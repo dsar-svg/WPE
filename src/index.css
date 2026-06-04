@@ -1,0 +1,55 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@theme {
+  --font-sans: "Helvetica Neue", Arial, sans-serif;
+  --color-primary-vibrant: #cb2027;
+  --color-secondary-vibrant: #ffc400;
+  --color-open-green: #00c853;
+  --color-closed-red: #d50000;
+}
+
+@layer base {
+  body {
+    @apply antialiased text-zinc-900 bg-white selection:bg-primary-vibrant selection:text-white;
+  }
+}
+
+@layer utilities {
+  .vibrant-gradient {
+    background: linear-gradient(135deg, #cb2027 0%, #ffc400 100%);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+    border: 2px solid #f1f1f1;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f1f1;
+  }
+
+  .animate-spin-slow {
+    animation: spin 8s linear infinite;
+  }
+}

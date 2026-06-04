@@ -1,0 +1,6 @@
+{
+  "name": "Wallace Panda Express",
+  "description": "App de pedidos para Panda Express. Mobile-first, catálogo de productos e integración directa con WhatsApp.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
