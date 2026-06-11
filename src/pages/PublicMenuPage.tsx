@@ -7,6 +7,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { LanguageToggle } from '../components/ui/LanguageToggle';
 import { ProductModal } from '../components/ui/ProductModal';
 import { PWAInstallPrompt } from '../components/ui/PWAInstallPrompt';
+import { Pagination } from '../components/ui/Pagination';
 import { Product } from '../types';
 
 export function PublicMenuPage() {
@@ -14,15 +15,27 @@ export function PublicMenuPage() {
   const { t, language } = useLanguage();
   const [activeCategory, setActiveCategory] = useState(categories[0]?.name || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
   useEffect(() => {
     if (!activeCategory && categories.length > 0) { setActiveCategory(categories[0].name); }
   }, [categories, activeCategory]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [activeCategory]);
+
   const filteredItems = useMemo(() => {
     return menuItems.filter((item) => item.category === activeCategory);
   }, [activeCategory, menuItems]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / ITEMS_PER_PAGE));
+  const paginatedItems = useMemo(() => {
+    const start = (page - 1) * ITEMS_PER_PAGE;
+    return filteredItems.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredItems, page]);
 
   if (isLoading) {
     return (
@@ -87,8 +100,9 @@ export function PublicMenuPage() {
             <p className="text-zinc-400 font-display uppercase tracking-[0.3em] text-sm">{t('menu.empty')}</p>
           </div>
         ) : (
+          <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredItems.map((item, idx) => (
+            {paginatedItems.map((item, idx) => (
               <motion.div key={item.id} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1, duration: 0.5 }} viewport={{ once: true }}
                 onClick={() => setSelectedProduct(item)}
@@ -119,6 +133,8 @@ export function PublicMenuPage() {
               </motion.div>
             ))}
           </div>
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+          </>
         )}
       </main>
 

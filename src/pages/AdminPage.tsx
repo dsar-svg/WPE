@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { LogIn, LogOut, MapPin, Clock, MessageCircle, Power, RefreshCcw, Plus, Trash2, Tag, Edit2, Utensils, ShoppingBag, Eye, EyeOff, Trophy, TrendingDown, DollarSign } from 'lucide-react';
 import { useRestaurant } from '../context/RestaurantContext';
@@ -10,6 +10,7 @@ import { CategoryModal } from '../components/admin/CategoryModal';
 import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { SettingsPage } from '../components/admin/SettingsPage';
 import { OrdersPage } from '../components/admin/OrdersPage';
+import { Pagination } from '../components/ui/Pagination';
 const formatTime12h = (time: string) => { if (!time) return ''; const [hours, minutes] = time.split(':');
 const h = parseInt(hours);
 const ampm = h >= 12 ? 'PM' : 'AM'; const h12 = h % 12 || 12; return `${h12}:${minutes} ${ampm}`;};
@@ -22,6 +23,7 @@ const [isLoggingIn, setIsLoggingIn] = useState(false);
 const [showPassword, setShowPassword] = useState(false);
 const filteredLocations = isSuperAdmin ? locations : locations.filter(l => l.id === managedLocationId);
 const canEditMenuGlobals = isSuperAdmin; const currentManagedLoc = locations.find(l => l.id === managedLocationId);
+
 const toggleLocalAvailability = async (productId: string) => { if (!currentManagedLoc) return; const discontinued = currentManagedLoc.discontinuedProductIds || []; const isDiscontinued = discontinued.includes(productId);
 const newDiscontinued = isDiscontinued ? discontinued.filter(id => id !== productId) : [...discontinued, productId]; await updateLocation({ ...currentManagedLoc, discontinuedProductIds: newDiscontinued }); };
 const [editingLoc, setEditingLoc] =
@@ -32,6 +34,29 @@ const [isAddingProd, setIsAddingProd] = useState(false);
 const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 const [isManageCatsOpen, setIsManageCatsOpen] = useState(false);
 const [activeProductCategory, setActiveProductCategory] = useState('Todos');
+const [productPage, setProductPage] = useState(1);
+useEffect(() => { setProductPage(1); }, [activeProductCategory]);
+const ITEMS_PER_PAGE = 10;
+
+const allFilteredItems = useMemo(() => {
+  if (activeProductCategory === 'Todos') return menuItems;
+  return menuItems.filter(item => item.category === activeProductCategory);
+}, [menuItems, activeProductCategory]);
+
+const totalProductPages = Math.max(1, Math.ceil(allFilteredItems.length / ITEMS_PER_PAGE));
+const paginatedProductItems = useMemo(() => {
+  const start = (productPage - 1) * ITEMS_PER_PAGE;
+  return allFilteredItems.slice(start, start + ITEMS_PER_PAGE);
+}, [allFilteredItems, productPage]);
+
+const groupedPaginatedItems = useMemo(() => {
+  const groups: Record<string, Product[]> = {};
+  paginatedProductItems.forEach(item => {
+    if (!groups[item.category]) groups[item.category] = [];
+    groups[item.category].push(item);
+  });
+  return groups;
+}, [paginatedProductItems]);
 
 const productSales = orders.reduce((acc, order) => {
   order.items.forEach(item => {
@@ -206,13 +231,14 @@ return (
                 </button>
               ))}
             </div>
-            {(activeProductCategory === 'Todos' ? categories : categories.filter(c => c.name === activeProductCategory)).map(cat => {
-              const catItems = menuItems.filter(item => item.category === cat.name);
-              if (catItems.length === 0) return null;
-              return (
-              <div key={cat.id} className="space-y-6">
+            {allFilteredItems.length === 0 ? (
+              <div className="text-center py-16 text-zinc-500 text-sm">No hay productos en esta categoría</div>
+            ) : (
+              <>
+              {Object.entries(groupedPaginatedItems).map(([catName, catItems]) => (
+              <div key={catName} className="space-y-6">
                 <div className="flex items-center gap-4">
-                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-primary-vibrant">{cat.name}</h4>
+                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-primary-vibrant">{catName}</h4>
                   <div className="h-px bg-zinc-800 flex-1 opacity-50" />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -275,8 +301,10 @@ return (
                   })}
                 </div>
               </div>
-              );
-            })}
+              ))}
+              <Pagination currentPage={productPage} totalPages={totalProductPages} onPageChange={setProductPage} />
+              </>
+            )}
           </div>
         )}
 

@@ -4,6 +4,7 @@ import { ShoppingCart, Plus, Tag, ArrowLeft } from "lucide-react";
 import { Product, Location, Category } from "../../types";
 import { useLanguage } from "../../context/LanguageContext";
 import { ProductModal } from "./ProductModal";
+import { Pagination } from "./Pagination";
 
 interface MenuViewProps {
   onAddToCart: (p: Product) => void;
@@ -23,14 +24,26 @@ export function MenuView({
   const { t, language } = useLanguage();
   const [activeCategory, setActiveCategory] = useState(categories[0]?.name || "");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [page, setPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
     if (!activeCategory && categories.length > 0) { setActiveCategory(categories[0].name); }
   }, [categories]);
 
+  useEffect(() => {
+    setPage(1);
+  }, [activeCategory]);
+
   const filteredItems = useMemo(() => {
     return menuItems.filter((item) => item.category === activeCategory);
   }, [activeCategory, menuItems]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / ITEMS_PER_PAGE));
+  const paginatedItems = useMemo(() => {
+    const start = (page - 1) * ITEMS_PER_PAGE;
+    return filteredItems.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredItems, page]);
 
   return (
     <div className="min-h-screen bg-dark pb-32 flex flex-col font-body overflow-x-hidden">
@@ -86,8 +99,9 @@ export function MenuView({
             <p className="text-zinc-600 font-display uppercase tracking-[0.3em] text-sm">{t("menu.empty")}</p>
           </div>
         ) : (
+          <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredItems.map((item, index) => (
+            {paginatedItems.map((item, index) => (
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.06, duration: 0.4 }} key={item.id}
                 onClick={() => setSelectedProduct(item)}
@@ -128,6 +142,8 @@ export function MenuView({
               </motion.div>
             ))}
           </div>
+          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+          </>
         )}
       </div>
 
