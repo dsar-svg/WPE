@@ -8,7 +8,7 @@ INSERT INTO public.config (id, name, logo, primary_color, secondary_color, about
 VALUES (
   1,
   'Wallace Panda Express',
-  'https://upload.wikimedia.org/wikipedia/en/thumb/d/d3/Panda_Express_logo.svg/1024px-Panda_Express_logo.svg.png',
+  '',
   '#d92323',
   '#ffc400',
   E'Bienvenido a Wallace Panda Express, donde la tradición y el sabor se encuentran. Disfruta de nuestra auténtica cocina con ingredientes frescos y recetas familiares que han deleitado a generaciones. ¡Haz tu pedido hoy y descubre el verdadero sabor de la tradición!',

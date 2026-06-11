@@ -36,7 +36,7 @@ const RestaurantContext = createContext<RestaurantContextType | undefined>(undef
 const DEFAULT_CONFIG: RestaurantConfig = {
   id: 'main',
   name: 'Wallace Panda Express',
-  logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/d/d3/Panda_Express_logo.svg/1024px-Panda_Express_logo.svg.png',
+  logo: '',
   primaryColor: '#d92323',
   secondaryColor: '#ffc400',
   aboutUs: '',
@@ -275,22 +275,21 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   const invalidate = (key: string[]) => queryClient.invalidateQueries({ queryKey: key });
 
   const updateConfig = async (newConfig: any) => {
-    try {
-      const dbRow: Record<string, any> = {};
-      if (newConfig.name !== undefined) dbRow.name = newConfig.name;
-      if (newConfig.logo !== undefined) dbRow.logo = newConfig.logo;
-      if (newConfig.primaryColor !== undefined) dbRow.primary_color = newConfig.primaryColor;
-      if (newConfig.secondaryColor !== undefined) dbRow.secondary_color = newConfig.secondaryColor;
-      if (newConfig.aboutUs !== undefined) dbRow.about_us = newConfig.aboutUs;
-      if (newConfig.socialMedia !== undefined) dbRow.social_media = newConfig.socialMedia;
-      if (newConfig.featuredProductIds !== undefined) dbRow.featured_product_ids = newConfig.featuredProductIds;
-      if (newConfig.taxRate !== undefined) dbRow.tax_rate = newConfig.taxRate;
-      if (newConfig.deliveryFee !== undefined) dbRow.delivery_fee = newConfig.deliveryFee;
-      if (newConfig.exchangeRate !== undefined) dbRow.exchange_rate = newConfig.exchangeRate;
-      if (newConfig.distancePricing !== undefined) dbRow.distance_pricing = newConfig.distancePricing;
-      await supabase.from('config').update(dbRow).eq('id', 1);
-      invalidate(['config']);
-    } catch (error) { console.error('Error updating config:', error); }
+    const dbRow: Record<string, any> = {};
+    if (newConfig.name !== undefined) dbRow.name = newConfig.name;
+    if (newConfig.logo !== undefined) dbRow.logo = newConfig.logo;
+    if (newConfig.primaryColor !== undefined) dbRow.primary_color = newConfig.primaryColor;
+    if (newConfig.secondaryColor !== undefined) dbRow.secondary_color = newConfig.secondaryColor;
+    if (newConfig.aboutUs !== undefined) dbRow.about_us = newConfig.aboutUs;
+    if (newConfig.socialMedia !== undefined) dbRow.social_media = newConfig.socialMedia;
+    if (newConfig.featuredProductIds !== undefined) dbRow.featured_product_ids = newConfig.featuredProductIds;
+    if (newConfig.taxRate !== undefined) dbRow.tax_rate = newConfig.taxRate;
+    if (newConfig.deliveryFee !== undefined) dbRow.delivery_fee = newConfig.deliveryFee;
+    if (newConfig.exchangeRate !== undefined) dbRow.exchange_rate = newConfig.exchangeRate;
+    if (newConfig.distancePricing !== undefined) dbRow.distance_pricing = newConfig.distancePricing;
+    const { error } = await supabase.from('config').update(dbRow).eq('id', 1);
+    if (error) throw error;
+    invalidate(['config']);
   };
 
   const updateCategory = async (cat: any) => {

@@ -8,3 +8,6 @@ coverage/
 
 testsprite_tests\tmp\config.json
 dist/
+docs/
+scripts/
+VISUAL_CHANGES.md
