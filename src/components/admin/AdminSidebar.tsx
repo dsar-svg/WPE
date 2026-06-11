@@ -42,7 +42,7 @@ export function AdminSidebar({
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1.5 shrink-0">
             {config.logo ? (
-              <img src={config.logo} alt="Logo" className="w-full h-full object-contain" />
+              <img src={config.logo} alt="Logo" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
             ) : (
               <Utensils className="w-5 h-5 text-zinc-800" />
             )}

@@ -62,7 +62,7 @@ export function WelcomeScreen({ onSelectLocation, locations, config }: WelcomeSc
           className="mt-12 mb-8 mx-auto relative">
           <div className="absolute inset-0 bg-primary-vibrant/20 rounded-full blur-3xl animate-pulse" />
           {config.logo ? (
-            <img src={config.logo} alt={config.name}
+            <img src={config.logo} alt={config.name} referrerPolicy="no-referrer"
               className="relative w-32 h-32 md:w-40 md:h-40 mx-auto rounded-full border-4 border-white/10 shadow-2xl z-10" />
           ) : (
             <div className="relative w-32 h-32 md:w-40 md:h-40 mx-auto rounded-full border-4 border-white/10 shadow-2xl z-10 bg-dark-card flex items-center justify-center">

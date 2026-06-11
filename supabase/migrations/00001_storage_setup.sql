@@ -29,3 +29,6 @@ CREATE POLICY "Authenticated users can delete images"
 ON storage.objects FOR DELETE
 TO authenticated
 USING (bucket_id = 'images');
+
+-- 6. Clear old Wikipedia logo URL from config (fix 400 errors)
+UPDATE public.config SET logo = '' WHERE id = 1 AND logo LIKE '%wikipedia%';

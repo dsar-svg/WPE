@@ -127,7 +127,7 @@ export function PublicMenuPage() {
         <div className="max-w-lg mx-auto space-y-6 relative z-10">
           <div className="w-20 h-20 bg-white/5 p-2 rounded-full shadow-2xl mx-auto flex items-center justify-center border border-white/10">
             {config.logo ? (
-              <img src={config.logo || '/logo.png'} alt={config.name} className="w-full h-full object-cover rounded-full" />
+              <img src={config.logo || '/logo.png'} alt={config.name} referrerPolicy="no-referrer" className="w-full h-full object-cover rounded-full" />
             ) : (
               <Utensils className="w-8 h-8 text-zinc-500" />
             )}

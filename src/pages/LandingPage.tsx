@@ -60,7 +60,7 @@ export function LandingPage() {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div onClick={() => scrollToSection('top')} className="flex items-center gap-3 cursor-pointer group">
             {config.logo ? (
-              <img src={config.logo || '/logo.png'} alt="" className="w-10 h-10 rounded-full border-2 border-primary-vibrant group-hover:rotate-12 transition-transform duration-500" />
+              <img src={config.logo || '/logo.png'} alt="" referrerPolicy="no-referrer" className="w-10 h-10 rounded-full border-2 border-primary-vibrant group-hover:rotate-12 transition-transform duration-500" />
             ) : (
               <div className="w-10 h-10 rounded-full border-2 border-primary-vibrant bg-primary-vibrant/10 flex items-center justify-center">
                 <Utensils className="w-5 h-5 text-primary-vibrant" />
@@ -139,7 +139,7 @@ export function LandingPage() {
             className="relative inline-block">
             <div className="absolute inset-0 bg-primary-vibrant/30 rounded-full blur-3xl animate-pulse" />
             {config.logo ? (
-              <img src={config.logo} alt={config.name}
+              <img src={config.logo} alt={config.name} referrerPolicy="no-referrer"
                 className="relative w-44 h-44 md:w-64 md:h-64 mx-auto rounded-full border-4 border-white/20 shadow-[0_0_80px_rgba(203,32,39,0.3)]" />
             ) : (
               <div className="relative w-44 h-44 md:w-64 md:h-64 mx-auto rounded-full border-4 border-white/20 bg-white/5 flex items-center justify-center shadow-[0_0_80px_rgba(203,32,39,0.3)]">

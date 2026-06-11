@@ -122,10 +122,11 @@ function rowToOrder(row: any): Order {
 }
 
 function rowToConfig(row: any): RestaurantConfig {
+  const logoUrl = row.logo || '';
   return {
     id: 'main',
     name: row.name,
-    logo: row.logo,
+    logo: logoUrl.includes('wikipedia') ? '' : logoUrl,
     primaryColor: row.primary_color,
     secondaryColor: row.secondary_color,
     aboutUs: row.about_us,
