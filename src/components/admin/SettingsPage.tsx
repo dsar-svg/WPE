@@ -1,7 +1,8 @@
-import { useState, ChangeEvent } from 'react';
+import { useState, ChangeEvent, useMemo, useEffect } from 'react';
 import { Save, RefreshCcw, Image as ImageIcon, Plus, Trash2, Settings, DollarSign } from 'lucide-react';
 import { RestaurantConfig, Product, Category } from '../../types';
 import { useUploadImage } from '../../hooks/useUploadImage';
+import { Pagination } from '../ui/Pagination';
 
 interface SettingsPageProps {
   config: RestaurantConfig;
@@ -32,7 +33,19 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
   const [success, setSuccess] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'finanzas'>('general');
   const [featuredCategory, setFeaturedCategory] = useState('Todos');
+  const [featuredPage, setFeaturedPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
   const uploadImage = useUploadImage();
+
+  const filteredFeatured = useMemo(() => {
+    return featuredCategory === 'Todos' ? menuItems : menuItems.filter(i => i.category === featuredCategory);
+  }, [menuItems, featuredCategory]);
+
+  const totalFeaturedPages = Math.max(1, Math.ceil(filteredFeatured.length / ITEMS_PER_PAGE));
+  const paginatedFeatured = useMemo(() => {
+    const start = (featuredPage - 1) * ITEMS_PER_PAGE;
+    return filteredFeatured.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredFeatured, featuredPage]);
 
   const handleSave = async () => {
     try {
@@ -63,12 +76,14 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
     }
   };
 
+  useEffect(() => { setFeaturedPage(1); }, [featuredCategory]);
+
   const toggleFeaturedProduct = (id: string) => {
     const ids = data.featuredProductIds || [];
     if (ids.includes(id)) {
       setData({ ...data, featuredProductIds: ids.filter(i => i !== id) });
     } else {
-      if (ids.length < 3) {
+      if (ids.length < 5) {
         setData({ ...data, featuredProductIds: [...ids, id] });
       }
     }
@@ -172,7 +187,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
 
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-[32px] space-y-4">
             <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">
-              Platos Destacados (Máx 3)
+              Platos Destacados (Máx 5)
             </label>
             <div className="flex gap-2 flex-wrap">
               <button
@@ -196,7 +211,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
               ))}
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {(featuredCategory === 'Todos' ? menuItems : menuItems.filter(i => i.category === featuredCategory)).map(item => (
+              {paginatedFeatured.map(item => (
                 <button
                   key={item.id}
                   onClick={() => toggleFeaturedProduct(item.id)}
@@ -210,6 +225,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
                 </button>
               ))}
             </div>
+            <Pagination currentPage={featuredPage} totalPages={totalFeaturedPages} onPageChange={setFeaturedPage} />
           </div>
         </div>
       )}
