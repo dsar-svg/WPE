@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { AddressSuggestion } from '../types';
-import { DistanceService } from '../services/DistanceService';
+import { DistanceService } from '../lib/DistanceService';
 
 export interface DistanceCalculationResult {
   distance: number;

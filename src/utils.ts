@@ -1,39 +1,32 @@
 
-import { CartItem, CheckoutData, Location } from './types';
-import { EXCHANGE_RATE, DELIVERY_FEE } from './constants';
+import { CartItem, CheckoutData, Location, RestaurantConfig } from './types';
 
 export function generateWhatsAppLink(
   location: Location,
   items: CartItem[],
-  checkout: CheckoutData
+  checkout: CheckoutData,
+  config: RestaurantConfig
 ) {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const taxRateActive = location.taxRate ?? 0;
+  const taxRateActive = config.taxRate ?? 0;
   const tax = subtotal * taxRateActive;
   const subtotalWithTax = subtotal + tax;
 
-  // Usar tarifa calculada por distancia si está disponible, sino la tarifa base
-  const deliveryFee = checkout.deliveryType === 'Delivery'
-    ? (checkout.calculatedDeliveryFee ?? checkout.selectedZone?.fee ?? location.deliveryFee ?? 0)
-    : 0;
+  const deliveryFee = checkout.calculatedDeliveryFee ?? config.deliveryFee ?? 0;
 
   const totalUSD = subtotalWithTax + deliveryFee;
-  const totalVES = totalUSD * (location.exchangeRate || 1);
+  const totalVES = totalUSD * (config.exchangeRate || 1);
 
   let message = `*NUEVO PEDIDO - W PANDA EXPRESS*\n`;
   message += `----------------------------------\n`;
   message += `*Cliente:* ${checkout.name}\n`;
   message += `*Teléfono:* ${checkout.phone}\n`;
-  message += `*Tipo:* ${checkout.deliveryType}\n`;
+  message += `*Tipo:* Delivery\n`;
 
-  if (checkout.deliveryType === 'Delivery') {
-    if (checkout.selectedZone) message += `*Zona:* ${checkout.selectedZone.name}\n`;
-    if (checkout.address) message += `*Dirección:* ${checkout.address}\n`;
-    if (checkout.reference) message += `*Referencia:* ${checkout.reference}\n`;
-    // Agregar información de distancia si está disponible
-    if (checkout.calculatedDistance !== undefined && checkout.calculatedDistance !== null) {
-      message += `*Distancia:* ${checkout.calculatedDistance} km\n`;
-    }
+  if (checkout.address) message += `*Dirección:* ${checkout.address}\n`;
+  if (checkout.reference) message += `*Referencia:* ${checkout.reference}\n`;
+  if (checkout.calculatedDistance != null) {
+    message += `*Distancia:* ${checkout.calculatedDistance} km\n`;
   }
 
   message += `----------------------------------\n`;
@@ -49,12 +42,10 @@ export function generateWhatsAppLink(
   message += `----------------------------------\n`;
   message += `*Subtotal:* $${subtotal.toFixed(2)}\n`;
   if (tax > 0) message += `*Impuesto (${(taxRateActive * 100).toFixed(1)}%):* $${tax.toFixed(2)}\n`;
-  if (checkout.deliveryType === 'Delivery') {
-    message += `*Delivery:* $${deliveryFee.toFixed(2)}\n`;
-  }
+  message += `*Delivery:* $${deliveryFee.toFixed(2)}\n`;
   message += `*TOTAL:* $${totalUSD.toFixed(2)}\n`;
   message += `*TOTAL (Bs):* ${totalVES.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs.\n`;
-  message += `*(Tasa: ${location.exchangeRate})*\n`;
+  message += `*(Tasa: ${config.exchangeRate})*\n`;
   message += `----------------------------------\n`;
   message += `_Pedido realizado desde la App Web_`;
 

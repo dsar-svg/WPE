@@ -1,0 +1,17 @@
+{
+  "status": "init",
+  "scope": "codebase",
+  "type": "frontend",
+  "localEndpoint": "http://localhost:5173/",
+  "serverPort": 54603,
+  "executionArgs": {
+    "projectName": "pndaexpress-main",
+    "projectPath": "C:\\Users\\pc\\Desktop\\Proyects\\Pndaexpress-main",
+    "testIds": [],
+    "additionalInstruction": "Test the full ordering flow: landing page, location selection, menu browsing, cart management, and checkout form. Also test admin panel login and CRUD operations.",
+    "serverMode": "production",
+    "envs": {
+      "API_KEY": "sk-user-59EabTvovZ3lPsU5pkZzRPw5io2pOqAcpzBXLQ1vrtFwH-F6WJB_ZevN04uavXlvoXjO9y15Zpzq22YYlHRcmj0hd0WWY6mxYjtsCkheEOjYD_v_UiCLikFPPMuepLO5SyI"
+    }
+  }
+}

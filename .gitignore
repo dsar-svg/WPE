@@ -5,3 +5,5 @@ coverage/
 .env*
 !.env.example
 .claude/settings.local.json
+
+testsprite_tests\tmp\config.json

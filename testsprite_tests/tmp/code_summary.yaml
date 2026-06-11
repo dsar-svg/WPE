@@ -1,0 +1,166 @@
+version: "2"
+type: frontend
+tech_stack:
+  - TypeScript
+  - React 19
+  - Vite 6
+  - Tailwind CSS v4
+  - Supabase
+  - Leaflet (OpenStreetMap/Nominatim)
+  - motion/react
+routes:
+  - path: /
+    file: src/pages/LandingPage.tsx
+    auth_required: false
+    description: Marketing landing page with hero, featured dishes, locations, reviews, socials
+  - path: /menu
+    file: src/pages/PublicMenuPage.tsx
+    auth_required: false
+    description: Public menu view without location selection
+  - path: /pedir
+    file: src/App.tsx (MainView)
+    auth_required: false
+    description: Order flow - select location, browse menu by category, cart, checkout, send via WhatsApp
+  - path: /admin
+    file: src/pages/AdminPage.tsx
+    auth_required: true
+    description: Admin panel for CRUD on locations, products, categories, settings, and orders
+features:
+  - name: Landing Page
+    description: Marketing homepage with hero, about, featured dishes, locations, reviews, social media
+    files:
+      - src/pages/LandingPage.tsx
+    entry_route: /
+    user_interactions:
+      - View hero section with tagline and CTA button
+      - Scroll through about section, featured dishes, locations, reviews, social media
+      - Click CTA to navigate to /pedir
+      - Click location cards to view details
+      - Switch language via LanguageToggle (es/en/zh)
+    api_calls:
+      - method: GET
+        endpoint: Supabase config table (featuredProductIds, socialMedia, aboutUs)
+    auth_required: false
+  - name: Location Selection
+    description: User selects a restaurant location to start ordering
+    files:
+      - src/components/WelcomeScreen.tsx
+    entry_route: /pedir
+    user_interactions:
+      - View restaurant logo and name
+      - Browse location cards with image, address, hours, open/closed status
+      - Click open location to proceed to menu
+      - Closed locations are disabled/non-clickable
+    api_calls:
+      - method: GET
+        endpoint: Supabase locations table
+    auth_required: false
+  - name: Menu Browsing
+    description: Browse menu items filtered by category, view product details
+    files:
+      - src/components/MenuView.tsx
+      - src/components/ProductModal.tsx
+    entry_route: /pedir (after location selection)
+    user_interactions:
+      - Scroll through sticky category tabs horizontally
+      - Click category tab to filter products
+      - View product cards with image, name, description, price
+      - Click product card to open detail modal
+      - Click + button to add item to cart
+      - Out-of-stock items shown as disabled
+      - Floating cart button shows item count and total
+    api_calls:
+      - method: GET
+        endpoint: Supabase menu_items table filtered by category
+    auth_required: false
+  - name: Cart Management
+    description: Manage cart items, quantities, special notes
+    files:
+      - src/components/CartDrawer.tsx
+      - src/hooks/useCart.ts
+    entry_route: /pedir (cart drawer)
+    user_interactions:
+      - Open cart drawer from floating button
+      - View cart items with image, name, unit price, quantity
+      - Increment/decrement quantity with +/- buttons
+      - Add special notes per item (max 100 chars)
+      - Remove item from cart
+      - View subtotal, proceed to checkout
+    api_calls: []
+    auth_required: false
+  - name: Checkout and Order via WhatsApp
+    description: Fill order form, set delivery address via map/search, calculate shipping, send order via WhatsApp
+    files:
+      - src/components/CartDrawer.tsx
+      - src/utils.ts
+    entry_route: /pedir (checkout step in cart)
+    user_interactions:
+      - Fill name (validated: min 2 chars)
+      - Fill phone number (validated: min 10 digits)
+      - Toggle between Delivery/Pick-up
+      - Search address via Nominatim autocomplete
+      - Select address suggestion to set coordinates
+      - Use "Use my location" button (Geolocation API)
+      - Interact with Leaflet map to pin delivery location
+      - View calculated distance and shipping fee
+      - See coverage validation (out of range blocked)
+      - Add reference point
+      - View order summary: subtotal, tax, shipping, total in USD and Bs
+      - Click "Order via WhatsApp" to send formatted message
+    api_calls:
+      - method: GET
+        endpoint: Nominatim API (address search/geocoding)
+      - method: POST
+        endpoint: Supabase orders table (save order)
+    auth_required: false
+  - name: Admin Panel
+    description: Full CRUD management for locations, products, categories, settings, and orders
+    files:
+      - src/pages/AdminPage.tsx
+      - src/components/admin/LocationForm.tsx
+      - src/components/admin/ProductForm.tsx
+      - src/components/admin/CategoryModal.tsx
+      - src/components/admin/SettingsPage.tsx
+      - src/components/admin/OrdersPage.tsx
+      - src/components/admin/AdminSidebar.tsx
+    entry_route: /admin
+    user_interactions:
+      - Login with email/password or Google OAuth
+      - View dashboard with counts (locations, products, orders)
+      - CRUD locations: create, edit, delete, toggle active/inactive
+      - CRUD products: create, edit, delete, toggle inStock global
+      - CRUD categories: create, edit, delete
+      - Toggle product availability per location (local admin)
+      - Edit restaurant config: name, logo, colors, tax, delivery fee, exchange rate, distance pricing, social media
+      - View orders list
+      - Logout
+    api_calls:
+      - method: POST
+        endpoint: Supabase Auth (login)
+      - method: GET/POST/PUT/DELETE
+        endpoint: Supabase locations, menu_items, categories, config, orders, admins tables
+    auth_required: true
+  - name: Multi-language Support
+    description: UI translations in Spanish, English, and Chinese
+    files:
+      - src/context/LanguageContext.tsx
+      - src/components/LanguageToggle.tsx
+    entry_route: All routes
+    user_interactions:
+      - Click language toggle button
+      - Switch between ES, EN, ZH
+      - All UI text updates immediately
+    api_calls: []
+    auth_required: false
+  - name: PWA Support
+    description: Progressive Web App with install prompt
+    files:
+      - src/hooks/usePWAInstall.ts
+      - src/components/PWAInstallPrompt.tsx
+    entry_route: All routes
+    user_interactions:
+      - See install prompt when available
+      - Click install to add to home screen
+    api_calls: []
+    auth_required: false
+known_limitations: []

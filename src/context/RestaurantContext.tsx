@@ -1,49 +1,34 @@
-
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase } from '../supabase';
-import { Location, Product, RestaurantConfig, Category } from '../types';
-
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
-
-function handleSupabaseError(error: any, operationType: OperationType, path: string | null) {
-  const errInfo = {
-    error: error?.message || String(error),
-    operationType,
-    path
-  };
-  console.error('Supabase Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
-}
-
-import { INITIAL_LOCATIONS, INITIAL_MENU_ITEMS, CATEGORIES } from '../constants';
+import { createContext, useContext, useEffect, useState, useMemo, useRef, ReactNode, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../lib/supabase';
+import { Location, Product, RestaurantConfig, Category, Order } from '../types';
 
 interface RestaurantContextType {
   locations: Location[];
   menuItems: Product[];
   categories: Category[];
   config: RestaurantConfig;
+  orders: Order[];
   isLoading: boolean;
   isAdmin: boolean;
   isSuperAdmin: boolean;
   isLocalAdmin: boolean;
   managedLocationId: string | null;
+  userEmail: string | null;
   selectedLocation: Location | null;
   setSelectedLocation: (loc: Location | null) => void;
-  updateLocation: (loc: Location) => Promise<void>;
-  updateProduct: (prod: Product) => Promise<void>;
-  updateConfig: (config: RestaurantConfig) => Promise<void>;
-  updateCategory: (cat: Category) => Promise<void>;
+  updateLocation: (loc: any) => Promise<void>;
+  updateProduct: (prod: any) => Promise<void>;
+  updateConfig: (config: any) => Promise<void>;
+  updateCategory: (cat: any) => Promise<void>;
   deleteLocation: (id: string) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
-  seedData: () => Promise<void>;
+  createOrder: (order: Omit<Order, 'id' | 'created_at'>) => Promise<void>;
+  fetchOrders: () => void;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 const RestaurantContext = createContext<RestaurantContextType | undefined>(undefined);
@@ -60,300 +45,361 @@ const DEFAULT_CONFIG: RestaurantConfig = {
   taxRate: 0.16,
   deliveryFee: 2.00,
   exchangeRate: 1.00,
-  deliveryZones: [],
   distancePricing: {
     ranges: [
       { maxDistance: 5, fee: 3.00 },
       { maxDistance: 10, fee: 5.00 },
       { maxDistance: 15, fee: 7.00 },
-      { maxDistance: null, fee: 0.00 }
+      { maxDistance: 20, fee: 9.00 },
     ],
-    maxDeliveryDistance: 20
-  }
+    maxDeliveryDistance: 20,
+  },
 };
 
+function computeIsOpen(row: any): boolean {
+  if (!row.is_open) return false;
+  if (!row.open_time || !row.close_time) return row.is_open;
+  const now = new Date();
+  const cur = now.getHours() * 60 + now.getMinutes();
+  const [oh, om] = row.open_time.split(':').map(Number);
+  const [ch, cm] = row.close_time.split(':').map(Number);
+  const open = oh * 60 + om;
+  const close = ch * 60 + cm;
+  return close < open ? cur >= open || cur < close : cur >= open && cur < close;
+}
+
+function rowToLocation(row: any): Location {
+  return {
+    id: row.id,
+    name: row.name,
+    whatsapp: row.whatsapp,
+    schedule: row.schedule,
+    address: row.address,
+    image: row.image,
+    openTime: row.open_time,
+    closeTime: row.close_time,
+    isOpen: computeIsOpen(row),
+    latitude: row.latitude,
+    longitude: row.longitude,
+    adminEmail: row.admin_email,
+    discontinuedProductIds: row.discontinued_product_ids || [],
+  };
+}
+
+function rowToProduct(row: any): Product {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    price: row.price,
+    category: row.category,
+    image: row.image,
+    inStock: row.in_stock,
+    order: row.sort_order,
+  };
+}
+
+function rowToCategory(row: any): Category {
+  return { id: row.id, name: row.name, order: row.sort_order };
+}
+
+function rowToOrder(row: any): Order {
+  return {
+    id: row.id,
+    location_id: row.location_id,
+    customer_name: row.customer_name,
+    customer_phone: row.customer_phone,
+    delivery_type: row.delivery_type as Order['delivery_type'],
+    delivery_address: row.delivery_address,
+    delivery_coordinates: row.delivery_coordinates,
+    items: row.items,
+    subtotal: row.subtotal,
+    delivery_fee: row.delivery_fee,
+    total: row.total,
+    notes: row.notes || '',
+    created_at: row.created_at,
+  };
+}
+
+function rowToConfig(row: any): RestaurantConfig {
+  return {
+    id: 'main',
+    name: row.name,
+    logo: row.logo,
+    primaryColor: row.primary_color,
+    secondaryColor: row.secondary_color,
+    aboutUs: row.about_us,
+    socialMedia: row.social_media || {},
+    featuredProductIds: row.featured_product_ids || [],
+    taxRate: row.tax_rate,
+    deliveryFee: row.delivery_fee,
+    exchangeRate: row.exchange_rate,
+    distancePricing: row.distance_pricing || DEFAULT_CONFIG.distancePricing,
+  };
+}
+
 export function RestaurantProvider({ children }: { children: ReactNode }) {
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [menuItems, setMenuItems] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [config, setConfig] = useState<RestaurantConfig>(DEFAULT_CONFIG);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const [sessionReady, setSessionReady] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserEmail(session?.user?.email ?? null);
+      setSessionReady(true);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserEmail(session?.user?.email ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const locQuery = useQuery({
+    queryKey: ['locations'],
+    queryFn: async () => { const { data } = await supabase.from('locations').select('*'); return data || []; },
+    staleTime: 3600000,
+  });
+  const menuQuery = useQuery({
+    queryKey: ['menu_items'],
+    queryFn: async () => { const { data } = await supabase.from('menu_items').select('*').order('sort_order', { ascending: true }); return data || []; },
+    staleTime: 3600000,
+  });
+  const catQuery = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => { const { data } = await supabase.from('categories').select('*').order('sort_order', { ascending: true }); return data || []; },
+    staleTime: 3600000,
+  });
+  const configQuery = useQuery({
+    queryKey: ['config'],
+    queryFn: async () => {
+      const { data } = await supabase.from('config').select('*').limit(1).maybeSingle();
+      return data || null;
+    },
+    staleTime: 3600000,
+  });
+  const adminsQuery = useQuery({
+    queryKey: ['admins'],
+    queryFn: async () => {
+      const { data } = await supabase.from('admins').select('email');
+      return new Set((data || []).map(a => a.email));
+    },
+    staleTime: 3600000,
+  });
+
+  const dataFetched = locQuery.isFetched && menuQuery.isFetched && catQuery.isFetched && configQuery.isFetched && adminsQuery.isFetched;
+  const locationRows = locQuery.data || [];
+  const menuItemRows = menuQuery.data || [];
+  const categoryRows = catQuery.data || [];
+  const configRow = configQuery.data || null;
+  const adminEmails = adminsQuery.data || new Set<string>();
+
+  const locations = useMemo(() => locationRows.map(rowToLocation), [locationRows]);
+  const menuItems = useMemo(() => menuItemRows.map(rowToProduct), [menuItemRows]);
+  const categories = useMemo(() => categoryRows.map(rowToCategory), [categoryRows]);
+  const config: RestaurantConfig = useMemo(() => configRow ? { ...DEFAULT_CONFIG, ...rowToConfig(configRow) } : DEFAULT_CONFIG, [configRow]);
+
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLocalAdmin, setIsLocalAdmin] = useState(false);
   const [managedLocationId, setManagedLocationId] = useState<string | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
 
-  const fetchData = async () => {
-    try {
-      // Fetch Config
-      const { data: configData, error: configError } = await supabase
-        .from('config')
-        .select('*')
-        .eq('id', 'main')
-        .maybeSingle();
-
-      if (configError) {
-        console.error("Error fetching config:", configError);
-      } else if (configData) {
-        const newConfig = { ...DEFAULT_CONFIG, ...configData } as RestaurantConfig;
-        setConfig(newConfig);
-        document.documentElement.style.setProperty('--color-primary-vibrant', newConfig.primaryColor);
-        document.documentElement.style.setProperty('--color-secondary-vibrant', newConfig.secondaryColor);
-        if (newConfig.name) document.title = newConfig.name;
-        const favicon = document.getElementById('favicon') as HTMLLinkElement;
-        if (favicon && newConfig.logo) favicon.href = newConfig.logo;
-      }
-
-      // Fetch Categories
-      const { data: catData, error: catError } = await supabase
-        .from('categories')
-        .select('*')
-        .order('order');
-      if (catError) {
-        console.error("Error fetching categories:", catError);
-      } else if (catData) {
-        setCategories(catData as Category[]);
-      }
-
-      // Fetch Locations
-      const { data: locData, error: locError } = await supabase.from('locations').select('*');
-      if (locError) {
-        console.error("Error fetching locations:", locError);
-      } else if (locData) {
-        setLocations(locData as Location[]);
-      }
-
-      // Fetch Menu Items
-      const { data: menuData, error: menuError } = await supabase.from('menu_items').select('*');
-      if (menuError) {
-        console.error("Error fetching menu items:", menuError);
-      } else if (menuData) {
-        setMenuItems(menuData as Product[]);
-      }
-
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    if (userEmail) {
+      const isSuper = adminEmails.has(userEmail);
+      const localLoc = locations.find(l => l.adminEmail === userEmail);
+      setIsSuperAdmin(isSuper);
+      setIsLocalAdmin(!!localLoc);
+      setIsAdmin(isSuper || !!localLoc);
+      setManagedLocationId(localLoc?.id || null);
+    } else {
+      setIsAdmin(false); setIsSuperAdmin(false); setIsLocalAdmin(false); setManagedLocationId(null);
     }
-  };
+  }, [userEmail, locations, adminEmails]);
+
+  const ordersQuery = useQuery({
+    queryKey: ['orders'],
+    queryFn: async () => {
+      const { data } = await supabase.from('orders').select('*').order('created_at', { ascending: false }).limit(50);
+      return (data || []).map(rowToOrder);
+    },
+    staleTime: 30000,
+    enabled: isAdmin,
+  });
+  const orders = ordersQuery.data || [];
+
+  const isFirstLoad = useRef(true);
+  useEffect(() => {
+    if (configRow !== null) {
+      document.title = config.name;
+      if (config.primaryColor) document.documentElement.style.setProperty('--color-primary-vibrant', config.primaryColor);
+      if (config.secondaryColor) document.documentElement.style.setProperty('--color-secondary-vibrant', config.secondaryColor);
+      const favicon = document.getElementById('favicon') as HTMLLinkElement;
+      if (favicon && config.logo) favicon.href = config.logo;
+    }
+  }, [configRow, config.name, config.logo, config.primaryColor, config.secondaryColor]);
 
   useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (!isLoading && locations.length > 0 && !selectedLocation) {
+    if (dataFetched && locations.length > 0 && !selectedLocation) {
       const params = new URLSearchParams(window.location.search);
       const sedeId = params.get('sede') || params.get('location');
-      if (sedeId) {
-        const found = locations.find(l => l.id === sedeId);
-        if (found) {
-          setSelectedLocation(found);
-        }
-      }
+      if (sedeId) { const found = locations.find(l => l.id === sedeId); if (found) setSelectedLocation(found); }
     }
-  }, [isLoading, locations, selectedLocation]);
+  }, [dataFetched, locations, selectedLocation]);
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      const user = session?.user;
-      if (user) {
-        try {
-          const { data: adminData, error } = await supabase
-            .from('admins')
-            .select('*')
-            .eq('uid', user.id)
-            .maybeSingle();
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    let isSuper = adminEmails.has(email);
+    let localLoc = locations.find(l => l.adminEmail === email);
+    if (!isSuper && !localLoc) {
+      const fresh = await queryClient.fetchQuery({
+        queryKey: ['admins'],
+        queryFn: async () => {
+          const { data } = await supabase.from('admins').select('email');
+          return new Set((data || []).map(a => a.email));
+        },
+      });
+      isSuper = fresh.has(email);
+    }
+    if (!isSuper && !localLoc) { await supabase.auth.signOut(); throw new Error('no_admin'); }
+  };
 
-          if (error) {
-            console.error("Error fetching admin data:", error);
-            // Continue without admin data
-          }
-          const isSuper = user.email === 'dariomedina2619@gmail.com' || !!adminData;
-          const localLoc = locations.find(l => l.adminEmail === user.email);
+  const signUp = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+  };
 
-          setIsSuperAdmin(isSuper);
-          setIsLocalAdmin(!!localLoc);
-          setIsAdmin(isSuper || !!localLoc);
-          setManagedLocationId(localLoc?.id || null);
+  const signOut = async () => { await supabase.auth.signOut(); };
 
-          if (isSuper) {
-            seedData().catch(err => console.error("Error seeding:", err));
-          }
-        } catch (err) {
-          console.error("Error in auth state change:", err);
-          setIsAdmin(false);
-          setIsSuperAdmin(false);
-          setIsLocalAdmin(false);
-          setManagedLocationId(null);
-        }
+  const invalidate = (key: string[]) => queryClient.invalidateQueries({ queryKey: key });
 
-        const isSuper = user.email === 'dariomedina2619@gmail.com' || !!adminData;
-        const localLoc = locations.find(l => l.adminEmail === user.email);
+  const updateConfig = async (newConfig: any) => {
+    try {
+      const dbRow: Record<string, any> = {};
+      if (newConfig.name !== undefined) dbRow.name = newConfig.name;
+      if (newConfig.logo !== undefined) dbRow.logo = newConfig.logo;
+      if (newConfig.primaryColor !== undefined) dbRow.primary_color = newConfig.primaryColor;
+      if (newConfig.secondaryColor !== undefined) dbRow.secondary_color = newConfig.secondaryColor;
+      if (newConfig.aboutUs !== undefined) dbRow.about_us = newConfig.aboutUs;
+      if (newConfig.socialMedia !== undefined) dbRow.social_media = newConfig.socialMedia;
+      if (newConfig.featuredProductIds !== undefined) dbRow.featured_product_ids = newConfig.featuredProductIds;
+      if (newConfig.taxRate !== undefined) dbRow.tax_rate = newConfig.taxRate;
+      if (newConfig.deliveryFee !== undefined) dbRow.delivery_fee = newConfig.deliveryFee;
+      if (newConfig.exchangeRate !== undefined) dbRow.exchange_rate = newConfig.exchangeRate;
+      if (newConfig.distancePricing !== undefined) dbRow.distance_pricing = newConfig.distancePricing;
+      await supabase.from('config').update(dbRow).eq('id', 1);
+      invalidate(['config']);
+    } catch (error) { console.error('Error updating config:', error); }
+  };
 
-        setIsSuperAdmin(isSuper);
-        setIsLocalAdmin(!!localLoc);
-        setIsAdmin(isSuper || !!localLoc);
-        setManagedLocationId(localLoc?.id || null);
-
-        if (isSuper) {
-          seedData().catch(err => console.error("Error seeding:", err));
-        }
+  const updateCategory = async (cat: any) => {
+    try {
+      const dbRow: Record<string, any> = {};
+      if (cat.name !== undefined) dbRow.name = cat.name;
+      if (cat.order !== undefined) dbRow.sort_order = cat.order;
+      const id = cat._id || cat.id;
+      if (id && typeof id === 'string' && id.startsWith('loc-')) {
+        await supabase.from('categories').insert(dbRow);
+      } else if (id) {
+        await supabase.from('categories').update(dbRow).eq('id', id);
       } else {
-        setIsAdmin(false);
-        setIsSuperAdmin(false);
-        setIsLocalAdmin(false);
-        setManagedLocationId(null);
+        await supabase.from('categories').insert(dbRow);
       }
-    });
-
-    return () => {
-      if (subscription) subscription.unsubscribe();
-    };
-  }, [locations]);
-
-  const updateConfig = async (newConfig: RestaurantConfig) => {
-    try {
-      const { error } = await supabase.from('config').upsert({
-        id: 'main',
-        ...newConfig
-      });
-      if (error) throw error;
-      await fetchData();
-    } catch (error: any) {
-      console.error('Error updating config:', error);
-      // Silently fail for now - user will see changes on refresh
-    }
+      invalidate(['categories']);
+    } catch (error) { console.error('Error updating category:', error); }
   };
 
-  const updateCategory = async (cat: Category) => {
+  const updateLocation = async (loc: any) => {
     try {
-      const { error } = await supabase.from('categories').upsert({
-        id: cat.id,
-        ...cat
-      });
-      if (error) throw error;
-      await fetchData();
-    } catch (error: any) {
-      console.error('Error updating category:', error);
-    }
+      const dbRow: Record<string, any> = {};
+      if (loc.name !== undefined) dbRow.name = loc.name;
+      if (loc.whatsapp !== undefined) dbRow.whatsapp = loc.whatsapp;
+      if (loc.schedule !== undefined) dbRow.schedule = loc.schedule;
+      if (loc.address !== undefined) dbRow.address = loc.address;
+      if (loc.image !== undefined) dbRow.image = loc.image;
+      if (loc.openTime !== undefined) dbRow.open_time = loc.openTime;
+      if (loc.closeTime !== undefined) dbRow.close_time = loc.closeTime;
+      if (loc.isOpen !== undefined) dbRow.is_open = loc.isOpen;
+      if (loc.latitude !== undefined) dbRow.latitude = loc.latitude;
+      if (loc.longitude !== undefined) dbRow.longitude = loc.longitude;
+      if (loc.adminEmail !== undefined) dbRow.admin_email = loc.adminEmail;
+      if (loc.discontinuedProductIds !== undefined) dbRow.discontinued_product_ids = loc.discontinuedProductIds;
+      const id = loc._id || loc.id;
+      if (id && typeof id === 'string' && (id.startsWith('loc-') || id.startsWith('new-'))) {
+        await supabase.from('locations').insert(dbRow);
+      } else if (id) {
+        await supabase.from('locations').update(dbRow).eq('id', id);
+      } else {
+        await supabase.from('locations').insert(dbRow);
+      }
+      invalidate(['locations']);
+    } catch (error) { console.error('Error updating location:', error); }
   };
 
-  const updateLocation = async (loc: Location) => {
+  const updateProduct = async (prod: any) => {
     try {
-      const { error } = await supabase.from('locations').upsert({
-        id: loc.id,
-        ...loc
-      });
-      if (error) throw error;
-      await fetchData();
-    } catch (error: any) {
-      console.error('Error updating location:', error);
-    }
-  };
-
-  const updateProduct = async (prod: Product) => {
-    try {
-      const { error } = await supabase.from('menu_items').upsert({
-        id: prod.id,
-        ...prod
-      });
-      if (error) throw error;
-      await fetchData();
-    } catch (error: any) {
-      console.error('Error updating product:', error);
-    }
+      const dbRow: Record<string, any> = {};
+      if (prod.name !== undefined) dbRow.name = prod.name;
+      if (prod.description !== undefined) dbRow.description = prod.description;
+      if (prod.price !== undefined) dbRow.price = prod.price;
+      if (prod.category !== undefined) dbRow.category = prod.category;
+      if (prod.image !== undefined) dbRow.image = prod.image;
+      if (prod.inStock !== undefined) dbRow.in_stock = prod.inStock;
+      if (prod.order !== undefined) dbRow.sort_order = prod.order;
+      const id = prod._id || prod.id;
+      if (id && typeof id === 'string' && (id.startsWith('prod-') || id.startsWith('new-'))) {
+        await supabase.from('menu_items').insert(dbRow);
+      } else if (id) {
+        await supabase.from('menu_items').update(dbRow).eq('id', id);
+      } else {
+        await supabase.from('menu_items').insert(dbRow);
+      }
+      invalidate(['menu_items']);
+    } catch (error) { console.error('Error updating product:', error); }
   };
 
   const deleteLocation = async (id: string) => {
-    try {
-      const { error } = await supabase.from('locations').delete().eq('id', id);
-      if (error) throw error;
-      await fetchData();
-    } catch (error: any) {
-      console.error('Error deleting location:', error);
-    }
+    try { await supabase.from('locations').delete().eq('id', id); invalidate(['locations']); }
+    catch (error) { console.error('Error deleting location:', error); }
   };
 
   const deleteProduct = async (id: string) => {
-    try {
-      const { error } = await supabase.from('menu_items').delete().eq('id', id);
-      if (error) throw error;
-      await fetchData();
-    } catch (error: any) {
-      console.error('Error deleting product:', error);
-    }
+    try { await supabase.from('menu_items').delete().eq('id', id); invalidate(['menu_items']); }
+    catch (error) { console.error('Error deleting product:', error); }
   };
 
   const deleteCategory = async (id: string) => {
+    try { await supabase.from('categories').delete().eq('id', id); invalidate(['categories']); }
+    catch (error) { console.error('Error deleting category:', error); }
+  };
+
+  const createOrder = async (order: Omit<Order, 'id' | 'created_at'>) => {
     try {
-      const { error } = await supabase.from('categories').delete().eq('id', id);
+      const { error } = await supabase.from('orders').insert({
+        location_id: order.location_id, customer_name: order.customer_name, customer_phone: order.customer_phone,
+        delivery_type: order.delivery_type, delivery_address: order.delivery_address || null,
+        delivery_coordinates: order.delivery_coordinates || null, items: order.items,
+        subtotal: order.subtotal, delivery_fee: order.delivery_fee, total: order.total,
+        notes: order.notes || '',
+      });
       if (error) throw error;
-      await fetchData();
-    } catch (error: any) {
-      console.error('Error deleting category:', error);
-    }
+      invalidate(['orders']);
+    } catch (error) { console.error('Error creating order:', error); throw error; }
   };
 
-  const seedData = async () => {
-    try {
-      const { data: cats } = await supabase.from('categories').select('*');
-      if (!cats || cats.length === 0) {
-        for (let i = 0; i < CATEGORIES.length; i++) {
-          const name = CATEGORIES[i];
-          const id = name.toLowerCase().replace(/\s+/g, '-');
-          await supabase.from('categories').upsert({ id, name, order: i });
-        }
-      }
+  const fetchOrders = useCallback(() => ordersQuery.refetch(), [ordersQuery]);
 
-      const { data: locs } = await supabase.from('locations').select('*');
-      if (!locs || locs.length === 0) {
-        for (const loc of INITIAL_LOCATIONS) {
-          await supabase.from('locations').upsert(loc);
-        }
-      }
-
-      const { data: items } = await supabase.from('menu_items').select('*');
-      if (!items || items.length === 0) {
-        for (const item of INITIAL_MENU_ITEMS) {
-          await supabase.from('menu_items').upsert(item);
-        }
-      }
-
-      const { data: cfg } = await supabase.from('config').select('*').eq('id', 'main').maybeSingle();
-      if (!cfg) {
-        await updateConfig(config);
-      }
-    } catch (error: any) {
-      console.error("Error seeding data:", error);
-    }
-  };
+  const isLoading = !sessionReady || !dataFetched;
 
   return (
     <RestaurantContext.Provider value={{
-      locations,
-      menuItems,
-      categories,
-      config,
-      isLoading,
-      isAdmin,
-      isSuperAdmin,
-      isLocalAdmin,
-      managedLocationId,
-      updateLocation,
-      updateProduct,
-      updateConfig,
-      updateCategory,
-      deleteLocation,
-      deleteProduct,
-      deleteCategory,
-      seedData,
-      selectedLocation,
-      setSelectedLocation
+      locations, menuItems, categories, config, orders,
+      isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail,
+      selectedLocation, setSelectedLocation,
+      updateLocation, updateProduct, updateConfig, updateCategory,
+      deleteLocation, deleteProduct, deleteCategory,
+      createOrder, fetchOrders, signIn, signUp, signOut,
     }}>
       {children}
     </RestaurantContext.Provider>
@@ -364,4 +410,4 @@ export const useRestaurant = () => {
   const context = useContext(RestaurantContext);
   if (!context) throw new Error('useRestaurant must be used within a RestaurantProvider');
   return context;
-}
+};
