@@ -66,7 +66,7 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
       <motion.div
         initial={{ scale: 0.9, y: 20, opacity: 0 }}
         animate={{ scale: 1, y: 0, opacity: 1 }}
-        className="relative w-full max-w-4xl bg-zinc-900 border border-zinc-800 rounded-[40px] p-8 shadow-2xl max-h-[90vh] overflow-y-auto space-y-8 custom-scrollbar"
+        className="relative w-full max-w-4xl bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-h-[90vh] overflow-y-auto space-y-8 custom-scrollbar"
       >
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-black tracking-tight">
@@ -82,7 +82,7 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
             <div className="bg-zinc-950 p-4 rounded-3xl border border-zinc-800 flex flex-col items-center gap-4">
               <div className="w-full aspect-square bg-zinc-900 rounded-2xl overflow-hidden relative">
                 {data.image ? (
-                  <img src={data.image} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  <img src={data.image} alt={data.name} loading="lazy" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-zinc-800">
                     <ImageIcon className="w-12 h-12" />

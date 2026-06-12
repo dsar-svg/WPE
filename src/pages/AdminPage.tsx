@@ -84,7 +84,7 @@ else { setAuthError('Credenciales incorrectas'); } }
 finally { setIsLoggingIn(false); } }; if (isLoading) { return ( <div className="min-h-screen bg-zinc-950 flex items-center justify-center"> <div className="w-12 h-12 border-4 border-primary-vibrant border-t-transparent rounded-full animate-spin"></div> </div> ); }
 if (!isAdmin) { return ( <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6 text-center"> <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
 
-className="max-w-md w-full bg-zinc-900 p-12 rounded-[40px] border border-zinc-800 space-y-8 shadow-2xl" > <div className="w-20 h-20 bg-zinc-800 rounded-[20px] flex items-center justify-center text-zinc-600 mx-auto"> <Power className="w-10 h-10" /> </div> <div className="space-y-2"> <h1 className="text-3xl font-black text-white">Panel Control</h1> <p className="text-zinc-500 text-sm">Inicia sesión con tu cuenta de administrador</p> </div> {authError && ( <p className="text-primary-vibrant text-xs font-bold bg-primary-vibrant/10 py-2 px-4 rounded-xl">{authError}</p> )} <form onSubmit={handleSignIn}
+className="max-w-md w-full bg-zinc-900 p-12 rounded-2xl border border-zinc-800 space-y-8" > <div className="w-20 h-20 bg-zinc-800 rounded-[20px] flex items-center justify-center text-zinc-600 mx-auto"> <Power className="w-10 h-10" /> </div> <div className="space-y-2"> <h1 className="text-3xl font-black text-white">Panel Control</h1> <p className="text-zinc-500 text-sm">Inicia sesión con tu cuenta de administrador</p> </div> {authError && ( <p className="text-primary-vibrant text-xs font-bold bg-primary-vibrant/10 py-2 px-4 rounded-xl">{authError}</p> )} <form onSubmit={handleSignIn}
 
 className="space-y-4"> <input type="email" placeholder="Correo electrónico" className="w-full bg-zinc-800 border border-zinc-700 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none text-white" value={email} onChange={(e) => setEmail(e.target.value)} required /> <div className="relative"> <input type={showPassword ? "text" : "password"} placeholder="Contraseña" className="w-full bg-zinc-800 border border-zinc-700 p-4 pr-12 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none text-white" value={password} onChange={(e) => setPassword(e.target.value)} required /> <button type="button" onClick={() => setShowPassword(!showPassword)}
 
@@ -122,12 +122,13 @@ return (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredLocations.map((loc) => (
                 <motion.div layoutId={loc.id} key={loc.id}
-                  className="bg-zinc-900 border border-zinc-800 rounded-[32px] p-8 flex flex-col justify-between group overflow-hidden"
+                  className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 flex flex-col justify-between group overflow-hidden"
                 >
                   <div className="space-y-6">
                     <div className="flex justify-between items-start">
                       <div className="relative">
                         <img src={loc.image || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80'}
+                          loading="lazy"
                           className="w-20 h-20 rounded-2xl object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all border border-zinc-800 shadow-xl"
                         />
                         <div className={'absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-zinc-900 ' + (loc.isOpen ? 'bg-green-500' : 'bg-zinc-500')} />
@@ -193,7 +194,7 @@ return (
 
         {activeTab === 'productos' && (
           <div className="space-y-12">
-            <div className="flex justify-between items-center bg-zinc-900 border border-zinc-800 p-6 rounded-[32px]">
+            <div className="flex justify-between items-center bg-zinc-900 border border-zinc-800 p-6 rounded-2xl">
               <div>
                 <h3 className="text-lg font-black">{isSuperAdmin ? 'Catálogo Global' : 'Inventario de Sede'}</h3>
                 <p className="text-xs text-zinc-500">{menuItems.length} items disponibles</p>
@@ -253,6 +254,8 @@ return (
                       >
                         <div className="w-24 h-24 rounded-2xl overflow-hidden relative bg-zinc-950">
                           <img src={item.image || 'https://picsum.photos/seed/food/400/300'}
+                            alt={item.name}
+                            loading="lazy"
                             className="w-full h-full object-cover grayscale-[0.2] transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer"
                           />
                           {(!item.inStock || isDiscontinuedLocally) && (

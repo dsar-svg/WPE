@@ -96,7 +96,7 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
       <motion.div
         initial={{ scale: 0.9, y: 20, opacity: 0 }}
         animate={{ scale: 1, y: 0, opacity: 1 }}
-        className="relative w-full max-w-3xl bg-zinc-900 border border-zinc-800 rounded-[40px] p-0 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-3xl bg-zinc-900 border border-zinc-800 rounded-2xl p-0 overflow-hidden flex flex-col max-h-[90vh]"
       >
         <div className="bg-zinc-800/50 p-8 pb-4 border-b border-zinc-800">
           <div className="flex justify-between items-center mb-6">
@@ -143,14 +143,14 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-6"
               >
-                <div className="bg-zinc-950 p-6 rounded-[32px] border border-zinc-800 space-y-4">
+                <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-800 space-y-4">
                   <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">
                     Foto de la Sede
                   </label>
                   <div className="flex gap-4">
                     <div className="w-24 h-24 bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden flex-shrink-0 relative">
                       {data.image ? (
-                        <img src={data.image} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <img src={data.image} alt={data.name} loading="lazy" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-zinc-700">
                           <ImageIcon className="w-8 h-8" />
@@ -231,7 +231,7 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
                   </p>
                 </div>
 
-                <div className="bg-zinc-950 p-6 rounded-[32px] border border-zinc-800 space-y-4">
+                <div className="bg-zinc-950 p-6 rounded-2xl border border-zinc-800 space-y-4">
                   <div className="flex justify-between items-center px-2">
                     <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500">
                       Coordenadas de la Sede

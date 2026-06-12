@@ -149,22 +149,22 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-[32px] p-8">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
           <MapPin className="w-8 h-8 text-primary-vibrant mb-4" />
           <p className="text-3xl font-black">{locations.length}</p>
           <p className="text-zinc-500 text-sm mt-1">Sedes activas</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-[32px] p-8">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
           <Utensils className="w-8 h-8 text-secondary-vibrant mb-4" />
           <p className="text-3xl font-black">{menuItems.length}</p>
           <p className="text-zinc-500 text-sm mt-1">Productos en menú</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-[32px] p-8">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
           <ShoppingBag className="w-8 h-8 text-green-500 mb-4" />
           <p className="text-3xl font-black">{count}</p>
           <p className="text-zinc-500 text-sm mt-1">Pedidos en período</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-[32px] p-8">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
           <DollarSign className="w-8 h-8 text-yellow-500 mb-4" />
           <p className="text-3xl font-black">${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           <p className="text-zinc-500 text-sm mt-1">Ventas en período</p>
@@ -172,7 +172,7 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
       </div>
 
       {/* Sales Chart */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-[32px] p-8">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
         <div className="flex items-center gap-3 mb-8">
           <Calendar className="w-6 h-6 text-primary-vibrant" />
           <h3 className="text-lg font-black">{chart.title}</h3>
@@ -220,7 +220,7 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
 
       {/* Top / Bottom Selling */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-[32px] p-8">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
           <div className="flex items-center gap-3 mb-6">
             <Trophy className="w-6 h-6 text-yellow-500" />
             <h3 className="text-lg font-black">Top 5 Más Vendidos</h3>
@@ -248,7 +248,7 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
           )}
         </div>
 
-        <div className="bg-zinc-900 border border-zinc-800 rounded-[32px] p-8">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
           <div className="flex items-center gap-3 mb-6">
             <TrendingDown className="w-6 h-6 text-red-500" />
             <h3 className="text-lg font-black">Top 5 Menos Vendidos</h3>
@@ -278,7 +278,7 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
       </div>
 
       {/* Recent Orders */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-[32px] p-8">
+      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
         <h3 className="text-lg font-black mb-6">Últimos pedidos</h3>
         {filtered.length === 0 ? (
           <p className="text-zinc-600 text-sm">Sin pedidos en este período</p>

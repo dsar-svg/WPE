@@ -127,12 +127,12 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
 
       {activeSettingsTab === 'general' && (
         <div className="space-y-8">
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-[32px] space-y-4">
+          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4">
             <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Logo</label>
             <div className="flex gap-4">
               <div className="w-20 h-20 bg-white rounded-full border border-zinc-800 overflow-hidden flex-shrink-0 relative flex items-center justify-center shadow-inner">
                 {data.logo ? (
-                  <img src={data.logo} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
+                  <img src={data.logo} alt="Logo" loading="lazy" className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
                 ) : (
                   <ImageIcon className="w-8 h-8 text-zinc-300" />
                 )}
@@ -161,7 +161,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
             </div>
           </div>
 
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-[32px] space-y-4">
+          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4">
             <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Sobre Nosotros</label>
             <textarea
               className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold text-sm focus:ring-2 focus:ring-primary-vibrant outline-none h-24"
@@ -171,7 +171,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
             />
           </div>
 
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-[32px] space-y-4">
+          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4">
             <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Redes Sociales (URLs)</label>
             {(['instagram', 'facebook', 'tiktok'] as const).map(platform => (
               <input
@@ -185,7 +185,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
             ))}
           </div>
 
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-[32px] space-y-4">
+          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4">
             <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">
               Platos Destacados (Máx 5)
             </label>
@@ -232,7 +232,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
 
       {activeSettingsTab === 'finanzas' && (
         <div className="space-y-8">
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-[32px] space-y-6">
+          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-6">
             <div className="flex justify-between items-center">
               <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500">Impuestos y Delivery</label>
               <span className="text-[8px] text-zinc-600">Configuración global</span>
@@ -271,7 +271,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
             </div>
           </div>
 
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-[32px] space-y-6">
+          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-6">
             <div className="flex justify-between items-center">
               <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500">Tarifas por Distancia</label>
               <span className="text-[8px] text-zinc-600">Configuración global</span>

@@ -92,7 +92,7 @@ export function PublicMenuPage() {
       <main className="max-w-7xl mx-auto px-6 py-16 bg-gradient-to-br from-red-50/30 via-white to-red-50/20">
         {filteredItems.length === 0 ? (
           <div className="py-24 text-center space-y-6">
-            <div className="w-24 h-24 bg-zinc-100 rounded-[32px] flex items-center justify-center mx-auto">
+            <div className="w-24 h-24 bg-zinc-100 rounded-2xl flex items-center justify-center mx-auto">
               <Tag className="w-12 h-12 text-zinc-300" />
             </div>
             <p className="text-zinc-400 font-display uppercase tracking-[0.3em] text-sm">{t('menu.empty')}</p>
@@ -107,6 +107,7 @@ export function PublicMenuPage() {
                 className="bg-white rounded-2xl overflow-hidden border border-zinc-100 hover:border-primary-vibrant/20 shadow-sm hover:shadow-xl transition-all duration-300 group cursor-pointer">
                 <div className="relative h-64 overflow-hidden">
                   <img src={item.image || 'https://picsum.photos/seed/food/400/300'} alt={item.name}
+                    loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" referrerPolicy="no-referrer" />
                   <div className="absolute top-4 left-4 bg-secondary-vibrant text-dark px-4 py-1.5 rounded-lg font-display text-lg tracking-wider shadow-lg">
                     ${item.price.toFixed(2)}

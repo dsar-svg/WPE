@@ -46,7 +46,7 @@ export function CategoryModal({ categories, onClose, onSave, onDelete }: Categor
       <motion.div
         initial={{ scale: 0.9, y: 20, opacity: 0 }}
         animate={{ scale: 1, y: 0, opacity: 1 }}
-        className="relative w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-[40px] p-8 shadow-2xl space-y-8"
+        className="relative w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-8"
       >
         <div className="flex justify-between items-center">
           <h2 className="text-2xl font-black tracking-tight">Gestionar Categorías</h2>

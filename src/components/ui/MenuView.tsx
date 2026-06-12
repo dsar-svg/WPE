@@ -91,7 +91,7 @@ export function MenuView({
       <div className="px-5 py-8 max-w-7xl mx-auto w-full flex-1 bg-gradient-to-b from-transparent via-primary-vibrant/[0.02] to-transparent">
         {filteredItems.length === 0 ? (
           <div className="py-20 text-center space-y-4">
-            <div className="w-20 h-20 bg-white/5 rounded-[28px] flex items-center justify-center mx-auto border border-white/5">
+            <div className="w-20 h-20 bg-white/5 rounded-xl flex items-center justify-center mx-auto border border-white/5">
               <Tag className="w-10 h-10 text-zinc-600" />
             </div>
             <p className="text-zinc-600 font-display uppercase tracking-[0.3em] text-sm">{t("menu.empty")}</p>
@@ -110,7 +110,7 @@ export function MenuView({
                 }`}>
                 <div className="relative h-40 md:h-48 rounded-2xl overflow-hidden mb-3 bg-white/5">
                   <img src={item.image || "https://picsum.photos/seed/food/400/300"} alt={item.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" referrerPolicy="no-referrer" />
+                    loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" referrerPolicy="no-referrer" />
                   {!item.inStock && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm">
                       <span className="bg-white/10 text-white text-[11px] font-bold px-4 py-1.5 rounded-full uppercase tracking-wider border border-white/20">
@@ -157,7 +157,7 @@ export function MenuView({
       {cartCount > 0 && (
         <motion.button initial={{ y: 100, opacity: 0, scale: 0.9 }} animate={{ y: 0, opacity: 1, scale: 1 }}
           whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onOpenCart}
-          className="fixed bottom-6 left-6 right-6 max-w-lg mx-auto text-white p-5 rounded-[28px] flex items-center justify-between z-40 group transition-all duration-300"
+          className="fixed bottom-6 left-6 right-6 max-w-lg mx-auto text-white p-5 rounded-2xl flex items-center justify-between z-40 group transition-all duration-300"
           style={{
             background: 'linear-gradient(135deg, rgba(203,32,39,0.95) 0%, rgba(139,15,21,0.95) 100%)',
             backdropFilter: 'blur(20px)',

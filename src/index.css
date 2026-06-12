@@ -12,12 +12,40 @@
   --color-dark: #0a0a0a;
   --color-dark-card: #141414;
   --color-dark-surface: #1a1a1a;
+  --color-ink-muted: #71717a;
+  --color-ink-subtle: #52525b;
 }
 
 @layer base {
   body {
     @apply antialiased text-zinc-900 bg-white selection:bg-primary-vibrant selection:text-white;
     font-family: var(--font-body);
+    scroll-behavior: smooth;
+  }
+
+  .skip-link {
+    position: absolute;
+    top: -100%;
+    left: 1rem;
+    z-index: 9999;
+    padding: 0.75rem 1.5rem;
+    background: #cb2027;
+    color: white;
+    font-family: "DM Sans", "Helvetica Neue", sans-serif;
+    font-size: 0.875rem;
+    font-weight: 700;
+    border-radius: 0 0 0.75rem 0.75rem;
+    text-decoration: none;
+    transition: top 0.2s;
+  }
+  .skip-link:focus {
+    top: 0;
+    outline: 2px solid white;
+    outline-offset: 2px;
+  }
+
+  #main-content {
+    scroll-margin-top: 5rem;
   }
 }
 
@@ -28,13 +56,6 @@
 
   .vibrant-gradient-warm {
     background: linear-gradient(135deg, #cb2027 0%, #e8352a 50%, #ffc400 100%);
-  }
-
-  .text-gradient-brand {
-    background: linear-gradient(135deg, #cb2027, #ffc400);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
   }
 
   .card-hover-lift {

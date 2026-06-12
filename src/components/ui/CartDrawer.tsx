@@ -196,7 +196,7 @@ export function CartDrawer({
                   {items.length === 0 ? (
                     <div className="py-24 text-center space-y-6">
                       <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 4, repeat: Infinity }}
-                        className="w-24 h-24 bg-white/5 rounded-[32px] shadow-xl flex items-center justify-center mx-auto text-zinc-700 border border-white/5">
+                        className="w-24 h-24 bg-white/5 rounded-2xl flex items-center justify-center mx-auto text-zinc-700 border border-white/5">
                         <ShoppingCart className="w-12 h-12" />
                       </motion.div>
                       <div className="space-y-2">
@@ -208,10 +208,10 @@ export function CartDrawer({
                     <div className="space-y-3">
                       {items.map((item) => (
                         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
-                          key={item.id} className="flex gap-3 bg-dark-card p-4 rounded-[24px] border border-white/10 group hover:border-primary-vibrant/20 transition-colors duration-300">
+                          key={item.id} className="flex gap-3 bg-dark-card p-4 rounded-xl border border-white/10 group hover:border-primary-vibrant/20 transition-colors duration-300">
                           <div className="w-16 h-16 shrink-0 rounded-2xl overflow-hidden border border-white/10">
                             <img src={item.image || 'https://picsum.photos/seed/food/400/300'} alt={t(`prod.${item.id}.name`)}
-                              className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              loading="lazy" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                           </div>
                           <div className="flex-1 min-w-0 flex flex-col justify-between">
                             <div className="flex justify-between items-start gap-2">
@@ -395,7 +395,7 @@ export function CartDrawer({
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                   className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-md p-6 flex items-center justify-center">
                   <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }}
-                    className={`bg-dark-card p-8 rounded-[32px] w-full max-w-lg space-y-6 shadow-2xl transition-all duration-500 ${
+                    className={`bg-dark-card p-8 rounded-2xl w-full max-w-lg space-y-6 transition-all duration-500 ${
                       locationSelected ? 'border-2 border-green-500/30' : 'border border-white/5'
                     }`}>
                     <div className="flex flex-col items-center text-center space-y-2">
@@ -409,14 +409,14 @@ export function CartDrawer({
                         </motion.div>
                       )}
                     </div>
-                    <div className="rounded-[24px] overflow-hidden border border-white/10">
+                    <div className="rounded-xl overflow-hidden border border-white/10">
                       <MapComponent center={location.latitude && location.longitude ? [location.latitude, location.longitude] : [10.162, -68.007]}
                         onLocationSelect={handleMapLocationSelect}
                         markerPosition={deliveryCoordinates ? [deliveryCoordinates.lat, deliveryCoordinates.lng] : undefined}
                         style="modern" showPopup={true} />
                     </div>
                     <motion.button whileTap={{ scale: 0.95 }} type="button" onClick={() => setIsMapOpen(false)}
-                      className="w-full bg-white/5 text-white py-5 rounded-[20px] text-xs font-bold uppercase tracking-[0.2em] hover:bg-white/10 transition-all duration-300 border border-white/5">
+                      className="w-full bg-white/5 text-white py-5 rounded-xl text-xs font-bold uppercase tracking-[0.2em] hover:bg-white/10 transition-all duration-300 border border-white/5">
                       {t('cart.closeMap')}
                     </motion.button>
                   </motion.div>
@@ -427,7 +427,7 @@ export function CartDrawer({
             {/* Footer */}
             {items.length > 0 && (
               <div className="p-4 sm:p-6 bg-dark-card border-t border-white/5 space-y-4">
-                <div className="p-5 bg-dark-surface text-white rounded-[24px] shadow-2xl space-y-3 relative overflow-hidden border border-white/5">
+                <div className="p-5 bg-dark-surface text-white rounded-xl space-y-3 relative overflow-hidden border border-white/5">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-primary-vibrant/10 rounded-full blur-2xl -mr-16 -mt-16" />
 
                   {deliveryType === 'Delivery' && step === 'checkout' && (

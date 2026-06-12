@@ -54,7 +54,7 @@ export function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-white font-body text-zinc-900 overflow-x-hidden pt-16 md:pt-0">
+    <div className="min-h-screen bg-white font-body text-zinc-900 pt-16 md:pt-0">
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-[100] bg-white/90 backdrop-blur-2xl border-b border-zinc-100 px-6 py-4 md:px-12">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -70,12 +70,12 @@ export function LandingPage() {
           </div>
 
           <div className="hidden lg:flex items-center gap-8">
-            <Link to="/menu" className="text-[11px] font-bold uppercase tracking-[0.25em] text-zinc-400 hover:text-primary-vibrant transition-colors duration-300">
+            <Link to="/menu" className="text-[11px] font-bold uppercase tracking-[0.25em] text-ink-muted hover:text-primary-vibrant transition-colors duration-300">
               {t('nav.menu')}
             </Link>
             {navLinks.map((link) => (
               <button key={link.id} onClick={() => scrollToSection(link.id)}
-                className="text-[11px] font-bold uppercase tracking-[0.25em] text-zinc-400 hover:text-primary-vibrant transition-colors duration-300">
+                className="text-[11px] font-bold uppercase tracking-[0.25em] text-ink-muted hover:text-primary-vibrant transition-colors duration-300">
                 {link.label}
               </button>
             ))}
@@ -87,7 +87,9 @@ export function LandingPage() {
               {t('nav.orderNow')}
             </Link>
             <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 bg-zinc-100 text-zinc-600 rounded-xl active:scale-90 transition-transform border border-zinc-200">
+              className="lg:hidden p-2 bg-zinc-100 text-zinc-600 rounded-xl active:scale-90 transition-transform border border-zinc-200"
+              aria-label={isMobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
+              aria-expanded={isMobileMenuOpen}>
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
@@ -117,7 +119,7 @@ export function LandingPage() {
       </nav>
 
       {/* Hero */}
-      <section id="top" className="relative min-h-[90vh] flex items-center justify-center bg-dark text-white overflow-hidden">
+      <section id="main-content" className="relative min-h-[90vh] flex items-center justify-center bg-dark text-white overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-dark via-dark to-primary-vibrant/30" />
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary-vibrant/20 rounded-full blur-[120px] -mr-48 -mt-48" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-secondary-vibrant/15 rounded-full blur-[100px] -ml-48 -mb-48" />
@@ -137,7 +139,7 @@ export function LandingPage() {
           </motion.div>
 
           <div className="space-y-6">
-            <h1 className="font-display text-6xl md:text-8xl lg:text-9xl leading-[0.9] tracking-wider uppercase text-white">
+            <h1 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9] tracking-wider uppercase text-white">
               {config.name}
             </h1>
             <div className="flex items-center justify-center gap-4">
@@ -171,7 +173,7 @@ export function LandingPage() {
               <h2 className="font-display text-5xl md:text-7xl uppercase tracking-wider leading-none text-dark">{t('about.title')}</h2>
             </div>
             <div className="space-y-6">
-              <p className="text-xl md:text-2xl text-zinc-700 leading-relaxed font-light border-l-2 border-primary-vibrant pl-6">
+              <p className="text-xl md:text-2xl text-zinc-700 leading-relaxed font-light bg-primary-vibrant/[0.06] px-6 py-4 rounded-xl">
                 "{config.aboutUs || t('about.default')}"
               </p>
               <div className="flex items-center gap-4">
@@ -208,6 +210,7 @@ export function LandingPage() {
                 <div className="relative h-64 overflow-hidden">
                   <img src={item.image || 'https://picsum.photos/seed/food/400/300'}
                     alt={language === 'es' ? item.name : t(`prod.${item.id}.name`)}
+                    loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>
@@ -253,6 +256,7 @@ export function LandingPage() {
                     className="min-w-[300px] sm:min-w-[380px] bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col border border-zinc-100 group cursor-pointer">
                     <div className="h-48 relative overflow-hidden bg-zinc-100">
                       <img src={loc.image || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80'} alt={loc.name}
+                        loading="lazy"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                       <div className="absolute bottom-4 left-4 flex items-center gap-2">

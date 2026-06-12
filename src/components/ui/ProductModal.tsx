@@ -33,7 +33,7 @@ export function ProductModal({ product, onClose, onAddToCart, showAddToCart = tr
         {/* Image Side */}
         <div className="w-full md:w-[55%] h-64 md:h-auto relative overflow-hidden">
           <img src={product.image} alt={product.name}
-            className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            loading="lazy" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
           <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-[#141414]" />
         </div>
 

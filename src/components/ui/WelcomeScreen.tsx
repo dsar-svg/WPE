@@ -86,7 +86,7 @@ export function WelcomeScreen({ onSelectLocation, locations, config }: WelcomeSc
 
         <div className="flex flex-col gap-5">
           {visibleLocations.length === 0 ? (
-            <div className="py-20 px-6 border-2 border-dashed border-white/10 rounded-[32px] flex flex-col items-center gap-4 bg-white/[0.02]">
+            <div className="py-20 px-6 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center gap-4 bg-white/[0.02]">
               <div className="w-20 h-20 bg-white/5 rounded-[20px] flex items-center justify-center transform rotate-12">
                 <UtensilsCrossed className="w-10 h-10 text-zinc-700" />
               </div>
@@ -109,7 +109,8 @@ export function WelcomeScreen({ onSelectLocation, locations, config }: WelcomeSc
                       : "bg-white/[0.02] border border-white/5 cursor-not-allowed opacity-60"
                   }`}>
                   <div className="h-40 w-full relative overflow-hidden">
-                    <img src={loc.image || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80"}
+                    <img src={loc.image || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80"} alt={loc.name}
+                      loading="lazy"
                       className={`w-full h-full object-cover transition-transform duration-500 ${isOpenByTime ? "group-hover:scale-105" : ""}`} />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/60 to-transparent" />
                     <div className="absolute top-4 right-4 flex gap-2">
