@@ -46,13 +46,11 @@ export function MenuView({
   }, [filteredItems, page]);
 
   return (
-    <div className="min-h-screen bg-dark pb-32 flex flex-col font-body overflow-x-hidden">
+    <div className="min-h-screen bg-[#0c0c0c] pb-32 flex flex-col font-body overflow-x-hidden">
       {/* Header */}
-      <div className="bg-dark p-8 md:p-14 text-white relative overflow-hidden grain-overlay">
+      <div className="bg-dark p-8 md:p-14 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-72 h-72 bg-primary-vibrant/15 rounded-full blur-[100px] -mr-36 -mt-36" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary-vibrant/10 rounded-full blur-[80px] -ml-24 -mb-24" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-white/5 rounded-full blur-[100px]" />
-        <div className="absolute top-6 right-[12%] w-16 h-16 border border-primary-vibrant/10 rotate-12" />
 
         <div className="max-w-7xl mx-auto relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div className="space-y-4">
@@ -70,10 +68,10 @@ export function MenuView({
       </div>
 
       {/* Sticky Categories */}
-      <div className="sticky top-0 bg-dark/95 backdrop-blur-2xl z-30 border-b border-white/5">
+      <div className="sticky top-0 bg-[#0c0c0c]/95 backdrop-blur-2xl z-30 border-b border-white/5">
         <div className="max-w-7xl mx-auto relative">
-          <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-dark/95 to-transparent z-10 pointer-events-none" />
-          <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-dark/95 to-transparent z-10 pointer-events-none" />
+          <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[#0c0c0c]/95 to-transparent z-10 pointer-events-none" />
+          <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[#0c0c0c]/95 to-transparent z-10 pointer-events-none" />
           <div className="flex items-center gap-3 p-5 overflow-x-auto no-scrollbar scroll-smooth">
             {categories.map((cat) => (
               <motion.button key={cat.id} whileTap={{ scale: 0.95 }} onClick={() => setActiveCategory(cat.name)}
@@ -105,14 +103,14 @@ export function MenuView({
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.06, duration: 0.4 }} key={item.id}
                 onClick={() => setSelectedProduct(item)}
-                className={`relative group bg-dark-card p-3 rounded-[28px] border transition-all duration-300 ${
+                className={`relative group bg-[#141414] p-3 rounded-2xl border transition-all duration-300 ${
                   item.inStock
-                    ? "border-white/5 hover:border-secondary-vibrant/40 hover:shadow-xl hover:shadow-secondary-vibrant/5"
+                    ? "border-white/5 hover:border-secondary-vibrant/30 hover:shadow-xl hover:shadow-secondary-vibrant/5"
                     : "border-white/5 opacity-50 grayscale cursor-not-allowed"
                 }`}>
-                <div className="relative h-40 md:h-48 rounded-[22px] overflow-hidden mb-3 bg-white/5">
+                <div className="relative h-40 md:h-48 rounded-2xl overflow-hidden mb-3 bg-white/5">
                   <img src={item.image || "https://picsum.photos/seed/food/400/300"} alt={item.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" />
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" referrerPolicy="no-referrer" />
                   {!item.inStock && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm">
                       <span className="bg-white/10 text-white text-[11px] font-bold px-4 py-1.5 rounded-full uppercase tracking-wider border border-white/20">
@@ -133,7 +131,7 @@ export function MenuView({
                     {item.inStock && (
                       <motion.button whileHover={{ scale: 1.1, rotate: 12 }} whileTap={{ scale: 0.9 }}
                         onClick={(e) => { e.stopPropagation(); onAddToCart(item); }}
-                        className="w-10 h-10 bg-primary-vibrant text-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary-vibrant/30 hover:shadow-primary-vibrant/50 transition-all duration-300">
+                        className="w-10 h-10 bg-primary-vibrant text-white rounded-xl flex items-center justify-center shadow-lg shadow-primary-vibrant/30 hover:shadow-primary-vibrant/50 transition-all duration-300">
                         <Plus className="w-5 h-5" strokeWidth={3} />
                       </motion.button>
                     )}

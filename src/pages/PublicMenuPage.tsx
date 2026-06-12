@@ -49,11 +49,9 @@ export function PublicMenuPage() {
   return (
     <div className="min-h-screen bg-white font-body selection:bg-primary-vibrant">
       {/* Header */}
-      <header className="bg-dark p-10 md:p-16 text-white relative overflow-hidden grain-overlay">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-primary-vibrant/10 rounded-full blur-[100px] -mr-40 -mt-40" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary-vibrant/8 rounded-full blur-[80px] -ml-32 -mb-32" />
-        <div className="absolute top-10 left-[10%] w-20 h-20 border border-secondary-vibrant/10 rotate-45" />
-        <div className="absolute bottom-10 right-[15%] w-16 h-16 border border-primary-vibrant/10 rounded-full" />
+      <header className="bg-dark p-10 md:p-16 text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-primary-vibrant/15 rounded-full blur-[100px] -mr-40 -mt-40" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary-vibrant/10 rounded-full blur-[80px] -ml-32 -mb-32" />
 
         <div className="max-w-7xl mx-auto relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div className="space-y-5">
@@ -106,26 +104,26 @@ export function PublicMenuPage() {
               <motion.div key={item.id} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1, duration: 0.5 }} viewport={{ once: true }}
                 onClick={() => setSelectedProduct(item)}
-                className="bg-white rounded-[32px] overflow-hidden border border-zinc-100 shadow-lg hover:shadow-2xl transition-all duration-500 group cursor-pointer card-hover-lift">
-                <div className="relative h-72 md:h-80 overflow-hidden">
+                className="bg-white rounded-2xl overflow-hidden border border-zinc-100 hover:border-primary-vibrant/20 shadow-sm hover:shadow-xl transition-all duration-300 group cursor-pointer">
+                <div className="relative h-64 overflow-hidden">
                   <img src={item.image || 'https://picsum.photos/seed/food/400/300'} alt={item.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" referrerPolicy="no-referrer" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  <div className="absolute top-5 left-5 bg-secondary-vibrant text-dark px-5 py-2.5 rounded-2xl font-display text-xl tracking-wider shadow-xl shadow-secondary-vibrant/30">
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" referrerPolicy="no-referrer" />
+                  <div className="absolute top-4 left-4 bg-secondary-vibrant text-dark px-4 py-1.5 rounded-lg font-display text-lg tracking-wider shadow-lg">
                     ${item.price.toFixed(2)}
                   </div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>
-                <div className="p-7 space-y-4">
-                  <h3 className="font-display text-2xl uppercase tracking-wider text-zinc-900 line-clamp-1">{item.name}</h3>
-                  <p className="text-zinc-500 font-medium leading-relaxed italic text-sm line-clamp-2">{item.description}</p>
-                  <div className="pt-3 flex items-center justify-between">
-                    <span className={`px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-[0.2em] ${
+                <div className="p-6 space-y-3">
+                  <h3 className="font-display text-xl uppercase tracking-wider text-dark line-clamp-1">{item.name}</h3>
+                  <p className="text-zinc-500 text-sm leading-relaxed line-clamp-2">{item.description}</p>
+                  <div className="flex items-center justify-between pt-3">
+                    <span className={`px-4 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-[0.2em] ${
                       item.inStock ? 'bg-zinc-100 text-zinc-500' : 'bg-red-50 text-red-500'
                     }`}>
                       {item.inStock ? activeCategory : t('menu.outOfStock')}
                     </span>
                     <Link to="/pedir" state={{ preAddProduct: item }} onClick={(e) => e.stopPropagation()}
-                      className="w-12 h-12 bg-primary-vibrant rounded-2xl flex items-center justify-center text-white hover:bg-primary-vibrant/80 transition-colors duration-300 hover:rotate-12 transform shadow-lg shadow-primary-vibrant/30">
+                      className="w-11 h-11 bg-primary-vibrant rounded-xl flex items-center justify-center text-white hover:bg-primary-vibrant/90 transition-all duration-300 shadow-md shadow-primary-vibrant/20 group-hover:shadow-lg group-hover:shadow-primary-vibrant/30">
                       <HandPlatter className="w-5 h-5" />
                     </Link>
                   </div>
@@ -139,7 +137,8 @@ export function PublicMenuPage() {
       </main>
 
       {/* Footer */}
-      <footer className="py-20 bg-dark text-white text-center relative overflow-hidden grain-overlay">
+      <footer className="py-20 bg-dark text-white text-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-t from-transparent via-primary-vibrant/[0.02] to-transparent" />
         <div className="max-w-lg mx-auto space-y-6 relative z-10">
           <div className="w-20 h-20 bg-white/5 p-2 rounded-full shadow-2xl mx-auto flex items-center justify-center border border-white/10">
             {config.logo ? (

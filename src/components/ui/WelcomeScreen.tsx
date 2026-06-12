@@ -40,13 +40,10 @@ export function WelcomeScreen({ onSelectLocation, locations, config }: WelcomeSc
   const visibleLocations = locations;
 
   return (
-    <div className="min-h-screen bg-dark flex flex-col text-white font-body overflow-hidden">
-      {/* Background Decor - brighter */}
+    <div className="min-h-screen bg-[#0c0c0c] flex flex-col text-white font-body overflow-hidden">
+      {/* Background glow */}
       <div className="absolute top-0 left-0 w-full h-72 bg-primary-vibrant/10 blur-[100px] -z-10" />
       <div className="absolute bottom-0 right-0 w-full h-72 bg-secondary-vibrant/8 blur-[100px] -z-10" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-white/5 rounded-full blur-[120px] -z-10" />
-      <div className="absolute top-[20%] left-[10%] w-24 h-24 border border-primary-vibrant/20 rotate-45 animate-float" />
-      <div className="absolute bottom-[30%] right-[15%] w-16 h-16 border border-secondary-vibrant/20 rounded-full animate-float-delayed" />
 
       {/* Top Header */}
       <div className="relative z-20 p-6 flex items-center justify-between max-w-lg mx-auto w-full">
@@ -60,12 +57,12 @@ export function WelcomeScreen({ onSelectLocation, locations, config }: WelcomeSc
         <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', damping: 20, stiffness: 200 }}
           className="mt-12 mb-8 mx-auto relative">
-          <div className="absolute inset-0 bg-primary-vibrant/20 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute inset-0 bg-primary-vibrant/20 rounded-full blur-3xl" />
           {config.logo ? (
             <img src={config.logo} alt={config.name} referrerPolicy="no-referrer"
-              className="relative w-32 h-32 md:w-40 md:h-40 mx-auto rounded-full border-4 border-white/10 shadow-2xl z-10" />
+              className="relative w-32 h-32 md:w-40 md:h-40 mx-auto rounded-full border-2 border-white/10 shadow-2xl z-10" />
           ) : (
-            <div className="relative w-32 h-32 md:w-40 md:h-40 mx-auto rounded-full border-4 border-white/10 shadow-2xl z-10 bg-dark-card flex items-center justify-center">
+            <div className="relative w-32 h-32 md:w-40 md:h-40 mx-auto rounded-full border-2 border-white/10 shadow-2xl z-10 bg-[#141414] flex items-center justify-center">
               <UtensilsCrossed className="w-14 h-14 text-primary-vibrant" />
             </div>
           )}
@@ -80,7 +77,7 @@ export function WelcomeScreen({ onSelectLocation, locations, config }: WelcomeSc
             <h1 className="font-display text-5xl md:text-6xl tracking-wider uppercase text-white leading-none">
               {config.name}
             </h1>
-            <div className="w-12 h-1.5 bg-primary-vibrant rounded-full mt-3" />
+            <div className="w-12 h-1 bg-primary-vibrant rounded-full mt-3" />
           </div>
           <p className="text-zinc-500 text-sm font-bold uppercase tracking-[0.25em]">
             {t("welcome.selectLocation")}
@@ -106,18 +103,18 @@ export function WelcomeScreen({ onSelectLocation, locations, config }: WelcomeSc
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ delay: 0.3 + index * 0.1, type: "spring", damping: 20 }}
                   onClick={() => isLocationOpen(loc) && onSelectLocation(loc)}
-                  className={`group relative overflow-hidden rounded-[28px] flex flex-col transition-all duration-500 text-left ${
+                  className={`group relative overflow-hidden rounded-2xl flex flex-col transition-all duration-500 text-left ${
                     isOpenByTime
-                      ? "bg-dark-card border border-white/5 hover:border-secondary-vibrant/30 hover:shadow-xl hover:shadow-secondary-vibrant/5 hover:-translate-y-1 cursor-pointer"
+                      ? "bg-[#141414] border border-white/5 hover:border-secondary-vibrant/30 hover:shadow-xl hover:shadow-secondary-vibrant/5 hover:-translate-y-1 cursor-pointer"
                       : "bg-white/[0.02] border border-white/5 cursor-not-allowed opacity-60"
                   }`}>
                   <div className="h-40 w-full relative overflow-hidden">
                     <img src={loc.image || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80"}
-                      className={`w-full h-full object-cover transition-transform duration-700 ${isOpenByTime ? "group-hover:scale-110" : ""}`} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-dark-card via-dark-card/30 to-transparent" />
+                      className={`w-full h-full object-cover transition-transform duration-500 ${isOpenByTime ? "group-hover:scale-105" : ""}`} />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-[#141414]/60 to-transparent" />
                     <div className="absolute top-4 right-4 flex gap-2">
-                      <span className={`px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-[0.2em] shadow-xl ${
-                        isOpenByTime ? "bg-secondary-vibrant text-dark backdrop-blur-sm" : "bg-zinc-800/90 text-zinc-400 backdrop-blur-sm"
+                      <span className={`px-4 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-[0.2em] ${
+                        isOpenByTime ? "bg-secondary-vibrant text-dark" : "bg-zinc-800/90 text-zinc-400"
                       }`}>
                         {isOpenByTime ? t("locations.open") : t("locations.closed")}
                       </span>
@@ -139,7 +136,7 @@ export function WelcomeScreen({ onSelectLocation, locations, config }: WelcomeSc
                       <MapPin className="w-4 h-4 text-primary-vibrant flex-shrink-0 mt-0.5" />
                       <p className="text-zinc-500 text-xs font-bold uppercase tracking-tight line-clamp-1">{loc.address}</p>
                     </div>
-                    <div className="bg-white/5 p-3 rounded-2xl group-hover:bg-primary-vibrant group-hover:text-white transition-all duration-300 transform group-hover:rotate-12 border border-white/5">
+                    <div className="bg-white/5 p-3 rounded-xl group-hover:bg-primary-vibrant group-hover:text-white transition-all duration-300 border border-white/5">
                       <ArrowRight className="w-5 h-5" />
                     </div>
                   </div>

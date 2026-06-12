@@ -22,11 +22,11 @@ export function ProductModal({ product, onClose, onAddToCart, showAddToCart = tr
       {/* Modal Content */}
       <motion.div initial={{ opacity: 0, scale: 0.85, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.85, y: 30 }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="relative w-full max-w-2xl bg-dark-card rounded-[32px] overflow-hidden shadow-2xl flex flex-col md:flex-row border border-white/5">
+        className="relative w-full max-w-2xl bg-[#141414] rounded-2xl overflow-hidden shadow-2xl flex flex-col md:flex-row border border-white/5">
 
         {/* Close Button */}
         <button onClick={onClose}
-          className="absolute top-5 right-5 z-10 w-11 h-11 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white hover:bg-white/20 hover:rotate-90 transition-all duration-300 border border-white/10">
+          className="absolute top-5 right-5 z-10 w-11 h-11 bg-black/50 backdrop-blur-md rounded-xl flex items-center justify-center text-white hover:bg-white/20 hover:rotate-90 transition-all duration-300 border border-white/10">
           <X className="w-5 h-5" />
         </button>
 
@@ -34,7 +34,7 @@ export function ProductModal({ product, onClose, onAddToCart, showAddToCart = tr
         <div className="w-full md:w-[55%] h-64 md:h-auto relative overflow-hidden">
           <img src={product.image} alt={product.name}
             className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-          <div className="absolute inset-0 bg-gradient-to-t from-dark-card via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-dark-card" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:to-[#141414]" />
         </div>
 
         {/* Details Side */}
@@ -64,22 +64,17 @@ export function ProductModal({ product, onClose, onAddToCart, showAddToCart = tr
               {showAddToCart && product.inStock && onAddToCart && (
                 <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                   onClick={() => { onAddToCart(product); onClose(); }}
-                  className="vibrant-gradient text-white px-7 py-4 rounded-[18px] font-display uppercase tracking-[0.2em] text-sm shadow-xl shadow-primary-vibrant/30 flex items-center gap-3 hover:shadow-primary-vibrant/50 transition-shadow duration-300">
+                  className="bg-primary-vibrant text-white px-7 py-4 rounded-xl font-display uppercase tracking-[0.2em] text-sm shadow-xl shadow-primary-vibrant/30 flex items-center gap-3 hover:shadow-primary-vibrant/50 transition-shadow duration-300">
                   {t("nav.orderNow")}
                   <ShoppingBag className="w-5 h-5" />
                 </motion.button>
               )}
               {!product.inStock && (
-                <span className="bg-white/5 text-zinc-500 px-6 py-3 rounded-2xl font-display uppercase tracking-[0.2em] text-[11px] border border-white/5">
+                <span className="bg-white/5 text-zinc-500 px-6 py-3 rounded-xl font-display uppercase tracking-[0.2em] text-[11px] border border-white/5">
                   {t("menu.outOfStock")}
                 </span>
               )}
             </div>
-          </div>
-
-          {/* Decoration */}
-          <div className="absolute -bottom-10 -right-10 text-white/[0.02] pointer-events-none">
-            <Utensils className="w-40 h-40" />
           </div>
         </div>
       </motion.div>
