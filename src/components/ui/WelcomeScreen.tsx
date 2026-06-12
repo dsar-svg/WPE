@@ -53,7 +53,7 @@ export function WelcomeScreen({ onSelectLocation, locations, config }: WelcomeSc
         </Link>
       </div>
 
-      <div className="flex-1 flex flex-col p-8 pt-0 text-center max-w-lg mx-auto w-full relative z-10">
+      <div className="flex-1 flex flex-col p-8 pt-0 text-center max-w-lg mx-auto w-full relative z-10 bg-gradient-to-b from-transparent via-primary-vibrant/[0.02] to-transparent">
         <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', damping: 20, stiffness: 200 }}
           className="mt-12 mb-8 mx-auto relative">

@@ -159,7 +159,7 @@ export function LandingPage() {
       </section>
 
       {/* About */}
-      <section id="about" className="py-28 px-6 max-w-6xl mx-auto relative scroll-mt-20">
+      <section id="about" className="py-28 px-6 max-w-6xl mx-auto relative scroll-mt-20 bg-gradient-to-br from-red-50/40 via-white to-red-50/20">
         <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
           className="grid md:grid-cols-[1fr_2fr] gap-12 items-center">
           <div className="space-y-4">
@@ -184,7 +184,7 @@ export function LandingPage() {
       </section>
 
       {/* Featured */}
-      <section id="featured" className="py-28 px-6 md:px-12 bg-zinc-50 relative overflow-hidden scroll-mt-20">
+      <section id="featured" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20 bg-gradient-to-br from-red-50/50 via-zinc-50 to-red-50/30">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
             <div className="space-y-3">
@@ -224,7 +224,7 @@ export function LandingPage() {
       </section>
 
       {/* Locations */}
-      <section id="locations" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20">
+      <section id="locations" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20 bg-gradient-to-tl from-red-50/30 via-white to-red-50/20">
         <div className="max-w-7xl mx-auto space-y-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="space-y-3">
@@ -279,7 +279,7 @@ export function LandingPage() {
       </section>
 
       {/* Reviews */}
-      <section id="reviews" className="py-28 bg-zinc-50 relative overflow-hidden scroll-mt-20">
+      <section id="reviews" className="py-28 relative overflow-hidden scroll-mt-20 bg-gradient-to-br from-red-50/40 via-zinc-50 to-red-50/20">
         <div className="text-center mb-16 space-y-3 px-6">
           <span className="text-secondary-vibrant font-display text-lg tracking-[0.35em] uppercase italic">{t('reviews.badge')}</span>
           <h2 className="font-display text-4xl md:text-6xl lg:text-7xl uppercase tracking-wider text-dark leading-none">{t('reviews.title')}</h2>
@@ -314,7 +314,7 @@ export function LandingPage() {
       </section>
 
       {/* Socials */}
-      <section id="socials" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20">
+      <section id="socials" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20 bg-gradient-to-tr from-red-50/30 via-white to-red-50/20">
         <div className="max-w-4xl mx-auto flex flex-col items-center text-center space-y-10">
           <div className="space-y-3">
             <h3 className="font-display text-4xl md:text-5xl uppercase tracking-wider text-dark">{t('socials.title')}</h3>

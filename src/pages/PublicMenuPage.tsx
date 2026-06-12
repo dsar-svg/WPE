@@ -89,7 +89,7 @@ export function PublicMenuPage() {
       </div>
 
       {/* Menu Grid */}
-      <main className="max-w-7xl mx-auto px-6 py-16">
+      <main className="max-w-7xl mx-auto px-6 py-16 bg-gradient-to-br from-red-50/30 via-white to-red-50/20">
         {filteredItems.length === 0 ? (
           <div className="py-24 text-center space-y-6">
             <div className="w-24 h-24 bg-zinc-100 rounded-[32px] flex items-center justify-center mx-auto">
@@ -138,7 +138,7 @@ export function PublicMenuPage() {
 
       {/* Footer */}
       <footer className="py-20 bg-dark text-white text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-transparent via-primary-vibrant/[0.02] to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-primary-vibrant/10 via-transparent to-transparent" />
         <div className="max-w-lg mx-auto space-y-6 relative z-10">
           <div className="w-20 h-20 bg-white/5 p-2 rounded-full shadow-2xl mx-auto flex items-center justify-center border border-white/10">
             {config.logo ? (

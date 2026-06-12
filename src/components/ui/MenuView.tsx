@@ -88,7 +88,7 @@ export function MenuView({
       </div>
 
       {/* Product List */}
-      <div className="px-5 py-8 max-w-7xl mx-auto w-full flex-1">
+      <div className="px-5 py-8 max-w-7xl mx-auto w-full flex-1 bg-gradient-to-b from-transparent via-primary-vibrant/[0.02] to-transparent">
         {filteredItems.length === 0 ? (
           <div className="py-20 text-center space-y-4">
             <div className="w-20 h-20 bg-white/5 rounded-[28px] flex items-center justify-center mx-auto border border-white/5">
