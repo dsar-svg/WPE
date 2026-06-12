@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { motion } from 'motion/react';
 import {
   LayoutDashboard, MapPin, Utensils, Settings, ShoppingBag,
@@ -17,6 +18,7 @@ interface AdminSidebarProps {
   onLogout: () => void;
   isCollapsed?: boolean;
   onToggle?: () => void;
+  isSuperAdmin?: boolean;
 }
 
 const navItems: { id: AdminPageTab; label: string; icon: any }[] = [
@@ -35,7 +37,12 @@ export function AdminSidebar({
   userName,
   userAvatar,
   onLogout,
+  isSuperAdmin = true,
 }: AdminSidebarProps) {
+  const visibleNavItems = useMemo(
+    () => isSuperAdmin ? navItems : navItems.filter(item => item.id !== 'sedes'),
+    [isSuperAdmin]
+  );
   return (
     <aside className="fixed left-0 top-0 bottom-0 w-64 bg-zinc-900 border-r border-zinc-800 z-50 flex flex-col">
       <div className="p-6 border-b border-zinc-800">
@@ -59,7 +66,7 @@ export function AdminSidebar({
       </div>
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
           return (

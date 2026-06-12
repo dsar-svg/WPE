@@ -10,12 +10,14 @@ import { CategoryModal } from '../components/admin/CategoryModal';
 import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { SettingsPage } from '../components/admin/SettingsPage';
 import { OrdersPage } from '../components/admin/OrdersPage';
+import { DashboardView } from '../components/admin/DashboardView';
 import { Pagination } from '../components/ui/Pagination';
 const formatTime12h = (time: string) => { if (!time) return ''; const [hours, minutes] = time.split(':');
 const h = parseInt(hours);
 const ampm = h >= 12 ? 'PM' : 'AM'; const h12 = h % 12 || 12; return `${h12}:${minutes} ${ampm}`;};
-export function AdminPage() { const { locations, menuItems, categories, config, isAdmin, isLoading, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, orders, signIn, signOut } = useRestaurant();
+export function AdminPage() { const { locations, menuItems, categories, config, isAdmin, isLoading, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, orders, signIn, signOut } = useRestaurant(); const isSedesHidden = !isSuperAdmin;
 const [activeTab, setActiveTab] = useState<'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos'>('dashboard');
+useEffect(() => { if (isSedesHidden && activeTab === 'sedes') setActiveTab('dashboard'); }, [isSedesHidden, activeTab]);
 const [authError, setAuthError] = useState<string | null>(null);
 const [email, setEmail] = useState('');
 const [password, setPassword] = useState('');
@@ -97,6 +99,7 @@ return (
       config={config}
       userEmail={userEmail}
       onLogout={() => signOut()}
+      isSuperAdmin={isSuperAdmin}
     />
 
     <main className="ml-64 flex-1 min-h-screen p-8">
@@ -322,92 +325,12 @@ return (
         )}
 
         {activeTab === 'dashboard' && (
-          <div className="space-y-8">
-            <div>
-              <h2 className="text-2xl font-black">Dashboard</h2>
-              <p className="text-zinc-500 text-sm">Resumen del restaurante</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-[32px] p-8">
-                <MapPin className="w-8 h-8 text-primary-vibrant mb-4" />
-                <p className="text-3xl font-black">{locations.length}</p>
-                <p className="text-zinc-500 text-sm mt-1">Sedes activas</p>
-              </div>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-[32px] p-8">
-                <Utensils className="w-8 h-8 text-secondary-vibrant mb-4" />
-                <p className="text-3xl font-black">{menuItems.length}</p>
-                <p className="text-zinc-500 text-sm mt-1">Productos en menú</p>
-              </div>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-[32px] p-8">
-                <ShoppingBag className="w-8 h-8 text-green-500 mb-4" />
-                <p className="text-3xl font-black">{orders.length}</p>
-                <p className="text-zinc-500 text-sm mt-1">Pedidos totales</p>
-              </div>
-              <div className="bg-zinc-900 border border-zinc-800 rounded-[32px] p-8">
-                <DollarSign className="w-8 h-8 text-yellow-500 mb-4" />
-                <p className="text-3xl font-black">${totalFacturado.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                <p className="text-zinc-500 text-sm mt-1">Total facturado</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-[32px] p-8">
-                <div className="flex items-center gap-3 mb-6">
-                  <Trophy className="w-6 h-6 text-yellow-500" />
-                  <h3 className="text-lg font-black">Top 5 Más Vendidos</h3>
-                </div>
-                {topSelling.length === 0 ? (
-                  <p className="text-zinc-600 text-sm">Sin datos de pedidos</p>
-                ) : (
-                  <div className="space-y-4">
-                    {topSelling.map(([name, qty], i) => {
-                      const maxQty = topSelling[0][1];
-                      const pct = maxQty > 0 ? (qty / maxQty) * 100 : 0;
-                      return (
-                        <div key={name} className="space-y-1.5">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-bold text-zinc-300">{i + 1}. {name}</span>
-                            <span className="text-xs font-black text-primary-vibrant">{qty} uds</span>
-                          </div>
-                          <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-primary-vibrant rounded-full" style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-zinc-900 border border-zinc-800 rounded-[32px] p-8">
-                <div className="flex items-center gap-3 mb-6">
-                  <TrendingDown className="w-6 h-6 text-red-500" />
-                  <h3 className="text-lg font-black">Top 5 Menos Vendidos</h3>
-                </div>
-                {leastSelling.length === 0 ? (
-                  <p className="text-zinc-600 text-sm">Sin datos de pedidos</p>
-                ) : (
-                  <div className="space-y-4">
-                    {leastSelling.map(([name, qty], i) => {
-                      const maxQty = topSelling[0]?.[1] || 1;
-                      const pct = maxQty > 0 ? (qty / maxQty) * 100 : 0;
-                      return (
-                        <div key={name} className="space-y-1.5">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-bold text-zinc-300">{i + 1}. {name}</span>
-                            <span className="text-xs font-black text-red-500">{qty} uds</span>
-                          </div>
-                          <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-red-500 rounded-full" style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <DashboardView
+            orders={orders}
+            locations={locations}
+            menuItems={menuItems}
+            totalFacturado={totalFacturado}
+          />
         )}
       </div>
     </main>

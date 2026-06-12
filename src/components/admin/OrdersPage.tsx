@@ -112,6 +112,11 @@ export function OrdersPage() {
           <thead>
             <tr className="bg-zinc-900 border-b border-zinc-800">
               <th className="text-left p-4 font-bold text-zinc-400 uppercase tracking-[0.15em] text-[11px]">
+                <button onClick={() => toggleSort('created_at')} className="flex items-center gap-1.5 hover:text-white transition-colors">
+                  <Clock className="w-3.5 h-3.5" /> Fecha <SortIcon field="created_at" />
+                </button>
+              </th>
+              <th className="text-left p-4 font-bold text-zinc-400 uppercase tracking-[0.15em] text-[11px]">
                 <button onClick={() => toggleSort('customer_name')} className="flex items-center gap-1.5 hover:text-white transition-colors">
                   <User className="w-3.5 h-3.5" /> Cliente <SortIcon field="customer_name" />
                 </button>
@@ -126,16 +131,12 @@ export function OrdersPage() {
                   Total <SortIcon field="total" />
                 </button>
               </th>
-              <th className="text-right p-4 font-bold text-zinc-400 uppercase tracking-[0.15em] text-[11px]">
-                <button onClick={() => toggleSort('created_at')} className="flex items-center gap-1.5 hover:text-white transition-colors justify-end w-full">
-                  <Clock className="w-3.5 h-3.5" /> Fecha <SortIcon field="created_at" />
-                </button>
-              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-800/50">
             {filtered.map((order) => (
               <tr key={order.id} className="bg-zinc-900/30 hover:bg-zinc-800/40 transition-colors">
+                <td className="p-4 text-[11px] text-zinc-500 whitespace-nowrap">{formatDate(order.created_at)}</td>
                 <td className="p-4">
                   <span className="font-bold text-white text-sm">{order.customer_name}</span>
                 </td>
@@ -176,7 +177,6 @@ export function OrdersPage() {
                 </td>
                 <td className="p-4 text-xs text-zinc-500">{getLocationName(order.location_id)}</td>
                 <td className="p-4 text-right font-bold text-green-500 text-sm">${order.total.toFixed(2)}</td>
-                <td className="p-4 text-right text-[11px] text-zinc-500 whitespace-nowrap">{formatDate(order.created_at)}</td>
               </tr>
             ))}
           </tbody>

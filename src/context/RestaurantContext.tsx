@@ -227,7 +227,12 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     staleTime: 30000,
     enabled: isAdmin,
   });
-  const orders = ordersQuery.data || [];
+  const rawOrders = ordersQuery.data || [];
+  const orders = useMemo(() => {
+    if (isSuperAdmin) return rawOrders;
+    if (isLocalAdmin && managedLocationId) return rawOrders.filter(o => o.location_id === managedLocationId);
+    return rawOrders;
+  }, [rawOrders, isSuperAdmin, isLocalAdmin, managedLocationId]);
 
   const isFirstLoad = useRef(true);
   useEffect(() => {
