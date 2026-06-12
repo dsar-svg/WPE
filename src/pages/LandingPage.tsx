@@ -118,9 +118,9 @@ export function LandingPage() {
 
       {/* Hero */}
       <section id="top" className="relative min-h-[90vh] flex items-center justify-center bg-dark text-white overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-dark via-dark to-primary-vibrant/20" />
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary-vibrant/15 rounded-full blur-[120px] -mr-48 -mt-48" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-secondary-vibrant/10 rounded-full blur-[100px] -ml-48 -mb-48" />
+        <div className="absolute inset-0 bg-gradient-to-br from-dark via-dark to-primary-vibrant/30" />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary-vibrant/20 rounded-full blur-[120px] -mr-48 -mt-48" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-secondary-vibrant/15 rounded-full blur-[100px] -ml-48 -mb-48" />
 
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="relative z-10 text-center space-y-10 px-6 max-w-4xl mx-auto">
@@ -159,33 +159,35 @@ export function LandingPage() {
       </section>
 
       {/* About */}
-      <section id="about" className="py-28 px-6 max-w-6xl mx-auto relative scroll-mt-20 bg-gradient-to-br from-red-50/40 via-white to-red-50/20">
-        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
-          className="grid md:grid-cols-[1fr_2fr] gap-12 items-center">
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <div className="w-12 h-1 bg-primary-vibrant rounded-full" />
-              <div className="w-6 h-1 bg-secondary-vibrant rounded-full" />
-            </div>
-            <h2 className="font-display text-5xl md:text-7xl uppercase tracking-wider leading-none text-dark">{t('about.title')}</h2>
-          </div>
-          <div className="space-y-6">
-            <p className="text-xl md:text-2xl text-zinc-700 leading-relaxed font-light border-l-2 border-primary-vibrant pl-6">
-              "{config.aboutUs || t('about.default')}"
-            </p>
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-primary-vibrant/10 rounded-full flex items-center justify-center">
-                <Utensils className="w-5 h-5 text-primary-vibrant" />
+      <section id="about" className="py-28 px-6 relative overflow-hidden scroll-mt-20 bg-gradient-to-br from-primary-vibrant/[0.07] via-white to-primary-vibrant/[0.03]">
+        <div className="max-w-6xl mx-auto relative">
+          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
+            className="grid md:grid-cols-[1fr_2fr] gap-12 items-center">
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <div className="w-12 h-1 bg-primary-vibrant rounded-full" />
+                <div className="w-6 h-1 bg-secondary-vibrant rounded-full" />
               </div>
-              <div className="h-px flex-1 bg-gradient-to-r from-primary-vibrant via-secondary-vibrant to-primary-vibrant" />
+              <h2 className="font-display text-5xl md:text-7xl uppercase tracking-wider leading-none text-dark">{t('about.title')}</h2>
             </div>
-          </div>
-        </motion.div>
+            <div className="space-y-6">
+              <p className="text-xl md:text-2xl text-zinc-700 leading-relaxed font-light border-l-2 border-primary-vibrant pl-6">
+                "{config.aboutUs || t('about.default')}"
+              </p>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-primary-vibrant/10 rounded-full flex items-center justify-center">
+                  <Utensils className="w-5 h-5 text-primary-vibrant" />
+                </div>
+                <div className="h-px flex-1 bg-gradient-to-r from-primary-vibrant via-secondary-vibrant to-primary-vibrant" />
+              </div>
+            </div>
+          </motion.div>
+        </div>
       </section>
 
       {/* Featured */}
-      <section id="featured" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20 bg-gradient-to-br from-red-50/50 via-zinc-50 to-red-50/30">
-        <div className="max-w-7xl mx-auto">
+      <section id="featured" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20 bg-gradient-to-br from-primary-vibrant/[0.08] via-zinc-50 to-primary-vibrant/[0.04]">
+        <div className="max-w-7xl mx-auto relative">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
             <div className="space-y-3">
               <span className="text-secondary-vibrant font-display text-lg tracking-[0.35em] uppercase">{t('featured.badge')}</span>
@@ -224,8 +226,8 @@ export function LandingPage() {
       </section>
 
       {/* Locations */}
-      <section id="locations" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20 bg-gradient-to-tl from-red-50/30 via-white to-red-50/20">
-        <div className="max-w-7xl mx-auto space-y-12">
+      <section id="locations" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20 bg-gradient-to-tl from-primary-vibrant/[0.06] via-white to-primary-vibrant/[0.03]">
+        <div className="max-w-7xl mx-auto space-y-12 relative">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="space-y-3">
               <span className="text-primary-vibrant font-display text-lg tracking-[0.35em] uppercase">{t('locations.badge')}</span>
@@ -279,7 +281,7 @@ export function LandingPage() {
       </section>
 
       {/* Reviews */}
-      <section id="reviews" className="py-28 relative overflow-hidden scroll-mt-20 bg-gradient-to-br from-red-50/40 via-zinc-50 to-red-50/20">
+      <section id="reviews" className="py-28 relative overflow-hidden scroll-mt-20 bg-gradient-to-br from-primary-vibrant/[0.07] via-zinc-50 to-primary-vibrant/[0.04]">
         <div className="text-center mb-16 space-y-3 px-6">
           <span className="text-secondary-vibrant font-display text-lg tracking-[0.35em] uppercase italic">{t('reviews.badge')}</span>
           <h2 className="font-display text-4xl md:text-6xl lg:text-7xl uppercase tracking-wider text-dark leading-none">{t('reviews.title')}</h2>
@@ -314,8 +316,8 @@ export function LandingPage() {
       </section>
 
       {/* Socials */}
-      <section id="socials" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20 bg-gradient-to-tr from-red-50/30 via-white to-red-50/20">
-        <div className="max-w-4xl mx-auto flex flex-col items-center text-center space-y-10">
+      <section id="socials" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20 bg-gradient-to-tr from-primary-vibrant/[0.06] via-white to-primary-vibrant/[0.03]">
+        <div className="max-w-4xl mx-auto flex flex-col items-center text-center space-y-10 relative">
           <div className="space-y-3">
             <h3 className="font-display text-4xl md:text-5xl uppercase tracking-wider text-dark">{t('socials.title')}</h3>
             <p className="text-zinc-500 text-base max-w-md mx-auto">{t('socials.tagline')}</p>
@@ -339,7 +341,7 @@ export function LandingPage() {
 
       {/* CTA */}
       <section className="py-20 bg-dark text-white text-center px-6 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary-vibrant/5 via-transparent to-secondary-vibrant/5" />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary-vibrant/10 via-transparent to-secondary-vibrant/10" />
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-vibrant via-secondary-vibrant to-primary-vibrant" />
         <div className="relative z-10 space-y-6">
           <h2 className="font-display text-4xl md:text-5xl uppercase tracking-wider">{t('cta.title')}</h2>
