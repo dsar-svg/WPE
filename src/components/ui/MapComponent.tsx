@@ -9,7 +9,7 @@ const pandaIcon = new L.Icon({
   iconAnchor: [32, 64],
 });
 
-const createCustomIcon = (color = '#d92323') => {
+const createCustomIcon = (color = 'var(--color-primary-vibrant)') => {
   return L.divIcon({
     className: 'custom-marker',
     html: `
@@ -160,7 +160,7 @@ export function MapComponent({
         {!fixedCenterMarker && markerPosition && (
           <Marker
             position={markerPosition}
-            icon={createCustomIcon(isPreview ? '#25D366' : '#d92323')}
+            icon={createCustomIcon(isPreview ? '#25D366' : 'var(--color-primary-vibrant)')}
           />
         )}
       </MapContainer>
@@ -171,7 +171,7 @@ export function MapComponent({
             height: 0,
             borderLeft: '14px solid transparent',
             borderRight: '14px solid transparent',
-            borderBottom: '28px solid #d92323',
+            borderBottom: '28px solid var(--color-primary-vibrant)',
             filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
             transform: 'translateY(-50%)',
           }} />
@@ -183,7 +183,7 @@ export function MapComponent({
             width: 12,
             height: 12,
             borderRadius: '50%',
-            backgroundColor: '#d92323',
+            backgroundColor: 'var(--color-primary-vibrant)',
             border: '3px solid white',
             boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
             marginTop: -14,

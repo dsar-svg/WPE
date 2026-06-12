@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useMemo, useRef, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, ReactNode, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { Location, Product, RestaurantConfig, Category, Order } from '../types';
@@ -234,7 +234,6 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     return rawOrders;
   }, [rawOrders, isSuperAdmin, isLocalAdmin, managedLocationId]);
 
-  const isFirstLoad = useRef(true);
   useEffect(() => {
     if (configRow !== null) {
       document.title = config.name;
@@ -257,7 +256,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
     let isSuper = adminEmails.has(email);
-    let localLoc = locations.find(l => l.adminEmail === email);
+    const localLoc = locations.find(l => l.adminEmail === email);
     if (!isSuper && !localLoc) {
       const fresh = await queryClient.fetchQuery({
         queryKey: ['admins'],
@@ -278,9 +277,9 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => { await supabase.auth.signOut(); };
 
-  const invalidate = (key: string[]) => queryClient.invalidateQueries({ queryKey: key });
+  const invalidate = useCallback((key: string[]) => queryClient.invalidateQueries({ queryKey: key }), [queryClient]);
 
-  const updateConfig = async (newConfig: any) => {
+  const updateConfig = useCallback(async (newConfig: any) => {
     const dbRow: Record<string, any> = {};
     if (newConfig.name !== undefined) dbRow.name = newConfig.name;
     if (newConfig.logo !== undefined) dbRow.logo = newConfig.logo;
@@ -296,9 +295,9 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.from('config').update(dbRow).eq('id', 1);
     if (error) throw error;
     invalidate(['config']);
-  };
+  }, [invalidate]);
 
-  const updateCategory = async (cat: any) => {
+  const updateCategory = useCallback(async (cat: any) => {
     try {
       const dbRow: Record<string, any> = {};
       if (cat.name !== undefined) dbRow.name = cat.name;
@@ -313,9 +312,9 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
       }
       invalidate(['categories']);
     } catch (error) { console.error('Error updating category:', error); }
-  };
+  }, [invalidate]);
 
-  const updateLocation = async (loc: any) => {
+  const updateLocation = useCallback(async (loc: any) => {
     try {
       const dbRow: Record<string, any> = {};
       if (loc.name !== undefined) dbRow.name = loc.name;
@@ -340,9 +339,9 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
       }
       invalidate(['locations']);
     } catch (error) { console.error('Error updating location:', error); }
-  };
+  }, [invalidate]);
 
-  const updateProduct = async (prod: any) => {
+  const updateProduct = useCallback(async (prod: any) => {
     try {
       const dbRow: Record<string, any> = {};
       if (prod.name !== undefined) dbRow.name = prod.name;
@@ -362,24 +361,24 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
       }
       invalidate(['menu_items']);
     } catch (error) { console.error('Error updating product:', error); }
-  };
+  }, [invalidate]);
 
-  const deleteLocation = async (id: string) => {
+  const deleteLocation = useCallback(async (id: string) => {
     try { await supabase.from('locations').delete().eq('id', id); invalidate(['locations']); }
     catch (error) { console.error('Error deleting location:', error); }
-  };
+  }, [invalidate]);
 
-  const deleteProduct = async (id: string) => {
+  const deleteProduct = useCallback(async (id: string) => {
     try { await supabase.from('menu_items').delete().eq('id', id); invalidate(['menu_items']); }
     catch (error) { console.error('Error deleting product:', error); }
-  };
+  }, [invalidate]);
 
-  const deleteCategory = async (id: string) => {
+  const deleteCategory = useCallback(async (id: string) => {
     try { await supabase.from('categories').delete().eq('id', id); invalidate(['categories']); }
     catch (error) { console.error('Error deleting category:', error); }
-  };
+  }, [invalidate]);
 
-  const createOrder = async (order: Omit<Order, 'id' | 'created_at'>) => {
+  const createOrder = useCallback(async (order: Omit<Order, 'id' | 'created_at'>) => {
     try {
       const { error } = await supabase.from('orders').insert({
         location_id: order.location_id, customer_name: order.customer_name, customer_phone: order.customer_phone,
@@ -391,21 +390,23 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       invalidate(['orders']);
     } catch (error) { console.error('Error creating order:', error); throw error; }
-  };
+  }, [invalidate]);
 
   const fetchOrders = useCallback(() => ordersQuery.refetch(), [ordersQuery]);
 
   const isLoading = !sessionReady || !dataFetched;
 
+  const value = useMemo(() => ({
+    locations, menuItems, categories, config, orders,
+    isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail,
+    selectedLocation, setSelectedLocation,
+    updateLocation, updateProduct, updateConfig, updateCategory,
+    deleteLocation, deleteProduct, deleteCategory,
+    createOrder, fetchOrders, signIn, signUp, signOut,
+  }), [locations, menuItems, categories, config, orders, isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, selectedLocation, setSelectedLocation, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, createOrder, fetchOrders, signIn, signUp, signOut]);
+
   return (
-    <RestaurantContext.Provider value={{
-      locations, menuItems, categories, config, orders,
-      isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail,
-      selectedLocation, setSelectedLocation,
-      updateLocation, updateProduct, updateConfig, updateCategory,
-      deleteLocation, deleteProduct, deleteCategory,
-      createOrder, fetchOrders, signIn, signUp, signOut,
-    }}>
+    <RestaurantContext.Provider value={value}>
       {children}
     </RestaurantContext.Provider>
   );

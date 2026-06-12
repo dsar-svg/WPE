@@ -118,8 +118,9 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Categoría</label>
+              <label htmlFor="product-category" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Categoría</label>
               <select
+                id="product-category"
                 className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
                 value={data.category}
                 onChange={e => setData({...data, category: e.target.value})}
@@ -133,16 +134,18 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
 
           <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Nombre del Producto</label>
+              <label htmlFor="product-name" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Nombre del Producto</label>
               <input
+                id="product-name"
                 className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
                 value={data.name}
                 onChange={e => setData({...data, name: e.target.value})}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Precio ($)</label>
+              <label htmlFor="product-price" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Precio ($)</label>
               <input
+                id="product-price"
                 type="number"
                 step="0.01"
                 className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
@@ -154,8 +157,9 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Descripción</label>
+              <label htmlFor="product-description" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Descripción</label>
               <textarea
+                id="product-description"
                 className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none h-32 resize-none"
                 value={data.description}
                 onChange={e => setData({...data, description: e.target.value})}

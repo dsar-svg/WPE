@@ -1,8 +1,19 @@
-
-import { useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
 import { Product, CartItem } from '../types';
 
-export function useCart() {
+interface CartContextType {
+  items: CartItem[];
+  addToCart: (product: Product) => void;
+  removeFromCart: (productId: string) => void;
+  updateQuantity: (productId: string, quantity: number) => void;
+  updateNotes: (productId: string, notes: string) => void;
+  clearCart: () => void;
+  total: number;
+}
+
+const CartContext = createContext<CartContextType | null>(null);
+
+export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
   const addToCart = useCallback((product: Product) => {
@@ -41,9 +52,9 @@ export function useCart() {
     setItems([]);
   }, []);
 
-  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const total = useMemo(() => items.reduce((sum, item) => sum + item.price * item.quantity, 0), [items]);
 
-  return {
+  const value = useMemo(() => ({
     items,
     addToCart,
     removeFromCart,
@@ -51,5 +62,19 @@ export function useCart() {
     updateNotes,
     clearCart,
     total,
-  };
+  }), [items, addToCart, removeFromCart, updateQuantity, updateNotes, clearCart, total]);
+
+  return (
+    <CartContext.Provider value={value}>
+      {children}
+    </CartContext.Provider>
+  );
+}
+
+export function useCart() {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error('useCart must be used within a CartProvider');
+  }
+  return context;
 }

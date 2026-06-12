@@ -19,12 +19,59 @@ export function LandingPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [isMarqueePaused, setIsMarqueePaused] = useState(false);
+  const [activeSection, setActiveSection] = useState('about');
   const marqueeControls = useAnimation();
+  const marqueeRef = useRef<HTMLDivElement>(null);
+
+  // Pause marquee when off-screen for performance
+  useEffect(() => {
+    const marqueeElement = marqueeRef.current;
+    if (!marqueeElement) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) {
+          marqueeControls.stop();
+        } else if (!isMarqueePaused) {
+          marqueeControls.start({ x: [0, -1000], transition: { duration: 20, repeat: Infinity, ease: "linear", repeatType: "loop" } });
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(marqueeElement);
+    return () => observer.disconnect();
+  }, [isMarqueePaused, marqueeControls]);
 
   useEffect(() => {
     if (isMarqueePaused) { marqueeControls.stop(); }
     else { marqueeControls.start({ x: [0, -1000], transition: { duration: 20, repeat: Infinity, ease: "linear", repeatType: "loop" } }); }
   }, [isMarqueePaused, marqueeControls]);
+
+  // Track active section for navbar indicator
+  useEffect(() => {
+    const sectionIds = ['about', 'featured', 'locations', 'reviews', 'socials'];
+    const observers: IntersectionObserver[] = [];
+
+    sectionIds.forEach(id => {
+      const element = document.getElementById(id);
+      if (!element) return;
+
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setActiveSection(id);
+          }
+        },
+        { threshold: 0.3, rootMargin: '-80px 0px -50% 0px' }
+      );
+
+      observer.observe(element);
+      observers.push(observer);
+    });
+
+    return () => observers.forEach(o => o.disconnect());
+  }, [isLoading]);
 
   if (isLoading) return null;
 
@@ -54,9 +101,9 @@ export function LandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-white font-body text-zinc-900 pt-16 md:pt-0">
+    <div className="min-h-screen bg-zinc-50 font-body text-zinc-900 pt-16 md:pt-0">
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-[100] bg-white/90 backdrop-blur-2xl border-b border-zinc-100 px-6 py-4 md:px-12">
+      <nav className="fixed top-0 left-0 right-0 z-[100] bg-white/90 backdrop-blur-2xl border-b-2 border-primary-vibrant/20 px-6 py-4 md:px-12">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div onClick={() => scrollToSection('top')} className="flex items-center gap-3 cursor-pointer group">
             {config.logo ? (
@@ -70,13 +117,23 @@ export function LandingPage() {
           </div>
 
           <div className="hidden lg:flex items-center gap-8">
-            <Link to="/menu" className="text-[11px] font-bold uppercase tracking-[0.25em] text-ink-muted hover:text-primary-vibrant transition-colors duration-300">
+            <Link to="/menu" className="relative text-[11px] font-bold uppercase tracking-[0.25em] text-ink-muted hover:text-primary-vibrant transition-colors duration-300 py-2 group">
               {t('nav.menu')}
+              <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-full group-hover:w-full transition-all duration-300" />
             </Link>
             {navLinks.map((link) => (
               <button key={link.id} onClick={() => scrollToSection(link.id)}
-                className="text-[11px] font-bold uppercase tracking-[0.25em] text-ink-muted hover:text-primary-vibrant transition-colors duration-300">
+                className={`relative text-[11px] font-bold uppercase tracking-[0.25em] transition-colors duration-300 py-2 group ${
+                  activeSection === link.id ? 'text-primary-vibrant' : 'text-ink-muted hover:text-primary-vibrant'
+                }`}>
                 {link.label}
+                <span className={`absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-full transition-all duration-300 ${
+                  activeSection === link.id ? 'w-full' : 'w-0 group-hover:w-full'
+                }`} />
+                {activeSection === link.id && (
+                  <motion.span layoutId="navIndicator" className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-primary-vibrant rounded-full"
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }} />
+                )}
               </button>
             ))}
           </div>
@@ -87,7 +144,7 @@ export function LandingPage() {
               {t('nav.orderNow')}
             </Link>
             <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 bg-zinc-100 text-zinc-600 rounded-xl active:scale-90 transition-transform border border-zinc-200"
+              className="lg:hidden p-2 bg-primary-vibrant/10 text-primary-vibrant rounded-xl active:scale-90 transition-transform border border-primary-vibrant/20"
               aria-label={isMobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
               aria-expanded={isMobileMenuOpen}>
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -98,17 +155,17 @@ export function LandingPage() {
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-              className="lg:hidden absolute top-full left-0 right-0 bg-white border-b border-zinc-100 shadow-2xl overflow-hidden">
+              className="lg:hidden absolute top-full left-0 right-0 bg-white border-b-2 border-primary-vibrant/20 shadow-2xl overflow-hidden">
               <div className="flex flex-col p-6 gap-6">
                 <Link to="/menu" onClick={() => setIsMobileMenuOpen(false)}
                   className="flex items-center justify-between text-left">
-                  <span className="text-sm font-bold uppercase tracking-[0.2em] text-zinc-600">{t('nav.menu')}</span>
+                  <span className="text-sm font-bold uppercase tracking-[0.2em] text-zinc-700">{t('nav.menu')}</span>
                   <ArrowRight className="w-4 h-4 text-primary-vibrant" />
                 </Link>
                 {navLinks.map((link) => (
                   <button key={link.id} onClick={() => scrollToSection(link.id)}
                     className="flex items-center justify-between text-left">
-                    <span className="text-sm font-bold uppercase tracking-[0.2em] text-zinc-600">{link.label}</span>
+                    <span className="text-sm font-bold uppercase tracking-[0.2em] text-zinc-700">{link.label}</span>
                     <ArrowRight className="w-4 h-4 text-primary-vibrant" />
                   </button>
                 ))}
@@ -121,8 +178,25 @@ export function LandingPage() {
       {/* Hero */}
       <section id="main-content" className="relative min-h-[90vh] flex items-center justify-center bg-dark text-white overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-dark via-dark to-primary-vibrant/30" />
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary-vibrant/20 rounded-full blur-[120px] -mr-48 -mt-48" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-secondary-vibrant/15 rounded-full blur-[100px] -ml-48 -mb-48" />
+        
+        {/* Food images grid - decorative background */}
+        <div className="absolute inset-0 overflow-hidden opacity-20">
+          <div className="absolute top-10 left-10 w-48 h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden rotate-[-5deg]">
+            <img src="https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&q=80" alt="" className="w-full h-full object-cover" />
+          </div>
+          <div className="absolute top-20 right-20 w-40 h-40 md:w-56 md:h-56 rounded-2xl overflow-hidden rotate-[8deg]">
+            <img src="https://images.unsplash.com/photo-1585032226651-759b368d7246?w=400&q=80" alt="" className="w-full h-full object-cover" />
+          </div>
+          <div className="absolute bottom-20 left-1/4 w-44 h-44 md:w-60 md:h-60 rounded-2xl overflow-hidden rotate-[3deg]">
+            <img src="https://images.unsplash.com/photo-1563379926898-05f4575a45d8?w=400&q=80" alt="" className="w-full h-full object-cover" />
+          </div>
+          <div className="absolute bottom-32 right-1/4 w-36 h-36 md:w-48 md:h-48 rounded-2xl overflow-hidden rotate-[-7deg]">
+            <img src="https://images.unsplash.com/photo-1525755662778-989d0524087e?w=400&q=80" alt="" className="w-full h-full object-cover" />
+          </div>
+        </div>
+        
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary-vibrant/20 rounded-full blur-[60px] -mr-48 -mt-48 will-change-[filter]" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-secondary-vibrant/15 rounded-full blur-[60px] -ml-48 -mb-48 will-change-[filter]" />
 
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="relative z-10 text-center space-y-10 px-6 max-w-4xl mx-auto">
@@ -140,7 +214,16 @@ export function LandingPage() {
 
           <div className="space-y-6">
             <h1 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9] tracking-wider uppercase text-white">
-              {config.name}
+              {config.name.split(' ').map((word, i) => {
+                const isLast = i === config.name.split(' ').length - 1;
+                const colorClass = word.toLowerCase() === 'panda' ? 'text-primary-vibrant' :
+                                   word.toLowerCase() === 'express' ? 'text-secondary-vibrant' : 'text-white';
+                return (
+                  <span key={i} className={colorClass}>
+                    {word}{!isLast && ' '}
+                  </span>
+                );
+              })}
             </h1>
             <div className="flex items-center justify-center gap-4">
               <div className="w-12 h-0.5 bg-primary-vibrant rounded-full" />
@@ -161,26 +244,29 @@ export function LandingPage() {
       </section>
 
       {/* About */}
-      <section id="about" className="py-28 px-6 relative overflow-hidden scroll-mt-20 bg-gradient-to-br from-primary-vibrant/[0.07] via-white to-primary-vibrant/[0.03]">
-        <div className="max-w-6xl mx-auto relative">
+      <section id="about" className="py-28 px-6 relative overflow-hidden scroll-mt-20 bg-gradient-to-br from-primary-vibrant/[0.08] via-white to-secondary-vibrant/[0.04]">
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary-vibrant via-secondary-vibrant to-primary-vibrant" />
+        <div className="absolute top-10 right-20 w-64 h-64 bg-primary-vibrant/10 rounded-full blur-[80px]" />
+        <div className="absolute bottom-10 left-20 w-48 h-48 bg-secondary-vibrant/10 rounded-full blur-[60px]" />
+        <div className="max-w-6xl mx-auto relative z-10">
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
             className="grid md:grid-cols-[1fr_2fr] gap-12 items-center">
             <div className="space-y-4">
               <div className="flex gap-2">
-                <div className="w-12 h-1 bg-primary-vibrant rounded-full" />
-                <div className="w-6 h-1 bg-secondary-vibrant rounded-full" />
+                <div className="w-16 h-2 bg-primary-vibrant rounded-full" />
+                <div className="w-8 h-2 bg-secondary-vibrant rounded-full" />
               </div>
               <h2 className="font-display text-5xl md:text-7xl uppercase tracking-wider leading-none text-dark">{t('about.title')}</h2>
             </div>
             <div className="space-y-6">
-              <p className="text-xl md:text-2xl text-zinc-700 leading-relaxed font-light bg-primary-vibrant/[0.06] px-6 py-4 rounded-xl">
+              <p className="text-xl md:text-2xl text-zinc-700 leading-relaxed font-light bg-primary-vibrant/[0.06] px-8 py-6 rounded-2xl border-l-4 border-secondary-vibrant">
                 "{config.aboutUs || t('about.default')}"
               </p>
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-primary-vibrant/10 rounded-full flex items-center justify-center">
-                  <Utensils className="w-5 h-5 text-primary-vibrant" />
+                <div className="w-14 h-14 bg-gradient-to-br from-primary-vibrant to-secondary-vibrant rounded-xl flex items-center justify-center shadow-lg shadow-primary-vibrant/20">
+                  <Utensils className="w-7 h-7 text-white" />
                 </div>
-                <div className="h-px flex-1 bg-gradient-to-r from-primary-vibrant via-secondary-vibrant to-primary-vibrant" />
+                <div className="h-1.5 flex-1 bg-gradient-to-r from-primary-vibrant via-secondary-vibrant to-primary-vibrant rounded-full" />
               </div>
             </div>
           </motion.div>
@@ -188,14 +274,17 @@ export function LandingPage() {
       </section>
 
       {/* Featured */}
-      <section id="featured" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20 bg-gradient-to-br from-primary-vibrant/[0.08] via-zinc-50 to-primary-vibrant/[0.04]">
-        <div className="max-w-7xl mx-auto relative">
+      <section id="featured" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20 bg-dark">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-primary-vibrant/15 rounded-full blur-[100px] -mr-48 -mt-48" />
+        <div className="absolute bottom-0 left-0 w-72 h-72 bg-secondary-vibrant/10 rounded-full blur-[80px] -ml-36 -mb-36" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-secondary-vibrant via-primary-vibrant to-secondary-vibrant" />
+        <div className="max-w-7xl mx-auto relative z-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
             <div className="space-y-3">
-              <span className="text-secondary-vibrant font-display text-lg tracking-[0.35em] uppercase">{t('featured.badge')}</span>
-              <h2 className="font-display text-4xl md:text-6xl lg:text-7xl uppercase tracking-wider leading-none text-dark">{t('featured.title')}</h2>
+              <span className="text-secondary-vibrant font-display text-lg tracking-[0.35em] uppercase bg-secondary-vibrant/10 px-4 py-2 rounded-full border border-secondary-vibrant/20">{t('featured.badge')}</span>
+              <h2 className="font-display text-4xl md:text-6xl lg:text-7xl uppercase tracking-wider leading-none text-white">{t('featured.title')}</h2>
             </div>
-            <Link to="/menu" className="text-zinc-400 hover:text-primary-vibrant font-medium text-sm tracking-[0.2em] uppercase flex items-center gap-2 group transition-colors duration-300">
+            <Link to="/menu" className="text-secondary-vibrant hover:text-white font-bold text-sm tracking-[0.2em] uppercase flex items-center gap-2 group transition-colors duration-300">
               {t('featured.viewAll')}
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300" />
             </Link>
@@ -206,21 +295,23 @@ export function LandingPage() {
               <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1, duration: 0.5 }} viewport={{ once: true }}
                 onClick={() => setSelectedProduct(item)}
-                className="group cursor-pointer bg-white rounded-2xl overflow-hidden border border-zinc-100 hover:border-primary-vibrant/20 hover:shadow-xl transition-all duration-300">
+                className="group cursor-pointer bg-dark-card rounded-2xl overflow-hidden border-2 border-white/10 hover:border-secondary-vibrant/40 hover:shadow-xl hover:shadow-secondary-vibrant/10 transition-all duration-300">
                 <div className="relative h-64 overflow-hidden">
                   <img src={item.image || 'https://picsum.photos/seed/food/400/300'}
                     alt={language === 'es' ? item.name : t(`prod.${item.id}.name`)}
                     loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-dark-card via-transparent to-transparent opacity-80" />
+                  <div className="absolute top-3 right-3 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white font-display text-lg tracking-wider px-3 py-1 rounded-lg shadow-lg">
+                    ${item.price.toFixed(2)}
+                  </div>
                 </div>
                 <div className="p-5 space-y-3">
                   <div className="flex items-start justify-between">
-                    <h3 className="font-display text-xl uppercase tracking-wider text-dark">{item.name}</h3>
-                    <span className="font-display text-lg text-secondary-vibrant tracking-wider bg-secondary-vibrant/10 px-3 py-1 rounded-lg">${item.price.toFixed(2)}</span>
+                    <h3 className="font-display text-xl uppercase tracking-wider text-white group-hover:text-secondary-vibrant transition-colors">{item.name}</h3>
                   </div>
-                  <p className="text-zinc-500 text-sm leading-relaxed line-clamp-2">{language === 'es' ? item.description : t(`prod.${item.id}.desc`)}</p>
-                  <div className="w-6 h-0.5 bg-primary-vibrant rounded-full group-hover:w-12 transition-all duration-300" />
+                  <p className="text-zinc-400 text-sm leading-relaxed line-clamp-2">{language === 'es' ? item.description : t(`prod.${item.id}.desc`)}</p>
+                  <div className="w-8 h-1 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-full group-hover:w-16 transition-all duration-300" />
                 </div>
               </motion.div>
             ))}
@@ -229,22 +320,25 @@ export function LandingPage() {
       </section>
 
       {/* Locations */}
-      <section id="locations" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20 bg-gradient-to-tl from-primary-vibrant/[0.06] via-white to-primary-vibrant/[0.03]">
-        <div className="max-w-7xl mx-auto space-y-12 relative">
+      <section id="locations" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20 bg-gradient-to-tl from-primary-vibrant/[0.08] via-white to-secondary-vibrant/[0.04]">
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-secondary-vibrant via-primary-vibrant to-secondary-vibrant" />
+        <div className="absolute top-20 left-10 w-72 h-72 bg-primary-vibrant/8 rounded-full blur-[80px]" />
+        <div className="absolute bottom-20 right-10 w-56 h-56 bg-secondary-vibrant/8 rounded-full blur-[60px]" />
+        <div className="max-w-7xl mx-auto space-y-12 relative z-10">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="space-y-3">
-              <span className="text-primary-vibrant font-display text-lg tracking-[0.35em] uppercase">{t('locations.badge')}</span>
+              <span className="text-primary-vibrant font-display text-lg tracking-[0.35em] uppercase bg-primary-vibrant/10 px-4 py-2 rounded-full border border-primary-vibrant/20">{t('locations.badge')}</span>
               <h2 className="font-display text-4xl md:text-6xl lg:text-7xl uppercase tracking-wider leading-none text-dark">{t('locations.title')}</h2>
             </div>
           </div>
 
           <div className="relative">
             <button onClick={() => setLocationIndex(prev => Math.max(0, prev - 1))} disabled={locationIndex === 0}
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white text-zinc-700 hover:bg-primary-vibrant hover:text-white shadow-lg border border-zinc-200 flex items-center justify-center transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed">
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-primary-vibrant text-white hover:bg-secondary-vibrant hover:text-dark shadow-lg shadow-primary-vibrant/30 flex items-center justify-center transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed">
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button onClick={() => setLocationIndex(prev => Math.min(locations.length - 1, prev + 1))} disabled={locationIndex >= locations.length - 1}
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-white text-zinc-700 hover:bg-primary-vibrant hover:text-white shadow-lg border border-zinc-200 flex items-center justify-center transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed">
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-primary-vibrant text-white hover:bg-secondary-vibrant hover:text-dark shadow-lg shadow-primary-vibrant/30 flex items-center justify-center transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed">
               <ChevronRight className="w-5 h-5" />
             </button>
 
@@ -253,27 +347,27 @@ export function LandingPage() {
                 transition={{ type: 'spring', damping: 25, stiffness: 120 }}>
                 {locations.map((loc, i) => (
                   <motion.div key={loc.id} onClick={() => setSelectedLocation(loc)}
-                    className="min-w-[300px] sm:min-w-[380px] bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 flex flex-col border border-zinc-100 group cursor-pointer">
+                    className="min-w-[300px] sm:min-w-[380px] bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl hover:shadow-primary-vibrant/10 transition-all duration-300 flex flex-col border-2 border-zinc-100 hover:border-primary-vibrant/30 group cursor-pointer">
                     <div className="h-48 relative overflow-hidden bg-zinc-100">
                       <img src={loc.image || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80'} alt={loc.name}
                         loading="lazy"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-primary-vibrant/60 via-transparent to-transparent" />
                       <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                        <div className={`w-2.5 h-2.5 rounded-full ${loc.isOpen ? 'bg-green-400' : 'bg-zinc-400'}`} />
+                        <div className={`w-2.5 h-2.5 rounded-full ${loc.isOpen ? 'bg-secondary-vibrant' : 'bg-zinc-400'}`} />
                         <span className="text-white text-xs font-bold uppercase tracking-[0.2em]">{loc.isOpen ? t('locations.open') : t('locations.closed')}</span>
                       </div>
                     </div>
                     <div className="p-6 space-y-4 flex-1 flex flex-col">
                       <div className="space-y-2">
-                        <h4 className="font-display text-2xl uppercase tracking-wider text-dark">{loc.name}</h4>
+                        <h4 className="font-display text-2xl uppercase tracking-wider text-dark group-hover:text-primary-vibrant transition-colors">{loc.name}</h4>
                         <div className="flex items-start gap-2">
-                          <MapPin className="w-4 h-4 text-zinc-400 flex-shrink-0 mt-0.5" />
+                          <MapPin className="w-4 h-4 text-secondary-vibrant flex-shrink-0 mt-0.5" />
                           <p className="text-zinc-500 text-sm">{loc.address}</p>
                         </div>
                       </div>
-                      <div className="mt-auto pt-4 border-t border-zinc-100">
-                        <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-[0.2em]">{loc.schedule}</p>
+                      <div className="mt-auto pt-4 border-t-2 border-secondary-vibrant/20">
+                        <p className="text-[11px] font-bold text-secondary-vibrant uppercase tracking-[0.2em]">{loc.schedule}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -285,31 +379,34 @@ export function LandingPage() {
       </section>
 
       {/* Reviews */}
-      <section id="reviews" className="py-28 relative overflow-hidden scroll-mt-20 bg-gradient-to-br from-primary-vibrant/[0.07] via-zinc-50 to-primary-vibrant/[0.04]">
-        <div className="text-center mb-16 space-y-3 px-6">
-          <span className="text-secondary-vibrant font-display text-lg tracking-[0.35em] uppercase italic">{t('reviews.badge')}</span>
-          <h2 className="font-display text-4xl md:text-6xl lg:text-7xl uppercase tracking-wider text-dark leading-none">{t('reviews.title')}</h2>
+      <section id="reviews" className="py-28 relative overflow-hidden scroll-mt-20 bg-dark-card">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-secondary-vibrant/10 rounded-full blur-[100px] -ml-48 -mt-48" />
+        <div className="absolute bottom-0 right-0 w-72 h-72 bg-primary-vibrant/15 rounded-full blur-[80px] -mr-36 -mb-36" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary-vibrant via-secondary-vibrant to-primary-vibrant" />
+        <div className="text-center mb-16 space-y-3 px-6 relative z-10">
+          <span className="text-secondary-vibrant font-display text-lg tracking-[0.35em] uppercase bg-secondary-vibrant/10 px-4 py-2 rounded-full border border-secondary-vibrant/20">{t('reviews.badge')}</span>
+          <h2 className="font-display text-4xl md:text-6xl lg:text-7xl uppercase tracking-wider text-white leading-none">{t('reviews.title')}</h2>
         </div>
 
-        <div className="relative flex overflow-hidden" onMouseEnter={() => setIsMarqueePaused(true)} onMouseLeave={() => setIsMarqueePaused(false)}>
+        <div ref={marqueeRef} className="relative flex overflow-hidden z-10" onMouseEnter={() => setIsMarqueePaused(true)} onMouseLeave={() => setIsMarqueePaused(false)}>
           <motion.div className="flex gap-5 px-4" animate={marqueeControls}>
             {[...Array(2)].map((_, setIdx) => (
               Array.from({ length: 8 }, (_, idx) => {
                 const globalIdx = setIdx * 8 + idx;
                 return (
                   <div key={`${setIdx}-${idx}`}
-                    className="min-w-[300px] md:min-w-[360px] bg-white p-6 rounded-2xl space-y-4 border border-zinc-100 shadow-sm">
+                    className="min-w-[300px] md:min-w-[360px] bg-dark p-6 rounded-2xl space-y-4 border-2 border-white/10 hover:border-secondary-vibrant/30 transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-secondary-vibrant/10">
                     <div className="flex gap-1">
                       {[...Array(5)].map((_, sIdx) => (
                         <Star key={sIdx} className="w-4 h-4 fill-secondary-vibrant text-secondary-vibrant" />
                       ))}
                     </div>
-                    <p className="text-zinc-600 text-sm leading-relaxed italic">"{t(`rev.${idx}.body`)}"</p>
-                    <div className="flex items-center gap-3 pt-3 border-t border-zinc-100">
-                      <div className="w-10 h-10 bg-secondary-vibrant/20 rounded-xl flex items-center justify-center font-display text-base text-secondary-vibrant">
+                    <p className="text-zinc-400 text-sm leading-relaxed">"{t(`rev.${idx}.body`)}"</p>
+                    <div className="flex items-center gap-3 pt-3 border-t-2 border-secondary-vibrant/20">
+                      <div className="w-10 h-10 bg-gradient-to-br from-primary-vibrant to-secondary-vibrant rounded-xl flex items-center justify-center font-display text-base text-white shadow-md">
                         {t(`rev.${idx}.name`)[0]}
                       </div>
-                      <span className="font-medium text-sm text-zinc-700 uppercase tracking-[0.15em]">{t(`rev.${idx}.name`)}</span>
+                      <span className="font-medium text-sm text-zinc-300 uppercase tracking-[0.15em]">{t(`rev.${idx}.name`)}</span>
                     </div>
                   </div>
                 );
@@ -320,8 +417,11 @@ export function LandingPage() {
       </section>
 
       {/* Socials */}
-      <section id="socials" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20 bg-gradient-to-tr from-primary-vibrant/[0.06] via-white to-primary-vibrant/[0.03]">
-        <div className="max-w-4xl mx-auto flex flex-col items-center text-center space-y-10 relative">
+      <section id="socials" className="py-28 px-6 md:px-12 relative overflow-hidden scroll-mt-20 bg-gradient-to-tr from-primary-vibrant/[0.06] via-white to-secondary-vibrant/[0.03]">
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary-vibrant via-secondary-vibrant to-primary-vibrant" />
+        <div className="absolute top-10 left-10 w-48 h-48 bg-primary-vibrant/8 rounded-full blur-[60px]" />
+        <div className="absolute bottom-10 right-10 w-36 h-36 bg-secondary-vibrant/8 rounded-full blur-[50px]" />
+        <div className="max-w-4xl mx-auto flex flex-col items-center text-center space-y-10 relative z-10">
           <div className="space-y-3">
             <h3 className="font-display text-4xl md:text-5xl uppercase tracking-wider text-dark">{t('socials.title')}</h3>
             <p className="text-zinc-500 text-base max-w-md mx-auto">{t('socials.tagline')}</p>
@@ -332,10 +432,12 @@ export function LandingPage() {
               const Icon = platform === 'instagram' ? Instagram : platform === 'facebook' ? Facebook : Share2;
               return (
                 <motion.a key={platform} href={url} target="_blank" rel="noopener noreferrer"
-                  whileHover={{ y: -2 }}
-                  className="bg-white text-zinc-700 border border-zinc-200 p-5 rounded-2xl hover:border-primary-vibrant/30 hover:shadow-lg transition-all duration-300 flex items-center gap-3 group">
-                  <Icon className="w-5 h-5 text-primary-vibrant" />
-                  <span className="font-medium text-sm uppercase tracking-[0.2em]">{platform}</span>
+                  whileHover={{ y: -4 }}
+                  className="bg-white text-zinc-700 border-2 border-zinc-100 hover:border-primary-vibrant/40 p-5 rounded-2xl hover:shadow-xl hover:shadow-primary-vibrant/10 transition-all duration-300 flex items-center gap-3 group">
+                  <div className="w-10 h-10 bg-primary-vibrant/10 rounded-xl flex items-center justify-center group-hover:bg-primary-vibrant group-hover:text-white transition-all duration-300">
+                    <Icon className="w-5 h-5 text-primary-vibrant group-hover:text-white" />
+                  </div>
+                  <span className="font-bold text-sm uppercase tracking-[0.2em]">{platform}</span>
                 </motion.a>
               );
             })}
@@ -345,11 +447,11 @@ export function LandingPage() {
 
       {/* CTA */}
       <section className="py-20 bg-dark text-white text-center px-6 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary-vibrant/10 via-transparent to-secondary-vibrant/10" />
-        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary-vibrant via-secondary-vibrant to-primary-vibrant" />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary-vibrant/15 via-transparent to-secondary-vibrant/15" />
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary-vibrant via-secondary-vibrant to-primary-vibrant" />
         <div className="relative z-10 space-y-6">
           <h2 className="font-display text-4xl md:text-5xl uppercase tracking-wider">{t('cta.title')}</h2>
-          <Link to="/menu" className="inline-flex items-center gap-3 bg-primary-vibrant text-white px-8 py-4 rounded-full font-display text-base tracking-wider hover:shadow-[0_0_40px_rgba(203,32,39,0.4)] hover:scale-105 transition-all duration-300">
+          <Link to="/menu" className="inline-flex items-center gap-3 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white px-10 py-5 rounded-full font-display text-lg tracking-wider hover:shadow-[0_0_50px_rgba(203,32,39,0.5)] hover:scale-105 transition-all duration-300">
             {t('cta.button')}
             <ClipboardList className="w-5 h-5" />
           </Link>

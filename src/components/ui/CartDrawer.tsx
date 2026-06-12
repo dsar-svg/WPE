@@ -79,13 +79,13 @@ export function CartDrawer({
   const validateField = useCallback((field: string, value: string) => {
     let error = '';
     switch (field) {
-      case 'name': error = value.length < 2 ? 'Nombre debe tener al menos 2 caracteres' : ''; break;
-      case 'phone': const phoneRegex = /^[0-9+\-\s()]{10,}$/; error = !phoneRegex.test(value) ? 'Número de teléfono inválido' : ''; break;
-      case 'address': error = value.length < 5 ? 'Dirección muy corta' : ''; break;
+      case 'name': { error = value.length < 2 ? t('cart.error.nameMin') : ''; break; }
+      case 'phone': { const phoneRegex = /^[0-9+\-\s()]{10,}$/; error = !phoneRegex.test(value) ? t('cart.error.phoneInvalid') : ''; break; }
+      case 'address': { error = value.length < 5 ? t('cart.error.addressMin') : ''; break; }
     }
     setFormErrors(prev => ({ ...prev, [field]: error }));
     return !error;
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (deliveryType === 'Delivery' && deliveryCoordinates && location.latitude && location.longitude) {
@@ -93,7 +93,7 @@ export function CartDrawer({
       setCalculatedDistance(result.distance);
       setCalculatedFee(result.deliveryFee);
       setIsWithinRange(result.isWithinRange);
-      setAddressError(result.isWithinRange ? null : 'Dirección fuera del área de cobertura');
+      setAddressError(result.isWithinRange ? null : t('cart.error.addressOutOfRange'));
     } else if (deliveryType === 'Delivery') {
       setCalculatedFee(config.deliveryFee ?? 0);
       setCalculatedDistance(null);
@@ -115,7 +115,7 @@ export function CartDrawer({
     const isPhoneValid = validateField('phone', formData.phone);
     const isAddressValid = deliveryType === 'Pick-up' || validateField('address', formData.address);
     if (!isNameValid || !isPhoneValid || !isAddressValid) return;
-    if (deliveryType === 'Delivery' && !isWithinRange) { setAddressError('La dirección está fuera del área de cobertura'); return; }
+    if (deliveryType === 'Delivery' && !isWithinRange) { setAddressError(t('cart.error.addressOutOfRange')); return; }
     onCheckout({ ...formData, deliveryType, deliveryCoordinates: deliveryType === 'Delivery' ? deliveryCoordinates : undefined, calculatedDistance: deliveryType === 'Delivery' ? calculatedDistance : undefined, calculatedDeliveryFee: deliveryType === 'Delivery' ? calculatedFee : undefined });
   };
 
@@ -161,7 +161,7 @@ export function CartDrawer({
       validateField('address', coordsStr);
       setTimeout(() => setLocationSelected(false), 1500);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Error desconocido';
+      const message = error instanceof Error ? error.message : t('cart.error.unknown');
       setAddressError(message);
     } finally { setIsLocating(false); }
   };
@@ -175,33 +175,40 @@ export function CartDrawer({
           <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 200 }}
             className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-dark-card rounded-t-[2rem] z-50 overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh]"
-            id="cart-drawer">
+            id="cart-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Carrito de compras">
             {/* Header */}
-            <div className="p-5 sm:p-6 border-b border-white/5 bg-dark relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary-vibrant/15 rounded-full blur-xl -mr-16 -mt-16" />
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-secondary-vibrant/10 rounded-full blur-lg -ml-12 -mb-12" />
-              <h2 className="font-display text-xl sm:text-2xl tracking-wider flex items-center gap-3 relative z-10 text-white">
-                <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 text-primary-vibrant" />
-                {step === 'cart' ? t('cart.title') : t('cart.checkout')}
-              </h2>
-              <button onClick={onClose} className="p-2 bg-white/10 hover:bg-white/15 rounded-xl transition-all duration-300 relative z-10 text-white border border-white/10">
-                <X className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
+            <div className="p-5 sm:p-6 border-b-2 border-primary-vibrant/20 bg-dark-card relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary-vibrant/20 rounded-full blur-xl -mr-16 -mt-16" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-secondary-vibrant/15 rounded-full blur-lg -ml-12 -mb-12" />
+              <div className="flex items-center justify-between relative z-10">
+                <h2 className="font-display text-xl sm:text-2xl tracking-wider flex items-center gap-3 text-white">
+                  <div className="w-10 h-10 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-xl flex items-center justify-center">
+                    <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+                  </div>
+                  {step === 'cart' ? t('cart.title') : t('cart.checkout')}
+                </h2>
+                <button onClick={onClose} className="p-2 bg-white/10 hover:bg-primary-vibrant rounded-xl transition-all duration-300 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-primary-vibrant" aria-label="Cerrar carrito">
+                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-5 bg-dark scroll-smooth pb-32 sm:pb-40">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-5 bg-dark-card scroll-smooth pb-32 sm:pb-40">
               {step === 'cart' ? (
                 <>
                   {items.length === 0 ? (
                     <div className="py-24 text-center space-y-6">
                       <motion.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ duration: 4, repeat: Infinity }}
-                        className="w-24 h-24 bg-white/5 rounded-2xl flex items-center justify-center mx-auto text-zinc-700 border border-white/5">
-                        <ShoppingCart className="w-12 h-12" />
+                        className="w-24 h-24 bg-primary-vibrant/10 rounded-2xl flex items-center justify-center mx-auto border border-primary-vibrant/20">
+                        <ShoppingCart className="w-12 h-12 text-primary-vibrant" />
                       </motion.div>
                       <div className="space-y-2">
                         <p className="text-zinc-400 font-display uppercase text-sm tracking-[0.25em] leading-none">{t('cart.empty')}</p>
-                        <p className="text-zinc-600 text-xs font-medium italic">{t('cart.emptyTagline')}</p>
+                        <p className="text-zinc-600 text-xs font-medium">{t('cart.emptyTagline')}</p>
                       </div>
                     </div>
                   ) : (
@@ -222,18 +229,22 @@ export function CartDrawer({
                               <div className="flex items-center gap-1.5 bg-white/10 rounded-xl p-1 border border-white/10">
                                 <motion.button whileTap={{ scale: 0.8 }}
                                   onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                  className="w-7 h-7 bg-white/10 hover:bg-white/15 rounded-lg flex items-center justify-center text-zinc-300 transition-colors duration-200">
-                                  <Minus className="w-3 h-3" />
+                                  className="w-11 h-11 bg-white/10 hover:bg-white/15 rounded-lg flex items-center justify-center text-zinc-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-vibrant focus:ring-offset-1 focus:ring-offset-dark"
+                                  aria-label={`Decrease quantity of ${t(`prod.${item.id}.name`)}`}>
+                                  <Minus className="w-4 h-4" />
                                 </motion.button>
                                 <span className="w-7 text-center font-bold text-sm text-white">{item.quantity}</span>
                                 <motion.button whileTap={{ scale: 0.8 }}
                                   onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                  className="w-7 h-7 bg-primary-vibrant text-white rounded-lg flex items-center justify-center shadow-lg shadow-primary-vibrant/20 transition-all duration-200">
-                                  <Plus className="w-3 h-3" />
+                                  className="w-11 h-11 bg-primary-vibrant text-white rounded-lg flex items-center justify-center shadow-lg shadow-primary-vibrant/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-1 focus:ring-offset-primary-vibrant"
+                                  aria-label={`Increase quantity of ${t(`prod.${item.id}.name`)}`}>
+                                  <Plus className="w-4 h-4" />
                                 </motion.button>
                               </div>
                               <div className="flex-1 ml-3 relative">
-                                <textarea placeholder={t('cart.specialInstructions') + " (ej: sin picante)"}
+                                <textarea 
+                                  placeholder={t('cart.specialInstructions') + " (ej: sin picante)"}
+                                  aria-label={t('cart.specialInstructions')}
                                   value={item.notes} onChange={(e) => updateNotes(item.id, e.target.value)}
                                   className="w-full text-xs bg-white/5 border border-white/5 rounded-lg px-3 py-2 focus:border-primary-vibrant/50 outline-none transition-colors duration-200 resize-none min-h-[32px] text-zinc-300 placeholder:text-zinc-600"
                                   rows={1} maxLength={100} />
@@ -254,20 +265,24 @@ export function CartDrawer({
                         <div className="relative">
                           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400"><User className="w-4 h-4" /></div>
                           <input required placeholder={t('cart.fullName')}
+                            aria-describedby={formErrors.name ? 'name-error' : undefined}
+                            aria-invalid={formErrors.name ? 'true' : 'false'}
                             className={`w-full pl-12 pr-4 py-4 bg-dark-surface border-2 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500 ${
                               formErrors.name ? 'border-red-500/50' : 'border-white/10'
                             }`}
                             value={formData.name} onChange={(e) => { setFormData({ ...formData, name: e.target.value }); validateField('name', e.target.value); }} />
-                          {formErrors.name && <span className="absolute -bottom-5 left-0 text-[10px] text-red-400">{formErrors.name}</span>}
+                          {formErrors.name && <span id="name-error" className="absolute -bottom-5 left-0 text-[10px] text-red-400" role="alert">{formErrors.name}</span>}
                         </div>
                         <div className="relative">
                           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400"><Phone className="w-4 h-4" /></div>
                           <input required type="tel" placeholder={t('cart.whatsapp')}
+                            aria-describedby={formErrors.phone ? 'phone-error' : undefined}
+                            aria-invalid={formErrors.phone ? 'true' : 'false'}
                             className={`w-full pl-12 pr-4 py-4 bg-dark-surface border-2 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500 ${
                               formErrors.phone ? 'border-red-500/50' : 'border-white/10'
                             }`}
                             value={formData.phone} onChange={(e) => { setFormData({ ...formData, phone: e.target.value }); validateField('phone', e.target.value); }} />
-                          {formErrors.phone && <span className="absolute -bottom-5 left-0 text-[10px] text-red-400">{formErrors.phone}</span>}
+                          {formErrors.phone && <span id="phone-error" className="absolute -bottom-5 left-0 text-[10px] text-red-400" role="alert">{formErrors.phone}</span>}
                         </div>
 
                         {deliveryType === 'Delivery' && (
@@ -303,7 +318,7 @@ export function CartDrawer({
 
                             <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="button"
                               onClick={handleGetUserLocation} disabled={isLocating}
-                              className="w-full py-4 bg-secondary-vibrant/10 border border-secondary-vibrant/30 rounded-[18px] text-[11px] font-bold uppercase tracking-[0.2em] text-secondary-vibrant hover:bg-secondary-vibrant/15 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50">
+                                className="w-full py-4 bg-secondary-vibrant/10 border border-secondary-vibrant/30 rounded-[20px] text-[11px] font-bold uppercase tracking-[0.2em] text-secondary-vibrant hover:bg-secondary-vibrant/15 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50">
                               {isLocating ? (
                                 <><div className="w-4 h-4 border-2 border-secondary-vibrant border-t-transparent rounded-full animate-spin" />{t('cart.locating') || 'Localizando...'}</>
                               ) : (
@@ -314,11 +329,13 @@ export function CartDrawer({
                             <div className="relative">
                               <div className="absolute left-4 top-4 text-zinc-400"><MapPin className="w-4 h-4" /></div>
                               <textarea required placeholder={t('cart.address') + " (escribe para buscar)"}
+                                aria-describedby={formErrors.address ? 'address-error' : undefined}
+                                aria-invalid={formErrors.address ? 'true' : 'false'}
                                 className={`w-full pl-12 pr-4 py-4 bg-dark-surface border-2 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500 min-h-[100px] resize-none ${
                                   formErrors.address ? 'border-red-500/50' : 'border-white/10'
                                 }`}
                                 value={formData.address} onChange={(e) => { setFormData({ ...formData, address: e.target.value }); validateField('address', e.target.value); }} />
-                              {formErrors.address && <span className="absolute -bottom-5 left-0 text-[10px] text-red-400">{formErrors.address}</span>}
+                              {formErrors.address && <span id="address-error" className="absolute -bottom-5 left-0 text-[10px] text-red-400" role="alert">{formErrors.address}</span>}
                               {isLoadingAddress && (
                                 <div className="absolute right-4 top-4 flex items-center gap-2 bg-primary-vibrant/10 px-3 py-1 rounded-full">
                                   <div className="w-3 h-3 border-2 border-primary-vibrant border-t-transparent rounded-full animate-spin" />
@@ -426,18 +443,19 @@ export function CartDrawer({
 
             {/* Footer */}
             {items.length > 0 && (
-              <div className="p-4 sm:p-6 bg-dark-card border-t border-white/5 space-y-4">
-                <div className="p-5 bg-dark-surface text-white rounded-xl space-y-3 relative overflow-hidden border border-white/5">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary-vibrant/10 rounded-full blur-2xl -mr-16 -mt-16" />
+              <div className="p-4 sm:p-6 bg-dark-card border-t-2 border-secondary-vibrant/30 space-y-4">
+                <div className="p-5 bg-dark-surface text-white rounded-xl space-y-3 relative overflow-hidden border-2 border-primary-vibrant/20">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary-vibrant/20 rounded-full blur-2xl -mr-16 -mt-16" />
+                  <div className="absolute bottom-0 left-0 w-24 h-24 bg-secondary-vibrant/15 rounded-full blur-xl -ml-12 -mb-12" />
 
                   {deliveryType === 'Delivery' && step === 'checkout' && (
                     <>
-                      <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
+                      <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">
                         <span>{t('cart.shipping')}</span>
-                        <span className="text-white">${calculatedFee.toFixed(2)}</span>
+                        <span className="text-secondary-vibrant">${calculatedFee.toFixed(2)}</span>
                       </div>
                       {calculatedDistance !== null && (
-                        <div className="flex justify-between items-center text-[9px] font-medium uppercase tracking-[0.2em] text-zinc-600">
+                        <div className="flex justify-between items-center text-[9px] font-medium uppercase tracking-[0.2em] text-zinc-500">
                           <span>Distancia estimada</span>
                           <span className="text-zinc-300 font-bold">{calculatedDistance} km</span>
                         </div>
@@ -446,8 +464,8 @@ export function CartDrawer({
                   )}
 
                   {items.length > 0 && (
-                    <div className="space-y-1.5 pb-3 border-b border-white/10">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-zinc-400">Resumen del Pedido</p>
+                    <div className="space-y-1.5 pb-3 border-b-2 border-primary-vibrant/20">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary-vibrant">Resumen del Pedido</p>
                       {items.map(item => (
                         <div key={item.id} className="flex justify-between items-center text-[11px] text-zinc-300">
                           <span className="truncate flex-1">{item.quantity}x {t(`prod.${item.id}.name`)}</span>
@@ -457,12 +475,12 @@ export function CartDrawer({
                     </div>
                   )}
 
-                  <div className="flex justify-between items-end border-b border-white/10 pb-3">
+                  <div className="flex justify-between items-end border-b-2 border-secondary-vibrant/20 pb-3">
                     <div className="flex flex-col">
-                      <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-zinc-400 mb-0.5">{t('cart.orderTotal')}</span>
-                      <span className="font-display text-2xl sm:text-3xl tracking-wider leading-none text-white">${finalTotal.toFixed(2)} <span className="text-[10px] text-zinc-400 ml-1 italic font-medium font-body">USD</span></span>
+                      <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-secondary-vibrant mb-0.5">{t('cart.orderTotal')}</span>
+                      <span className="font-display text-2xl sm:text-3xl tracking-wider leading-none text-white">${finalTotal.toFixed(2)} <span className="text-[10px] text-zinc-400 ml-1 font-medium font-body">USD</span></span>
                       {(config.taxRate ?? 0) > 0 && (
-                        <span className="text-[8px] text-zinc-600 uppercase tracking-widest mt-0.5">{t('cart.includesTax')} ({((config.taxRate ?? 0) * 100).toFixed(1)}%)</span>
+                        <span className="text-[8px] text-zinc-500 uppercase tracking-widest mt-0.5">{t('cart.includesTax')} ({((config.taxRate ?? 0) * 100).toFixed(1)}%)</span>
                       )}
                     </div>
                   </div>
@@ -470,33 +488,33 @@ export function CartDrawer({
                   <div className="flex justify-between items-center pt-1">
                     <div className="flex flex-col">
                       <span className="text-[8px] font-bold text-secondary-vibrant uppercase tracking-widest">{t('cart.inBolivares')}</span>
-                      <span className="font-display text-lg sm:text-xl text-white tracking-wider">
+                      <span className="font-display text-lg sm:text-xl text-secondary-vibrant tracking-wider">
                         {totalVES.toLocaleString(language === 'es' ? 'es-VE' : 'en-US', { minimumFractionDigits: 2 })} <span className="text-[9px] font-body">Bs.</span>
                       </span>
                     </div>
-                    <div className="bg-white/5 px-3 py-1 rounded-full border border-white/5">
-                      <span className="text-[8px] text-zinc-600 font-bold uppercase">Tasa: {config.exchangeRate}</span>
+                    <div className="bg-secondary-vibrant/10 px-3 py-1 rounded-full border border-secondary-vibrant/20">
+                      <span className="text-[8px] text-secondary-vibrant font-bold uppercase">Tasa: {config.exchangeRate}</span>
                     </div>
                   </div>
                 </div>
 
                 {step === 'cart' ? (
                   <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setStep('checkout')}
-                    className="w-full vibrant-gradient text-white py-5 sm:py-6 rounded-[22px] font-display uppercase tracking-[0.2em] text-sm flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(203,32,39,0.3)] transition-all duration-300 hover:shadow-[0_20px_60px_rgba(203,32,39,0.5)]">
+                    className="w-full vibrant-gradient text-white py-5 sm:py-6 rounded-[20px] font-display uppercase tracking-[0.2em] text-sm flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(203,32,39,0.3)] transition-all duration-300 hover:shadow-[0_20px_60px_rgba(203,32,39,0.5)]">
                     {t('cart.continue')} <ArrowRight className="w-5 h-5" />
                   </motion.button>
                 ) : (
                   <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <motion.button whileTap={{ scale: 0.95 }} onClick={() => setStep('cart')}
-                      className="w-full sm:flex-1 bg-white/5 text-zinc-400 py-5 sm:py-6 rounded-[22px] font-display uppercase tracking-widest text-xs sm:text-[11px] transition-all duration-300 hover:bg-white/10 border border-white/5">
+                      className="w-full sm:flex-1 bg-white/5 text-zinc-400 py-5 sm:py-6 rounded-[20px] font-display uppercase tracking-widest text-xs sm:text-[11px] transition-all duration-300 hover:bg-white/10 border border-white/5">
                       {t('cart.back')}
                     </motion.button>
                     <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} form="checkout-form" type="submit"
                       disabled={deliveryType === 'Delivery' && !isWithinRange}
-                      className={`w-full sm:flex-[2] bg-[#25D366] text-white py-5 sm:py-6 rounded-[22px] font-display uppercase tracking-[0.2em] text-xs sm:text-[11px] shadow-[0_20px_50px_rgba(37,211,102,0.3)] transition-all duration-300 flex items-center justify-center gap-3 ${
+                      className={`w-full sm:flex-[2] bg-[#25D366] text-white py-5 sm:py-6 rounded-[20px] font-display uppercase tracking-[0.2em] text-xs sm:text-[11px] shadow-[0_20px_50px_rgba(37,211,102,0.3)] transition-all duration-300 flex items-center justify-center gap-3 ${
                         deliveryType === 'Delivery' && !isWithinRange ? 'opacity-50 cursor-not-allowed' : ''
                       }`}>
-                      {deliveryType === 'Delivery' && !isWithinRange ? 'Fuera de cobertura' : t('cart.confirmWhatsApp')}
+                      {deliveryType === 'Delivery' && !isWithinRange ? t('cart.outOfCoverage') : t('cart.confirmWhatsApp')}
                     </motion.button>
                   </div>
                 )}

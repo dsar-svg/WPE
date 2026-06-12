@@ -14,7 +14,8 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       <button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="p-2 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+        aria-label="Previous page"
+        className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center"
       >
         <ChevronLeft className="w-4 h-4" />
       </button>
@@ -22,7 +23,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         <button
           key={page}
           onClick={() => onPageChange(page)}
-          className={`w-9 h-9 rounded-xl text-[11px] font-black transition-all ${
+          className={`w-11 h-11 rounded-xl text-[11px] font-black transition-all ${
             page === currentPage
               ? 'bg-primary-vibrant text-white shadow-lg shadow-primary-vibrant/30'
               : 'bg-white/5 border border-white/10 text-zinc-500 hover:text-white hover:bg-white/10'
@@ -34,7 +35,8 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       <button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="p-2 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+        aria-label="Next page"
+        className="w-11 h-11 rounded-xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center"
       >
         <ChevronRight className="w-4 h-4" />
       </button>

@@ -19,6 +19,7 @@ interface AdminSidebarProps {
   isCollapsed?: boolean;
   onToggle?: () => void;
   isSuperAdmin?: boolean;
+  isOpen?: boolean;
 }
 
 const navItems: { id: AdminPageTab; label: string; icon: any }[] = [
@@ -38,29 +39,34 @@ export function AdminSidebar({
   userAvatar,
   onLogout,
   isSuperAdmin = true,
+  isOpen = false,
 }: AdminSidebarProps) {
   const visibleNavItems = useMemo(
     () => isSuperAdmin ? navItems : navItems.filter(item => item.id !== 'sedes'),
     [isSuperAdmin]
   );
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-64 bg-zinc-900 border-r border-zinc-800 z-50 flex flex-col">
-      <div className="p-6 border-b border-zinc-800">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1.5 shrink-0">
-            {config.logo ? (
-              <img src={config.logo} alt="Logo" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
-            ) : (
-              <Utensils className="w-5 h-5 text-zinc-800" />
-            )}
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-sm font-black text-white truncate">
-              {config.name || 'Panel Admin'}
-            </h1>
-            <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">
-              Administración
-            </p>
+    <aside className={`fixed left-0 top-0 bottom-0 w-64 bg-admin-surface border-r border-admin-border z-50 flex flex-col transition-transform duration-300 ease-out lg:translate-x-0 ${
+      isOpen ? 'translate-x-0' : '-translate-x-full'
+    }`}>
+      <div className="p-6 border-b border-admin-border">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1.5 shrink-0">
+              {config.logo ? (
+                <img src={config.logo} alt="Logo" referrerPolicy="no-referrer" className="w-full h-full object-contain" />
+              ) : (
+                <Utensils className="w-5 h-5 text-admin-bg" />
+              )}
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-sm font-black text-admin-text truncate">
+                {config.name || 'Panel Admin'}
+              </h1>
+              <p className="text-[9px] text-admin-text-muted uppercase tracking-widest font-bold">
+                Administración
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -76,7 +82,7 @@ export function AdminSidebar({
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
                 isActive
                   ? 'bg-white text-black shadow-lg shadow-white/10'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50'
+                  : 'text-admin-muted hover:text-zinc-300 hover:bg-zinc-800/50'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -87,21 +93,21 @@ export function AdminSidebar({
         })}
       </nav>
 
-      <div className="p-4 border-t border-zinc-800">
+      <div className="p-4 border-t border-admin-border">
         <div className="flex items-center gap-3 mb-4 px-2">
-          <div className="w-8 h-8 rounded-xl border border-zinc-700 bg-zinc-800 flex items-center justify-center">
-            <User className="w-4 h-4 text-zinc-500" />
+          <div className="w-8 h-8 rounded-xl border border-admin-border bg-admin-surface flex items-center justify-center">
+            <User className="w-4 h-4 text-admin-muted" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-black text-zinc-300 truncate">
+            <p className="text-[11px] font-black text-admin-text truncate">
               {userEmail?.split('@')[0] || 'Admin'}
             </p>
-            <p className="text-[8px] text-zinc-600 truncate">{userEmail}</p>
+            <p className="text-[8px] text-admin-text-muted truncate">{userEmail}</p>
           </div>
         </div>
         <button
           onClick={onLogout}
-          className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-800 hover:bg-red-500/10 hover:text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-500 transition-all"
+          className="w-full flex items-center justify-center gap-2 py-3 bg-admin-border hover:bg-red-500/10 hover:text-red-500 rounded-xl text-[10px] font-black uppercase tracking-widest text-admin-text-muted transition-all"
         >
           <LogOut className="w-4 h-4" />
           Cerrar Sesión

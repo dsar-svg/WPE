@@ -6,12 +6,12 @@ import { CartDrawer } from "./components/ui/CartDrawer";
 import { AdminPage } from "./pages/AdminPage";
 import { LandingPage } from "./pages/LandingPage";
 import { PublicMenuPage } from "./pages/PublicMenuPage";
-import { useCart } from "./hooks/useCart";
+import { useCart } from "./context/CartContext";
 import { Location, CheckoutData } from "./types";
 import { generateWhatsAppLink } from "./utils";
 import { RestaurantProvider, useRestaurant } from "./context/RestaurantContext";
 import { LanguageProvider } from "./context/LanguageContext";
-import { LanguageToggle } from "./components/ui/LanguageToggle";
+import { CartProvider } from "./context/CartContext";
 function MainView() { const { locations, menuItems, categories, config, isLoading, selectedLocation, setSelectedLocation, createOrder, } = useRestaurant();
 const [isCartOpen, setIsCartOpen] = useState(false);
 const { items, addToCart, updateQuantity, updateNotes, removeFromCart, total, clearCart, } = useCart();
@@ -59,4 +59,4 @@ const handleCheckout = async (data: CheckoutData) => {
 }; return ( <div className="min-h-screen bg-white font-sans selection:bg-primary-vibrant selection:text-white"> {" "} {!selectedLocation ? ( <WelcomeScreen onSelectLocation={(loc) => setSelectedLocation({ ...loc })} locations={locations} config={config} /> ) : ( <> {" "} <MenuView onAddToCart={addToCart} cartCount={items.reduce((acc, item) => acc + item.quantity, 0)} total={total} menuItems={activeMenuItems} categories={categories} onOpenCart={() => setIsCartOpen(true)} location={selectedLocation} onBack={() => { setSelectedLocation(null);
 clearCart(); }} config={config} />{" "} <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} items={items} total={total} location={selectedLocation} updateQuantity={updateQuantity} updateNotes={updateNotes} removeItem={removeFromCart} onCheckout={handleCheckout} />{" "} </> )}{" "} </div> );}
 
-export default function App() { return ( <LanguageProvider> {" "} <RestaurantProvider> {" "} <BrowserRouter> {" "} <Routes> {" "} <Route path="/" element={<LandingPage />} />{" "} <Route path="/menu" element={<PublicMenuPage />} />{" "} <Route path="/pedir" element={<MainView />} />{" "} <Route path="/admin" element={<AdminPage />} />{" "} <Route path="*" element={<Navigate to="/" replace />} />{" "} </Routes>{" "} </BrowserRouter>{" "} </RestaurantProvider>{" "} </LanguageProvider> );}
+export default function App() { return ( <LanguageProvider> {" "} <RestaurantProvider> {" "} <CartProvider> {" "} <BrowserRouter> {" "} <Routes> {" "} <Route path="/" element={<LandingPage />} />{" "} <Route path="/menu" element={<PublicMenuPage />} />{" "} <Route path="/pedir" element={<MainView />} />{" "} <Route path="/admin" element={<AdminPage />} />{" "} <Route path="*" element={<Navigate to="/" replace />} />{" "} </Routes>{" "} </BrowserRouter>{" "} </CartProvider>{" "} </RestaurantProvider>{" "} </LanguageProvider> );}

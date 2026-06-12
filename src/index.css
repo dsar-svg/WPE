@@ -14,6 +14,12 @@
   --color-dark-surface: #1a1a1a;
   --color-ink-muted: #71717a;
   --color-ink-subtle: #52525b;
+  --color-admin-bg: #09090b;
+  --color-admin-surface: #18181b;
+  --color-admin-border: #27272a;
+  --color-admin-muted: #71717a;
+  --color-admin-text: #fafafa;
+  --color-admin-text-muted: #a1a1aa;
 }
 
 @layer base {
@@ -54,19 +60,25 @@
     background: linear-gradient(135deg, #cb2027 0%, #a3181e 100%);
   }
 
-  .vibrant-gradient-warm {
-    background: linear-gradient(135deg, #cb2027 0%, #e8352a 50%, #ffc400 100%);
-  }
-
-  .card-hover-lift {
-    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease;
-  }
-
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  html {
+    scroll-behavior: auto;
   }
 }

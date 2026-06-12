@@ -189,8 +189,9 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
 
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Nombre</label>
+                    <label htmlFor="location-name" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Nombre</label>
                     <input
+                      id="location-name"
                       type="text"
                       className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
                       placeholder="Ej: Valencia Norte"
@@ -199,8 +200,9 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Dirección</label>
+                    <label htmlFor="location-address" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Dirección</label>
                     <textarea
+                      id="location-address"
                       className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none h-24 resize-none"
                       placeholder="Dirección completa de la sede..."
                       value={data.address}
@@ -210,7 +212,7 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">
+                  <label htmlFor="location-whatsapp" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">
                     WhatsApp de Pedidos
                   </label>
                   <div className="relative">
@@ -219,6 +221,7 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
                       <span>+</span>
                     </div>
                     <input
+                      id="location-whatsapp"
                       type="text"
                       className="w-full bg-zinc-950 border border-zinc-800 p-4 pl-12 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
                       placeholder="584241234567"
@@ -240,8 +243,9 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Latitud</label>
+                      <label htmlFor="location-latitude" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Latitud</label>
                       <input
+                        id="location-latitude"
                         type="number"
                         step="0.000001"
                         className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
@@ -251,8 +255,9 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Longitud</label>
+                      <label htmlFor="location-longitude" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Longitud</label>
                       <input
+                        id="location-longitude"
                         type="number"
                         step="0.000001"
                         className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
@@ -270,10 +275,11 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
                 {isSuperAdmin && (
                   <>
                     <div className="space-y-2">
-                      <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">
+                      <label htmlFor="location-admin-email" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">
                         Email del Administrador de Sede
                       </label>
                       <input
+                        id="location-admin-email"
                         type="email"
                         className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
                         placeholder="ejemplo@admin.com"
@@ -285,10 +291,11 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">
+                      <label htmlFor="location-admin-password" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">
                         Contraseña de Acceso
                       </label>
                       <input
+                        id="location-admin-password"
                         type="text"
                         className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
                         placeholder="Contraseña"
@@ -318,8 +325,9 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
                   </label>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[9px] uppercase font-black tracking-widest text-zinc-600 ml-2">Desde</label>
+                      <label htmlFor="location-schedule-from" className="text-[9px] uppercase font-black tracking-widest text-zinc-600 ml-2">Desde</label>
                       <select
+                        id="location-schedule-from"
                         className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
                         value={parseSchedule(data.schedule).dayFrom}
                         onChange={e => {
@@ -333,8 +341,9 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[9px] uppercase font-black tracking-widest text-zinc-600 ml-2">Hasta</label>
+                      <label htmlFor="location-schedule-to" className="text-[9px] uppercase font-black tracking-widest text-zinc-600 ml-2">Hasta</label>
                       <select
+                        id="location-schedule-to"
                         className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
                         value={parseSchedule(data.schedule).dayTo}
                         onChange={e => {
@@ -351,9 +360,10 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Apertura</label>
+                    <label htmlFor="location-open-ampm" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Apertura</label>
                     <div className="flex gap-2">
                       <select
+                        id="location-open-ampm"
                         className="w-24 bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
                         value={to12h(data.openTime).ampm}
                         onChange={e => {
@@ -373,9 +383,10 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Cierre</label>
+                    <label htmlFor="location-close-ampm" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Cierre</label>
                     <div className="flex gap-2">
                       <select
+                        id="location-close-ampm"
                         className="w-24 bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
                         value={to12h(data.closeTime).ampm}
                         onChange={e => {
