@@ -1,5 +1,4 @@
 import { useMemo } from 'react';
-import { motion } from 'motion/react';
 import {
   LayoutDashboard, MapPin, Utensils, Settings, ShoppingBag,
   LogOut, ChevronRight, User
@@ -22,7 +21,7 @@ interface AdminSidebarProps {
   isOpen?: boolean;
 }
 
-const navItems: { id: AdminPageTab; label: string; icon: any }[] = [
+const navItems: { id: AdminPageTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'sedes', label: 'Sedes', icon: MapPin },
   { id: 'productos', label: 'Productos', icon: Utensils },
@@ -35,8 +34,6 @@ export function AdminSidebar({
   onTabChange,
   config,
   userEmail,
-  userName,
-  userAvatar,
   onLogout,
   isSuperAdmin = true,
   isOpen = false,

@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Utensils, ArrowLeft, HandPlatter, Tag, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { AnimatePresence } from 'motion/react';
+import { Utensils, ArrowLeft, HandPlatter, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -13,7 +13,7 @@ import { Product } from '../types';
 
 export function PublicMenuPage() {
   const { menuItems, categories, config, isLoading } = useRestaurant();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [activeCategory, setActiveCategory] = useState(categories[0]?.name || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [page, setPage] = useState(1);

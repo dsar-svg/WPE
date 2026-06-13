@@ -1,6 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { ShoppingBag, MapPin, Phone, User, Clock, ChevronDown, ChevronUp, Search, Filter } from 'lucide-react';
-import { Order, Location } from '../../types';
+import { ShoppingBag, MapPin, Phone, User, Clock, ChevronDown, ChevronUp, Search } from 'lucide-react';
 import { useRestaurant } from '../../context/RestaurantContext';
 
 export function OrdersPage() {

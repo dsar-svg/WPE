@@ -1,8 +1,8 @@
 ﻿import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, LogOut, MapPin, Clock, MessageCircle, Power, RefreshCcw, Plus, Trash2, Tag, Edit2, Utensils, ShoppingBag, Eye, EyeOff, Trophy, TrendingDown, DollarSign, Menu, X } from 'lucide-react';
+import { LogIn, MapPin, Clock, MessageCircle, Power, RefreshCcw, Plus, Trash2, Tag, Edit2, Eye, EyeOff, Menu, X } from 'lucide-react';
 import { useRestaurant } from '../context/RestaurantContext';
-import { Location, Product } from '../types';
+import { Product } from '../types';
 import { Link } from 'react-router-dom';
 import { LocationForm } from '../components/admin/LocationForm';
 import { ProductForm } from '../components/admin/ProductForm';
@@ -16,7 +16,7 @@ import { OptimizedImage } from '../components/ui/OptimizedImage';
 const formatTime12h = (time: string) => { if (!time) return ''; const [hours, minutes] = time.split(':');
 const h = parseInt(hours);
 const ampm = h >= 12 ? 'PM' : 'AM'; const h12 = h % 12 || 12; return `${h12}:${minutes} ${ampm}`;};
-export function AdminPage() { const { locations, menuItems, categories, config, isAdmin, isLoading, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, orders, signIn, signOut } = useRestaurant(); const isSedesHidden = !isSuperAdmin;
+export function AdminPage() { const { locations, menuItems, categories, config, isAdmin, isLoading, isSuperAdmin, managedLocationId, userEmail, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, orders, signIn, signOut } = useRestaurant(); const isSedesHidden = !isSuperAdmin;
 const [activeTab, setActiveTab] = useState<'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos'>('dashboard');
 const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
@@ -28,7 +28,7 @@ const [password, setPassword] = useState('');
 const [isLoggingIn, setIsLoggingIn] = useState(false);
 const [showPassword, setShowPassword] = useState(false);
 const filteredLocations = isSuperAdmin ? locations : locations.filter(l => l.id === managedLocationId);
-const canEditMenuGlobals = isSuperAdmin; const currentManagedLoc = locations.find(l => l.id === managedLocationId);
+const currentManagedLoc = locations.find(l => l.id === managedLocationId);
 
 const toggleLocalAvailability = async (productId: string) => { if (!currentManagedLoc) return; const discontinued = currentManagedLoc.discontinuedProductIds || []; const isDiscontinued = discontinued.includes(productId);
 const newDiscontinued = isDiscontinued ? discontinued.filter(id => id !== productId) : [...discontinued, productId]; await updateLocation({ ...currentManagedLoc, discontinuedProductIds: newDiscontinued }); };
@@ -37,7 +37,6 @@ useState<Location | null>(null);
 const [editingProd, setEditingProd] = useState<Product | null>(null);
 const [isAddingLoc, setIsAddingLoc] = useState(false);
 const [isAddingProd, setIsAddingProd] = useState(false);
-const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 const [isManageCatsOpen, setIsManageCatsOpen] = useState(false);
 const [activeProductCategory, setActiveProductCategory] = useState('Todos');
 const [productPage, setProductPage] = useState(1);
@@ -64,15 +63,6 @@ const groupedPaginatedItems = useMemo(() => {
   return groups;
 }, [paginatedProductItems]);
 
-const productSales = orders.reduce((acc, order) => {
-  order.items.forEach(item => {
-    if (!acc[item.name]) acc[item.name] = 0;
-    acc[item.name] += item.quantity;
-  });
-  return acc;
-}, {} as Record<string, number>);
-const topSelling = Object.entries(productSales).sort((a, b) => b[1] - a[1]).slice(0, 5);
-const leastSelling = Object.entries(productSales).sort((a, b) => a[1] - b[1]).slice(0, 5);
 const totalFacturado = orders.reduce((sum, o) => sum + o.total, 0);
 
 const handleSignIn = async (e: React.FormEvent) => { e.preventDefault();

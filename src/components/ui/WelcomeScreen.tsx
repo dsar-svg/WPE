@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { MapPin, Clock, ArrowRight, UtensilsCrossed, ArrowLeft, Info, AlertCircle } from "lucide-react";
+import { MapPin, Clock, ArrowRight, UtensilsCrossed, ArrowLeft, AlertCircle } from "lucide-react";
 import { Location } from "../../types";
 import { Link } from "react-router-dom";
 import { useLanguage } from "../../context/LanguageContext";

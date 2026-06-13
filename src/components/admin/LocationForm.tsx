@@ -1,6 +1,6 @@
 import { useState, ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Save, RefreshCcw, Info, Clock, AlertCircle, Image as ImageIcon, MessageCircle, MapPin } from 'lucide-react';
+import { X, Save, RefreshCcw, Info, Clock, AlertCircle, Image as ImageIcon, MessageCircle } from 'lucide-react';
 import { Location } from '../../types';
 import { useUploadImage } from '../../hooks/useUploadImage';
 import { validateImageSize } from '../../lib/uploadImage';

@@ -7,7 +7,7 @@ import { AdminPage } from "./pages/AdminPage";
 import { LandingPage } from "./pages/LandingPage";
 import { PublicMenuPage } from "./pages/PublicMenuPage";
 import { useCart } from "./context/CartContext";
-import { Location, CheckoutData } from "./types";
+import { CheckoutData } from "./types";
 import { generateWhatsAppLink } from "./utils";
 import { RestaurantProvider, useRestaurant } from "./context/RestaurantContext";
 import { LanguageProvider } from "./context/LanguageContext";

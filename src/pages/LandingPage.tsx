@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useAnimation } from 'motion/react';
 import { ArrowRight, Star, Utensils, ClipboardList, MapPin, Instagram, Facebook, Share2, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -13,7 +13,7 @@ import { Product, Location } from '../types';
 
 export function LandingPage() {
   const { config, menuItems, isLoading, locations, setSelectedLocation: setGlobalSelectedLocation } = useRestaurant();
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [locationIndex, setLocationIndex] = useState(0);
@@ -339,7 +339,7 @@ export function LandingPage() {
             <div className="overflow-hidden p-2 -m-2">
               <motion.div className="flex gap-6" animate={{ x: `calc(-${locationIndex * 340}px - ${locationIndex * 1.5}rem)` }}
                 transition={{ type: 'spring', damping: 25, stiffness: 120 }}>
-                {locations.map((loc, i) => (
+                {locations.map((loc) => (
                   <motion.div key={loc.id} onClick={() => setSelectedLocation(loc)}
                     className="min-w-[300px] sm:min-w-[380px] bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl hover:shadow-primary-vibrant/10 transition-all duration-300 flex flex-col border-2 border-zinc-100 hover:border-primary-vibrant/30 group cursor-pointer">
                     <div className="h-48 relative overflow-hidden bg-zinc-100">
@@ -388,7 +388,6 @@ export function LandingPage() {
           <motion.div className="flex gap-5 px-4" animate={marqueeControls}>
             {[...Array(2)].map((_, setIdx) => (
               Array.from({ length: 8 }, (_, idx) => {
-                const globalIdx = setIdx * 8 + idx;
                 return (
                   <div key={`${setIdx}-${idx}`}
                     className="min-w-[300px] md:min-w-[360px] bg-dark p-6 rounded-2xl space-y-4 border-2 border-white/10 hover:border-secondary-vibrant/30 transition-all duration-300 shadow-sm hover:shadow-lg hover:shadow-secondary-vibrant/10">

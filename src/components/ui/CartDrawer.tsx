@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingCart, User, MapPin, Phone, Trash2, Plus, Minus, X, Search, ArrowRight, Navigation, AlertCircle } from 'lucide-react';
-import { Product, CartItem, DeliveryType, CheckoutData, Location, AddressSuggestion } from '../../types';
+import { ShoppingCart, User, MapPin, Phone, Plus, Minus, X, ArrowRight, Navigation, AlertCircle } from 'lucide-react';
+import { CartItem, DeliveryType, CheckoutData, Location, AddressSuggestion } from '../../types';
 import React, { useState, useEffect, useCallback } from 'react';
 import { MapComponent } from './MapComponent';
 import { useLanguage } from '../../context/LanguageContext';
@@ -29,7 +29,7 @@ export function CartDrawer({
   const { searchAddress, calculateDistanceAndFee, clearSuggestions, suggestions, isLoading: isLoadingAddress, error: searchError } = useDistanceCalculation();
 
   const [step, setStep] = useState<'cart' | 'checkout'>('cart');
-  const [deliveryType, setDeliveryType] = useState<DeliveryType>('Delivery');
+  const [deliveryType] = useState<DeliveryType>('Delivery');
   const [formData, setFormData] = useState({ name: '', phone: '', address: '', reference: '', notes: '' });
   const [deliveryCoordinates, setDeliveryCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
@@ -39,7 +39,6 @@ export function CartDrawer({
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState({ name: '', phone: '', address: '' });
-  const [showMapPreview, setShowMapPreview] = useState(false);
   const [locationSelected, setLocationSelected] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
 

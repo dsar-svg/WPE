@@ -13,7 +13,7 @@ interface CategoryModalProps {
 export function CategoryModal({ categories, onClose, onSave, onDelete }: CategoryModalProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
+  const [, setIsSaving] = useState(false);
 
   const handleSave = async (cat: Category) => {
     try {

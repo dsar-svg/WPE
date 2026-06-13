@@ -88,7 +88,7 @@ const ProductCard = memo(function ProductCard({
 });
 
 export function MenuView({
-  onAddToCart, cartCount, total, menuItems, categories, onOpenCart, location, onBack, config,
+  onAddToCart, cartCount, total, menuItems, categories, onOpenCart, location, onBack, config: _config,
 }: MenuViewProps) {
   const { t, language } = useLanguage();
   const [activeCategory, setActiveCategory] = useState(categories[0]?.name || "");

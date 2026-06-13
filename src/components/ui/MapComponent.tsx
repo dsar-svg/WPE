@@ -3,12 +3,6 @@ import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-lea
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-const pandaIcon = new L.Icon({
-  iconUrl: '/panda-marker.png',
-  iconSize: [64, 64],
-  iconAnchor: [32, 64],
-});
-
 const createCustomIcon = (color = 'var(--color-primary-vibrant)') => {
   return L.divIcon({
     className: 'custom-marker',

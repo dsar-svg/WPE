@@ -1,5 +1,5 @@
-import { motion, AnimatePresence } from "motion/react";
-import { X, ShoppingBag, Utensils } from "lucide-react";
+import { motion } from "motion/react";
+import { X, ShoppingBag } from "lucide-react";
 import { Product } from "../../types";
 import { useLanguage } from "../../context/LanguageContext";
 
@@ -11,7 +11,7 @@ interface ProductModalProps {
 }
 
 export function ProductModal({ product, onClose, onAddToCart, showAddToCart = true }: ProductModalProps) {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-6">
