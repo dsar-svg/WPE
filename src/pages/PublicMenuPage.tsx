@@ -8,6 +8,7 @@ import { LanguageToggle } from '../components/ui/LanguageToggle';
 import { ProductModal } from '../components/ui/ProductModal';
 import { PWAInstallPrompt } from '../components/ui/PWAInstallPrompt';
 import { Pagination } from '../components/ui/Pagination';
+import { OptimizedImage } from '../components/ui/OptimizedImage';
 import { Product } from '../types';
 
 export function PublicMenuPage() {
@@ -16,7 +17,7 @@ export function PublicMenuPage() {
   const [activeCategory, setActiveCategory] = useState(categories[0]?.name || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [page, setPage] = useState(1);
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 12;
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
   useEffect(() => {
@@ -76,14 +77,14 @@ export function PublicMenuPage() {
       <div className="sticky top-0 bg-dark/95 backdrop-blur-2xl z-30 border-b border-white/10">
         <div className="max-w-7xl mx-auto flex items-center gap-3 p-6 overflow-x-auto no-scrollbar scroll-smooth">
           {categories.map((cat) => (
-            <motion.button key={cat.id} whileTap={{ scale: 0.95 }} onClick={() => setActiveCategory(cat.name)}
-              className={`px-8 py-3.5 rounded-full text-[11px] font-bold uppercase tracking-[0.25em] transition-all duration-300 whitespace-nowrap ${
+            <button key={cat.id} onClick={() => setActiveCategory(cat.name)}
+              className={`px-8 py-3.5 rounded-full text-[11px] font-bold uppercase tracking-[0.25em] transition-all duration-200 whitespace-nowrap ${
                 activeCategory === cat.name
                   ? 'bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-xl shadow-primary-vibrant/30'
                   : 'bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white border border-white/10'
               }`}>
               {cat.name}
-            </motion.button>
+            </button>
           ))}
         </div>
       </div>
@@ -100,19 +101,20 @@ export function PublicMenuPage() {
         ) : (
           <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {paginatedItems.map((item, idx) => (
-              <motion.div key={item.id} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.1, duration: 0.5 }} viewport={{ once: true }}
+            {paginatedItems.map((item) => (
+              <div key={item.id}
                 onClick={() => setSelectedProduct(item)}
-                className="bg-dark-card rounded-2xl overflow-hidden border-2 border-secondary-vibrant/20 hover:border-secondary-vibrant/50 shadow-sm hover:shadow-xl hover:shadow-secondary-vibrant/10 transition-all duration-300 group cursor-pointer">
+                className="bg-dark-card rounded-2xl overflow-hidden border-2 border-secondary-vibrant/20 hover:border-secondary-vibrant/50 shadow-sm hover:shadow-xl hover:shadow-secondary-vibrant/10 transition-all duration-200 group cursor-pointer">
                 <div className="relative h-64 overflow-hidden">
-                  <img src={item.image || 'https://picsum.photos/seed/food/300/200'} alt={item.name}
-                    loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" referrerPolicy="no-referrer" />
+                  <OptimizedImage
+                    src={item.image}
+                    alt={item.name}
+                    className="w-full h-full"
+                  />
                   <div className="absolute top-4 left-4 bg-secondary-vibrant text-dark px-4 py-1.5 rounded-lg font-display text-lg tracking-wider shadow-lg font-bold">
                     ${item.price.toFixed(2)}
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-primary-vibrant/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-primary-vibrant/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                 </div>
                 <div className="p-6 space-y-3">
                   <h3 className="font-display text-xl uppercase tracking-wider text-white group-hover:text-secondary-vibrant transition-colors line-clamp-1">{item.name}</h3>
@@ -124,12 +126,12 @@ export function PublicMenuPage() {
                       {item.inStock ? activeCategory : t('menu.outOfStock')}
                     </span>
                     <Link to="/pedir" state={{ preAddProduct: item }} onClick={(e) => e.stopPropagation()}
-                      className="w-11 h-11 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-xl flex items-center justify-center text-white hover:shadow-lg hover:shadow-primary-vibrant/30 transition-all duration-300">
+                      className="w-11 h-11 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-xl flex items-center justify-center text-white hover:shadow-lg hover:shadow-primary-vibrant/30 transition-all duration-200">
                       <HandPlatter className="w-5 h-5" />
                     </Link>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
           <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />

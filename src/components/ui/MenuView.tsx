@@ -95,7 +95,7 @@ export function MenuView({
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [page, setPage] = useState(1);
   const [addedItem, setAddedItem] = useState<string | null>(null);
-  const ITEMS_PER_PAGE = 10;
+  const ITEMS_PER_PAGE = 12;
 
   const handleAddToCart = useCallback((product: Product) => {
     onAddToCart(product);

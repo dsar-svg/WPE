@@ -8,6 +8,7 @@ import { LanguageToggle } from '../components/ui/LanguageToggle';
 import { ProductModal } from '../components/ui/ProductModal';
 import { LocationModal } from '../components/ui/LocationModal';
 import { PWAInstallPrompt } from '../components/ui/PWAInstallPrompt';
+import { OptimizedImage } from '../components/ui/OptimizedImage';
 import { Product, Location } from '../types';
 
 export function LandingPage() {
@@ -179,20 +180,12 @@ export function LandingPage() {
       <section id="main-content" className="relative min-h-[90vh] flex items-center justify-center bg-dark text-white overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-dark via-dark to-primary-vibrant/30" />
         
-        {/* Food images grid - decorative background */}
+        {/* Decorative background gradient */}
         <div className="absolute inset-0 overflow-hidden opacity-20">
-          <div className="absolute top-10 left-10 w-48 h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden rotate-[-5deg]">
-            <img src="https://picsum.photos/seed/chinese1/300/200" alt="" className="w-full h-full object-cover" />
-          </div>
-          <div className="absolute top-20 right-20 w-40 h-40 md:w-56 md:h-56 rounded-2xl overflow-hidden rotate-[8deg]">
-            <img src="https://picsum.photos/seed/chinese2/300/200" alt="" className="w-full h-full object-cover" />
-          </div>
-          <div className="absolute bottom-20 left-1/4 w-44 h-44 md:w-60 md:h-60 rounded-2xl overflow-hidden rotate-[3deg]">
-            <img src="https://picsum.photos/seed/chinese3/300/200" alt="" className="w-full h-full object-cover" />
-          </div>
-          <div className="absolute bottom-32 right-1/4 w-36 h-36 md:w-48 md:h-48 rounded-2xl overflow-hidden rotate-[-7deg]">
-            <img src="https://picsum.photos/seed/chinese4/300/200" alt="" className="w-full h-full object-cover" />
-          </div>
+          <div className="absolute top-10 left-10 w-48 h-48 md:w-64 md:h-64 rounded-2xl rotate-[-5deg] bg-gradient-to-br from-primary-vibrant/30 to-transparent" />
+          <div className="absolute top-20 right-20 w-40 h-40 md:w-56 md:h-56 rounded-2xl rotate-[8deg] bg-gradient-to-br from-secondary-vibrant/30 to-transparent" />
+          <div className="absolute bottom-20 left-1/4 w-44 h-44 md:w-60 md:h-60 rounded-2xl rotate-[3deg] bg-gradient-to-br from-primary-vibrant/20 to-transparent" />
+          <div className="absolute bottom-32 right-1/4 w-36 h-36 md:w-48 md:h-48 rounded-2xl rotate-[-7deg] bg-gradient-to-br from-secondary-vibrant/20 to-transparent" />
         </div>
         
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary-vibrant/20 rounded-full blur-[60px] -mr-48 -mt-48 will-change-[filter]" />
@@ -297,10 +290,11 @@ export function LandingPage() {
                 onClick={() => setSelectedProduct(item)}
                 className="group cursor-pointer bg-dark-card rounded-2xl overflow-hidden border-2 border-white/10 hover:border-secondary-vibrant/40 hover:shadow-xl hover:shadow-secondary-vibrant/10 transition-all duration-300">
                 <div className="relative h-64 overflow-hidden">
-                  <img src={item.image || 'https://picsum.photos/seed/food/300/200'}
+                  <OptimizedImage
+                    src={item.image}
                     alt={language === 'es' ? item.name : t(`prod.${item.id}.name`)}
-                    loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    className="w-full h-full"
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-dark-card via-transparent to-transparent opacity-80" />
                   <div className="absolute top-3 right-3 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white font-display text-lg tracking-wider px-3 py-1 rounded-lg shadow-lg">
                     ${item.price.toFixed(2)}
@@ -349,9 +343,11 @@ export function LandingPage() {
                   <motion.div key={loc.id} onClick={() => setSelectedLocation(loc)}
                     className="min-w-[300px] sm:min-w-[380px] bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl hover:shadow-primary-vibrant/10 transition-all duration-300 flex flex-col border-2 border-zinc-100 hover:border-primary-vibrant/30 group cursor-pointer">
                     <div className="h-48 relative overflow-hidden bg-zinc-100">
-                      <img src={loc.image || 'https://picsum.photos/seed/restaurant/300/200'} alt={loc.name}
-                        loading="lazy"
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      <OptimizedImage
+                        src={loc.image}
+                        alt={loc.name}
+                        className="w-full h-full"
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-primary-vibrant/60 via-transparent to-transparent" />
                       <div className="absolute bottom-4 left-4 flex items-center gap-2">
                         <div className={`w-2.5 h-2.5 rounded-full ${loc.isOpen ? 'bg-secondary-vibrant' : 'bg-zinc-400'}`} />

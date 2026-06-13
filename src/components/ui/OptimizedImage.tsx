@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, memo } from 'react';
+import { Image as ImageIcon } from 'lucide-react';
 
 interface OptimizedImageProps {
   src: string | null;
@@ -33,30 +34,33 @@ export const OptimizedImage = memo(function OptimizedImage({
     return () => observer.disconnect();
   }, []);
 
-  const fallbackSrc = `https://picsum.photos/seed/${alt.replace(/\s+/g, '-')}/300/200`;
-  const imageSrc = hasError ? fallbackSrc : src || fallbackSrc;
+  const showPlaceholder = !src || hasError;
 
   return (
-    <div ref={imgRef} className={`relative overflow-hidden ${className}`}>
-      {!isLoaded && (
-        <div className="absolute inset-0 bg-zinc-800 animate-pulse" />
+    <div ref={imgRef} className={`relative overflow-hidden bg-dark-card ${className}`}>
+      {showPlaceholder ? (
+        <div className="w-full h-full flex items-center justify-center bg-zinc-800/50">
+          <ImageIcon className="w-12 h-12 text-zinc-600" />
+        </div>
+      ) : (
+        <>
+          {!isLoaded && (
+            <div className="absolute inset-0 bg-zinc-800 animate-pulse" />
+          )}
+          <img
+            src={src}
+            alt={alt}
+            loading="lazy"
+            decoding="async"
+            onLoad={() => setIsLoaded(true)}
+            onError={() => setHasError(true)}
+            className={`w-full h-full object-cover transition-opacity duration-300 ${
+              isLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
+            referrerPolicy="no-referrer"
+          />
+        </>
       )}
-
-      <img
-        src={imageSrc}
-        alt={alt}
-        loading="lazy"
-        decoding="async"
-        onLoad={() => setIsLoaded(true)}
-        onError={() => {
-          if (!hasError) setHasError(true);
-          else setIsLoaded(true);
-        }}
-        className={`w-full h-full object-cover transition-opacity duration-300 ${
-          isLoaded ? 'opacity-100' : 'opacity-0'
-        }`}
-        referrerPolicy="no-referrer"
-      />
     </div>
   );
 });

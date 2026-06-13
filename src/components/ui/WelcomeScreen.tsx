@@ -4,6 +4,7 @@ import { MapPin, Clock, ArrowRight, UtensilsCrossed, ArrowLeft, Info, AlertCircl
 import { Location } from "../../types";
 import { Link } from "react-router-dom";
 import { useLanguage } from "../../context/LanguageContext";
+import { OptimizedImage } from "./OptimizedImage";
 
 interface WelcomeScreenProps {
   onSelectLocation: (loc: Location) => void;
@@ -123,9 +124,11 @@ export function WelcomeScreen({ onSelectLocation, locations, config }: WelcomeSc
                       : "bg-white/[0.02] border-2 border-white/5 cursor-not-allowed opacity-60"
                   }`}>
                   <div className="h-40 w-full relative overflow-hidden">
-                    <img src={loc.image || "https://picsum.photos/seed/restaurant/300/200"} alt={loc.name}
-                      loading="lazy"
-                      className={`w-full h-full object-cover transition-transform duration-500 ${isOpenByTime ? "group-hover:scale-105" : ""}`} />
+                    <OptimizedImage
+                      src={loc.image}
+                      alt={loc.name}
+                      className={`w-full h-full ${isOpenByTime ? "" : ""}`}
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-dark-card via-dark-card/60 to-transparent" />
                     <div className="absolute top-4 right-4 flex gap-2">
                       <span className={`px-4 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-[0.2em] ${

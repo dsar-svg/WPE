@@ -19,7 +19,7 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
     description: '',
     category: categories[0]?.name || '',
     price: 0,
-    image: 'https://picsum.photos/seed/food/300/200',
+    image: '',
     inStock: true,
     order: 0
   });

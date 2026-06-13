@@ -12,6 +12,7 @@ import { SettingsPage } from '../components/admin/SettingsPage';
 import { OrdersPage } from '../components/admin/OrdersPage';
 import { DashboardView } from '../components/admin/DashboardView';
 import { Pagination } from '../components/ui/Pagination';
+import { OptimizedImage } from '../components/ui/OptimizedImage';
 const formatTime12h = (time: string) => { if (!time) return ''; const [hours, minutes] = time.split(':');
 const h = parseInt(hours);
 const ampm = h >= 12 ? 'PM' : 'AM'; const h12 = h % 12 || 12; return `${h12}:${minutes} ${ampm}`;};
@@ -153,9 +154,10 @@ return (
                   <div className="space-y-6">
                     <div className="flex justify-between items-start">
                       <div className="relative">
-                        <img src={loc.image || 'https://picsum.photos/seed/restaurant/300/200'}
-                          loading="lazy"
-                          className="w-20 h-20 rounded-2xl object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all border border-admin-border shadow-xl"
+                        <OptimizedImage
+                          src={loc.image}
+                          alt={loc.name}
+                          className="w-20 h-20 rounded-2xl grayscale-[0.3] group-hover:grayscale-0 transition-all border border-admin-border shadow-xl"
                         />
                         <div className={'absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-admin-bg ' + (loc.isOpen ? 'bg-green-500' : 'bg-admin-muted')} />
                       </div>
@@ -279,10 +281,10 @@ return (
                         className="bg-admin-surface border border-admin-border rounded-[20px] p-4 flex gap-4 hover:border-admin-border transition-colors group"
                       >
                         <div className="w-24 h-24 rounded-2xl overflow-hidden relative bg-admin-bg">
-                          <img src={item.image || 'https://picsum.photos/seed/food/300/200'}
+                          <OptimizedImage
+                            src={item.image}
                             alt={item.name}
-                            loading="lazy"
-                            className="w-full h-full object-cover grayscale-[0.2] transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer"
+                            className="w-full h-full grayscale-[0.2] transition-transform duration-500 group-hover:scale-110"
                           />
                           {(!item.inStock || isDiscontinuedLocally) && (
                             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
