@@ -12,11 +12,19 @@ interface SettingsPageProps {
 }
 
 export function SettingsPage({ config: initialConfig, menuItems, categories, onSave }: SettingsPageProps) {
+  const getFeaturedIds = (val: unknown): string[] => {
+    if (Array.isArray(val)) return val as string[];
+    if (typeof val === 'string' && val.length > 0) {
+      return val.replace(/[{}"]/g, '').split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
   const [data, setData] = useState<RestaurantConfig>(() => ({
     ...initialConfig,
     aboutUs: initialConfig.aboutUs || '',
     socialMedia: initialConfig.socialMedia || {},
-    featuredProductIds: Array.isArray(initialConfig.featuredProductIds) ? initialConfig.featuredProductIds : [],
+    featuredProductIds: getFeaturedIds(initialConfig.featuredProductIds),
     distancePricing: initialConfig.distancePricing || {
       ranges: [
         { maxDistance: 5, fee: 3.00 },
@@ -77,14 +85,6 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
   };
 
   useEffect(() => { setFeaturedPage(1); }, [featuredCategory]);
-
-  const getFeaturedIds = (val: unknown): string[] => {
-    if (Array.isArray(val)) return val as string[];
-    if (typeof val === 'string' && val.length > 0) {
-      return val.replace(/[{}"]/g, '').split(',').map(s => s.trim()).filter(Boolean);
-    }
-    return [];
-  };
 
   const toggleFeaturedProduct = (id: string) => {
     setData(prev => {
