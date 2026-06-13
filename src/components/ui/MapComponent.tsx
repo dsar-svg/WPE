@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import { MapContainer, TileLayer, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -28,13 +28,8 @@ interface MapComponentProps {
   onLocationSelect: (lat: number, lng: number) => void | Promise<void>;
   onDragEnd?: (lat: number, lng: number, address: string | null) => void | Promise<void>;
   onOutOfBounds?: (lat: number, lng: number) => void;
-  markerPosition?: [number, number] | null;
   style?: 'modern' | 'light';
-  showPopup?: boolean;
   isPreview?: boolean;
-  fixedCenterMarker?: boolean;
-  draggable?: boolean;
-  maxDeliveryDistance?: number;
   markerColor?: 'red' | 'orange';
 }
 
@@ -46,6 +41,36 @@ function isInsideVenezuela(lat: number, lng: number): boolean {
 // ── Inner components ────────────────────────────────────────────────────────
 
 /**
+ * Watches `center` prop and flies the map there when it changes.
+ * Used when the user types/selects an address and we need the pin to move.
+ */
+function CenterFlyer({
+  center,
+  zoom,
+  onFlyStart,
+}: {
+  center: [number, number];
+  zoom: number;
+  onFlyStart: () => void;
+}) {
+  const map = useMap();
+  const prevCenter = useRef(center);
+
+  useEffect(() => {
+    const [lat, lng] = center;
+    const [prevLat, prevLng] = prevCenter.current;
+    // Only fly if the coordinates actually changed (not from our own moveend)
+    if (lat !== prevLat || lng !== prevLng) {
+      onFlyStart();
+      map.flyTo([lat, lng], zoom, { duration: 0.8 });
+      prevCenter.current = center;
+    }
+  }, [center, zoom, map, onFlyStart]);
+
+  return null;
+}
+
+/**
  * Fires on every map move/end — reports the center coordinates to the parent.
  * The center is the "pin" position since the marker is fixed in the middle.
  */
@@ -53,10 +78,12 @@ function MapMoveHandler({
   onLocationSelect,
   onDragEnd,
   onOutOfBounds,
+  skipNextRef,
 }: {
   onLocationSelect: (lat: number, lng: number) => void | Promise<void>;
   onDragEnd?: (lat: number, lng: number, address: string | null) => void | Promise<void>;
   onOutOfBounds?: (lat: number, lng: number) => void;
+  skipNextRef: React.MutableRefObject<boolean>;
 }) {
   const onSelectRef = useRef(onLocationSelect);
   onSelectRef.current = onLocationSelect;
@@ -70,6 +97,11 @@ function MapMoveHandler({
     moveend() {
       if (isInitialMove.current) {
         isInitialMove.current = false;
+        return;
+      }
+      // Skip if this move was triggered by CenterFlyer (address selection)
+      if (skipNextRef.current) {
+        skipNextRef.current = false;
         return;
       }
       const c = map.getCenter();
@@ -109,6 +141,11 @@ export function MapComponent({
 }: MapComponentProps) {
   const tile = TILE_LAYERS[style];
   const pinColor = markerColor === 'orange' ? '#ff6b00' : '#cb2027';
+  const skipNextRef = useRef(false);
+
+  const handleFlyStart = () => {
+    skipNextRef.current = true;
+  };
 
   return (
     <div className="relative">
@@ -125,10 +162,12 @@ export function MapComponent({
         scrollWheelZoom={!isPreview}
       >
         <TileLayer attribution={tile.attribution} url={tile.url} />
+        <CenterFlyer center={center} zoom={zoom} onFlyStart={handleFlyStart} />
         <MapMoveHandler
           onLocationSelect={onLocationSelect}
           onDragEnd={onDragEnd}
           onOutOfBounds={onOutOfBounds}
+          skipNextRef={skipNextRef}
         />
       </MapContainer>
 
