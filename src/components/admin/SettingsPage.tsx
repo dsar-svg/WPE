@@ -87,8 +87,11 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
   useEffect(() => { setFeaturedPage(1); }, [featuredCategory]);
 
   const toggleFeaturedProduct = (id: string) => {
+    console.log('[DEBUG] toggleFeaturedProduct called with:', id);
     setData(prev => {
+      console.log('[DEBUG] prev.featuredProductIds:', prev.featuredProductIds);
       const ids = getFeaturedIds(prev.featuredProductIds);
+      console.log('[DEBUG] parsed ids:', ids);
       if (ids.includes(id)) {
         return { ...prev, featuredProductIds: ids.filter(i => i !== id) };
       }
@@ -222,7 +225,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
               {paginatedFeatured.map(item => (
                 <button
                   key={item.id}
-                  onClick={() => toggleFeaturedProduct(item.id)}
+                  onClick={() => { console.log('[DEBUG] button clicked:', item.id); toggleFeaturedProduct(item.id); }}
                   className={`p-3 rounded-xl text-xs font-bold text-left border transition-all ${
                     getFeaturedIds(data.featuredProductIds).includes(item.id)
                       ? 'bg-primary-vibrant text-white border-primary-vibrant'
