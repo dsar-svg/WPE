@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Save, RefreshCcw, Info, Clock, AlertCircle, Image as ImageIcon, MessageCircle, MapPin } from 'lucide-react';
 import { Location } from '../../types';
 import { useUploadImage } from '../../hooks/useUploadImage';
+import { validateImageSize } from '../../lib/uploadImage';
 
 interface LocationFormProps {
   location?: Location;
@@ -59,7 +60,16 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const validation = validateImageSize(file);
+    if (!validation.valid) {
+      setError(validation.error || 'Imagen demasiado grande');
+      e.target.value = '';
+      return;
+    }
+
     setIsUploading(true);
+    setError(null);
     try {
       const url = await uploadImage(file);
       setData({ ...data, image: url });
@@ -176,6 +186,7 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
                       >
                         Subir desde el dispositivo
                       </button>
+                      <p className="text-[9px] text-zinc-600">Máximo 5MB</p>
                       <input
                         type="text"
                         className="w-full bg-zinc-900 border border-zinc-700 p-2.5 rounded-xl font-bold text-[9px] focus:ring-1 focus:ring-primary-vibrant outline-none text-zinc-400"

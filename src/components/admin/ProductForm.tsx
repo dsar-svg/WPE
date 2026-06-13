@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { X, Save, RefreshCcw, Image as ImageIcon } from 'lucide-react';
 import { Product, Category } from '../../types';
 import { useUploadImage } from '../../hooks/useUploadImage';
+import { validateImageSize } from '../../lib/uploadImage';
 
 interface ProductFormProps {
   product?: Product;
@@ -30,7 +31,16 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const validation = validateImageSize(file);
+    if (!validation.valid) {
+      setError(validation.error || 'Imagen demasiado grande');
+      e.target.value = '';
+      return;
+    }
+
     setIsUploading(true);
+    setError(null);
     try {
       const url = await uploadImage(file);
       setData({ ...data, image: url });
@@ -109,6 +119,7 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
                   <RefreshCcw className="w-3 h-3" />
                   Subir desde el dispositivo
                 </button>
+                <p className="text-[9px] text-zinc-600 text-center">Máximo 5MB • Se comprime automáticamente</p>
                 <input
                   className="w-full bg-zinc-900 border border-zinc-800 p-2 rounded-xl font-mono text-[9px] text-zinc-500 focus:ring-1 focus:ring-primary-vibrant outline-none"
                   placeholder="O URL directa..."

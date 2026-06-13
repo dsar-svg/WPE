@@ -2,6 +2,18 @@ import { supabase } from './supabase';
 
 const MAX_WIDTH = 800;
 const QUALITY = 0.7;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+export function validateImageSize(file: File): { valid: boolean; error?: string } {
+  if (file.size > MAX_FILE_SIZE) {
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+    return {
+      valid: false,
+      error: `La imagen pesa ${sizeMB}MB. El máximo permitido es 5MB.`
+    };
+  }
+  return { valid: true };
+}
 
 async function compressImage(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -37,6 +49,11 @@ async function compressImage(file: File): Promise<Blob> {
 }
 
 export async function uploadImage(file: File): Promise<string> {
+  const validation = validateImageSize(file);
+  if (!validation.valid) {
+    throw new Error(validation.error);
+  }
+
   const blob = await compressImage(file);
   const ext = 'webp';
   const fileName = `${crypto.randomUUID()}.${ext}`;

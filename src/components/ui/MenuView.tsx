@@ -5,6 +5,7 @@ import { Product, Location, Category } from "../../types";
 import { useLanguage } from "../../context/LanguageContext";
 import { ProductModal } from "./ProductModal";
 import { Pagination } from "./Pagination";
+import { OptimizedImage } from "./OptimizedImage";
 
 interface MenuViewProps {
   onAddToCart: (p: Product) => void;
@@ -118,8 +119,11 @@ export function MenuView({
                     : "border-white/5 opacity-50 grayscale cursor-not-allowed"
                 }`}>
                 <div className="relative h-40 md:h-48 rounded-2xl overflow-hidden mb-3 bg-dark-card">
-                  <img src={item.image || "https://picsum.photos/seed/food/400/300"} alt={item.name}
-                    loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" referrerPolicy="no-referrer" />
+                  <OptimizedImage
+                    src={item.image}
+                    alt={item.name}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
                   <div className="absolute top-2 right-2 bg-secondary-vibrant text-dark font-display text-lg tracking-wider px-3 py-1 rounded-lg shadow-lg font-bold">
                     ${item.price.toFixed(2)}
                   </div>
