@@ -86,25 +86,6 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
     return [];
   };
 
-  useEffect(() => {
-    setData(prev => {
-      const newFeatured = getFeaturedIds(initialConfig.featuredProductIds);
-      const prevFeatured = getFeaturedIds(prev.featuredProductIds);
-      if (JSON.stringify(newFeatured) === JSON.stringify(prevFeatured) &&
-          prev.name === initialConfig.name &&
-          prev.aboutUs === initialConfig.aboutUs) {
-        return prev;
-      }
-      return {
-        ...initialConfig,
-        aboutUs: initialConfig.aboutUs || '',
-        socialMedia: initialConfig.socialMedia || {},
-        featuredProductIds: newFeatured,
-        distancePricing: initialConfig.distancePricing || prev.distancePricing,
-      };
-    });
-  }, [initialConfig]);
-
   const toggleFeaturedProduct = (id: string) => {
     setData(prev => {
       const ids = getFeaturedIds(prev.featuredProductIds);
