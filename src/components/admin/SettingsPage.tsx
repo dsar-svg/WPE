@@ -221,19 +221,24 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
               ))}
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {paginatedFeatured.map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => toggleFeaturedProduct(item.id)}
-                  className={`p-3 rounded-xl text-xs font-bold text-left border transition-all ${
-                    getFeaturedIds(data.featuredProductIds).includes(item.id)
-                      ? 'bg-primary-vibrant text-white border-primary-vibrant'
-                      : 'bg-zinc-950 text-zinc-400 border-zinc-800'
-                  }`}
-                >
-                  {item.name}
-                </button>
-              ))}
+              {paginatedFeatured.map(item => {
+                const featuredIds = getFeaturedIds(data.featuredProductIds);
+                const isFeatured = featuredIds.includes(item.id);
+                console.log('[DEBUG render]', { itemId: item.id, featuredIds, isFeatured });
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => toggleFeaturedProduct(item.id)}
+                    className={`p-3 rounded-xl text-xs font-bold text-left border transition-all ${
+                      isFeatured
+                        ? 'bg-primary-vibrant text-white border-primary-vibrant'
+                        : 'bg-zinc-950 text-zinc-400 border-zinc-800'
+                    }`}
+                  >
+                    {item.name}
+                  </button>
+                );
+              })}
             </div>
             <Pagination currentPage={featuredPage} totalPages={totalFeaturedPages} onPageChange={setFeaturedPage} />
           </div>

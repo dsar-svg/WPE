@@ -77,8 +77,13 @@ export function LandingPage() {
   if (isLoading) return null;
 
   const featuredIds = Array.isArray(config.featuredProductIds) ? config.featuredProductIds : [];
+  console.log('[DEBUG Landing] config.featuredProductIds:', config.featuredProductIds, 'featuredIds:', featuredIds);
   const featuredItems = featuredIds.length > 0
-    ? menuItems.filter(item => featuredIds.includes(item.id))
+    ? menuItems.filter(item => {
+        const match = featuredIds.includes(item.id);
+        if (match) console.log('[DEBUG Landing match]', item.id, item.name);
+        return match;
+      })
     : menuItems.slice(0, 3);
 
   const scrollToSection = (id: string) => {
