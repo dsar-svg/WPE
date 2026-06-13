@@ -284,7 +284,7 @@ return (
                           <OptimizedImage
                             src={item.image}
                             alt={item.name}
-                            className="w-full h-full object-contain p-1 grayscale-[0.2] transition-transform duration-500 group-hover:scale-110"
+                            className="w-full h-full p-1 grayscale-[0.2] transition-transform duration-500 group-hover:scale-110"
                           />
                           {(!item.inStock || isDiscontinuedLocally) && (
                             <div className="absolute inset-0 bg-black/60 flex items-center justify-center">

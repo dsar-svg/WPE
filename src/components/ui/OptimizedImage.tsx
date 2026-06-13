@@ -37,7 +37,7 @@ export const OptimizedImage = memo(function OptimizedImage({
   const showPlaceholder = !src || hasError;
 
   return (
-    <div ref={imgRef} className={`relative overflow-hidden bg-dark-card ${className}`}>
+    <div ref={imgRef} className={`relative overflow-hidden bg-dark-card flex items-center justify-center ${className}`}>
       {showPlaceholder ? (
         <div className="w-full h-full flex items-center justify-center bg-zinc-800/50">
           <UtensilsCrossed className="w-10 h-10 text-zinc-600" />
@@ -54,9 +54,7 @@ export const OptimizedImage = memo(function OptimizedImage({
             decoding="async"
             onLoad={() => setIsLoaded(true)}
             onError={() => setHasError(true)}
-            className={`w-full h-full object-cover transition-opacity duration-300 ${
-              isLoaded ? 'opacity-100' : 'opacity-0'
-            }`}
+            className="w-auto h-auto max-w-full max-h-full object-contain transition-opacity duration-300 m-auto"
             referrerPolicy="no-referrer"
           />
         </>

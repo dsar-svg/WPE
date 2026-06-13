@@ -293,7 +293,7 @@ export function LandingPage() {
                   <OptimizedImage
                     src={item.image}
                     alt={language === 'es' ? item.name : t(`prod.${item.id}.name`)}
-                    className="w-full h-full object-contain p-2"
+                    className="w-full h-full p-2"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-dark-card via-transparent to-transparent opacity-80" />
                   <div className="absolute top-3 right-3 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white font-display text-lg tracking-wider px-3 py-1 rounded-lg shadow-lg">
