@@ -206,7 +206,12 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   const locations = useMemo(() => locationRows.map(rowToLocation), [locationRows]);
   const menuItems = useMemo(() => menuItemRows.map(rowToProduct), [menuItemRows]);
   const categories = useMemo(() => categoryRows.map(rowToCategory), [categoryRows]);
-  const config: RestaurantConfig = useMemo(() => configRow ? { ...DEFAULT_CONFIG, ...rowToConfig(configRow) } : DEFAULT_CONFIG, [configRow]);
+  const menuItemIds = useMemo(() => new Set(menuItems.map(m => m.id)), [menuItems]);
+  const rawConfig = useMemo(() => configRow ? { ...DEFAULT_CONFIG, ...rowToConfig(configRow) } : DEFAULT_CONFIG, [configRow]);
+  const config: RestaurantConfig = useMemo(() => ({
+    ...rawConfig,
+    featuredProductIds: rawConfig.featuredProductIds?.filter(id => menuItemIds.has(id)) || []
+  }), [rawConfig, menuItemIds]);
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
