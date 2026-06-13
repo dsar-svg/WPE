@@ -78,9 +78,36 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
 
   useEffect(() => { setFeaturedPage(1); }, [featuredCategory]);
 
+  const getFeaturedIds = (val: unknown): string[] => {
+    if (Array.isArray(val)) return val as string[];
+    if (typeof val === 'string' && val.length > 0) {
+      return val.replace(/[{}"]/g, '').split(',').map(s => s.trim()).filter(Boolean);
+    }
+    return [];
+  };
+
+  useEffect(() => {
+    setData(prev => {
+      const newFeatured = getFeaturedIds(initialConfig.featuredProductIds);
+      const prevFeatured = getFeaturedIds(prev.featuredProductIds);
+      if (JSON.stringify(newFeatured) === JSON.stringify(prevFeatured) &&
+          prev.name === initialConfig.name &&
+          prev.aboutUs === initialConfig.aboutUs) {
+        return prev;
+      }
+      return {
+        ...initialConfig,
+        aboutUs: initialConfig.aboutUs || '',
+        socialMedia: initialConfig.socialMedia || {},
+        featuredProductIds: newFeatured,
+        distancePricing: initialConfig.distancePricing || prev.distancePricing,
+      };
+    });
+  }, [initialConfig]);
+
   const toggleFeaturedProduct = (id: string) => {
     setData(prev => {
-      const ids = Array.isArray(prev.featuredProductIds) ? prev.featuredProductIds : [];
+      const ids = getFeaturedIds(prev.featuredProductIds);
       if (ids.includes(id)) {
         return { ...prev, featuredProductIds: ids.filter(i => i !== id) };
       }
@@ -216,7 +243,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
                   key={item.id}
                   onClick={() => toggleFeaturedProduct(item.id)}
                   className={`p-3 rounded-xl text-xs font-bold text-left border transition-all ${
-                    (Array.isArray(data.featuredProductIds) && data.featuredProductIds.includes(item.id))
+                    getFeaturedIds(data.featuredProductIds).includes(item.id)
                       ? 'bg-primary-vibrant text-white border-primary-vibrant'
                       : 'bg-zinc-950 text-zinc-400 border-zinc-800'
                   }`}
