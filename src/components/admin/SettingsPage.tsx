@@ -95,7 +95,10 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
       if (ids.includes(id)) {
         return { ...prev, featuredProductIds: ids.filter(i => i !== id) };
       }
-      if (ids.length >= 5) return prev;
+      if (ids.length >= 5) {
+        // Swap: remove first, add new at end
+        return { ...prev, featuredProductIds: [...ids.slice(1), id] };
+      }
       return { ...prev, featuredProductIds: [...ids, id] };
     });
   };
