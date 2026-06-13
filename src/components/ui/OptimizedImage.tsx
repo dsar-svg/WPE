@@ -37,9 +37,9 @@ export const OptimizedImage = memo(function OptimizedImage({
   const showPlaceholder = !src || hasError;
 
   return (
-    <div ref={imgRef} className={`relative overflow-hidden bg-dark-card flex items-center justify-center ${className}`}>
+    <div ref={imgRef} className={`relative overflow-hidden bg-zinc-900/50 flex items-center justify-center ${className}`}>
       {showPlaceholder ? (
-        <div className="w-full h-full flex items-center justify-center bg-zinc-800/50">
+        <div className="w-full h-full flex items-center justify-center">
           <UtensilsCrossed className="w-10 h-10 text-zinc-600" />
         </div>
       ) : (
