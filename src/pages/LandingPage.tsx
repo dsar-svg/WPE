@@ -76,7 +76,10 @@ export function LandingPage() {
 
   if (isLoading) return null;
 
-  const featuredItems = config.featuredProductIds ? menuItems.filter(item => config.featuredProductIds?.includes(item.id)) : menuItems.slice(0, 3);
+  const featuredIds = Array.isArray(config.featuredProductIds) ? config.featuredProductIds : [];
+  const featuredItems = featuredIds.length > 0
+    ? menuItems.filter(item => featuredIds.includes(item.id))
+    : menuItems.slice(0, 3);
 
   const scrollToSection = (id: string) => {
     setIsMobileMenuOpen(false);
