@@ -1,5 +1,5 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import { useRef } from 'react';
+import { MapContainer, TileLayer, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { reverseGeocode } from '../../lib/DistanceService';
@@ -8,45 +8,6 @@ import { reverseGeocode } from '../../lib/DistanceService';
 const VE_SW = L.latLng(0.6, -73.5);
 const VE_NE = L.latLng(12.5, -59.8);
 const VE_BOUNDS = L.latLngBounds(VE_SW, VE_NE);
-
-// ── Panda SVG marker ────────────────────────────────────────────────────────
-function pandaIcon(color: 'red' | 'orange'): L.DivIcon {
-  const fill = color === 'red' ? '#cb2027' : '#ff6b00';
-  const html = `
-    <svg width="44" height="52" viewBox="0 0 44 52" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 3px 6px rgba(0,0,0,0.35))">
-      <ellipse cx="22" cy="44" rx="12" ry="4" fill="rgba(0,0,0,0.18)"/>
-      <!-- body -->
-      <ellipse cx="22" cy="30" rx="16" ry="18" fill="#fff"/>
-      <!-- ears -->
-      <circle cx="10" cy="12" r="7" fill="${fill}"/>
-      <circle cx="34" cy="12" r="7" fill="${fill}"/>
-      <circle cx="10" cy="12" r="4" fill="#222"/>
-      <circle cx="34" cy="12" r="4" fill="#222"/>
-      <!-- eyes -->
-      <ellipse cx="16" cy="24" rx="5" ry="6" fill="#222"/>
-      <ellipse cx="28" cy="24" rx="5" ry="6" fill="#222"/>
-      <circle cx="15" cy="22" r="2" fill="#fff"/>
-      <circle cx="27" cy="22" r="2" fill="#fff"/>
-      <!-- nose -->
-      <ellipse cx="22" cy="30" rx="2.5" ry="1.8" fill="#222"/>
-      <!-- mouth -->
-      <path d="M19 33 Q22 36 25 33" stroke="#222" stroke-width="1.2" fill="none" stroke-linecap="round"/>
-      <!-- pin needle -->
-      <path d="M22 44 L22 50" stroke="${fill}" stroke-width="2.5" stroke-linecap="round"/>
-      <circle cx="22" cy="49" r="3" fill="${fill}"/>
-      <circle cx="22" cy="49" r="1.5" fill="#fff"/>
-    </svg>`;
-  return L.divIcon({
-    className: 'panda-marker',
-    html,
-    iconSize: [44, 52],
-    iconAnchor: [22, 52],
-    popupAnchor: [0, -52],
-  });
-}
-
-const pandaRed = pandaIcon('red');
-const pandaOrange = pandaIcon('orange');
 
 // ── Tile layers ─────────────────────────────────────────────────────────────
 const TILE_LAYERS = {
@@ -84,20 +45,27 @@ function isInsideVenezuela(lat: number, lng: number): boolean {
 
 // ── Inner components ────────────────────────────────────────────────────────
 
-function MapCenterUpdater({ markerPosition }: { markerPosition?: [number, number] | null }) {
-  const map = useMap();
-  useEffect(() => {
-    if (markerPosition) {
-      map.flyTo(markerPosition, map.getZoom(), { duration: 0.5 });
-    }
-  }, [markerPosition, map]);
-  return null;
-}
-
-function MapMoveHandler({ onLocationSelect }: { onLocationSelect: (lat: number, lng: number) => void | Promise<void> }) {
+/**
+ * Fires on every map move/end — reports the center coordinates to the parent.
+ * The center is the "pin" position since the marker is fixed in the middle.
+ */
+function MapMoveHandler({
+  onLocationSelect,
+  onDragEnd,
+  onOutOfBounds,
+}: {
+  onLocationSelect: (lat: number, lng: number) => void | Promise<void>;
+  onDragEnd?: (lat: number, lng: number, address: string | null) => void | Promise<void>;
+  onOutOfBounds?: (lat: number, lng: number) => void;
+}) {
   const onSelectRef = useRef(onLocationSelect);
   onSelectRef.current = onLocationSelect;
+  const onDragEndRef = useRef(onDragEnd);
+  onDragEndRef.current = onDragEnd;
+  const onOutOfBoundsRef = useRef(onOutOfBounds);
+  onOutOfBoundsRef.current = onOutOfBounds;
   const isInitialMove = useRef(true);
+
   useMapEvents({
     moveend() {
       if (isInitialMove.current) {
@@ -105,74 +73,26 @@ function MapMoveHandler({ onLocationSelect }: { onLocationSelect: (lat: number, 
         return;
       }
       const c = map.getCenter();
-      onSelectRef.current(c.lat, c.lng);
-    },
-  });
-  const map = useMap();
-  return null;
-}
+      const lat = c.lat;
+      const lng = c.lng;
 
-function MapClickHandler({
-  onLocationSelect,
-  showPopup,
-}: {
-  onLocationSelect: (lat: number, lng: number) => void | Promise<void>;
-  showPopup?: boolean;
-}) {
-  const onSelectRef = useRef(onLocationSelect);
-  onSelectRef.current = onLocationSelect;
-  const map = useMapEvents({
-    async click(e) {
-      await onSelectRef.current(e.latlng.lat, e.latlng.lng);
-      if (showPopup) {
-        L.popup()
-          .setLatLng(e.latlng)
-          .setContent(`<div style="padding:6px;text-align:center;font-size:12px"><b>Ubicación</b><br/>${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}</div>`)
-          .openOn(map);
+      if (!isInsideVenezuela(lat, lng)) {
+        onOutOfBoundsRef.current?.(lat, lng);
+        return;
+      }
+
+      onSelectRef.current(lat, lng);
+
+      // Reverse geocode the center and report via onDragEnd
+      if (onDragEndRef.current) {
+        reverseGeocode(lat, lng).then((addr) => {
+          onDragEndRef.current?.(lat, lng, addr);
+        });
       }
     },
   });
-  return null;
-}
-
-function DraggableMarker({
-  position,
-  icon,
-  onDragEnd,
-  onOutOfBounds,
-}: {
-  position: [number, number];
-  icon: L.DivIcon;
-  onDragEnd?: (lat: number, lng: number, address: string | null) => void | Promise<void>;
-  onOutOfBounds?: (lat: number, lng: number) => void;
-}) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const markerRef = useRef<any>(null);
   const map = useMap();
-  const handleDragEnd = useCallback(async () => {
-    const marker = markerRef.current;
-    if (!marker) return;
-    const { lat, lng } = marker.getLatLng();
-    if (!isInsideVenezuela(lat, lng)) {
-      onOutOfBounds?.(lat, lng);
-      // snap back to last valid position inside Venezuela
-      const center = map.getCenter();
-      marker.setLatLng(center);
-      return;
-    }
-    const addr = await reverseGeocode(lat, lng);
-    onDragEnd?.(lat, lng, addr);
-  }, [map, onDragEnd, onOutOfBounds]);
-
-  return (
-    <Marker
-      ref={markerRef as any}
-      position={position}
-      icon={icon}
-      draggable={true}
-      eventHandlers={{ dragend: handleDragEnd }}
-    />
-  );
+  return null;
 }
 
 // ── Main component ──────────────────────────────────────────────────────────
@@ -183,16 +103,12 @@ export function MapComponent({
   onLocationSelect,
   onDragEnd,
   onOutOfBounds,
-  markerPosition,
   style = 'modern',
-  showPopup = true,
   isPreview = false,
-  fixedCenterMarker = false,
-  draggable = false,
   markerColor = 'red',
 }: MapComponentProps) {
   const tile = TILE_LAYERS[style];
-  const icon = markerColor === 'orange' ? pandaOrange : pandaRed;
+  const pinColor = markerColor === 'orange' ? '#ff6b00' : '#cb2027';
 
   return (
     <div className="relative">
@@ -209,40 +125,33 @@ export function MapComponent({
         scrollWheelZoom={!isPreview}
       >
         <TileLayer attribution={tile.attribution} url={tile.url} />
-
-        {fixedCenterMarker ? (
-          <MapMoveHandler onLocationSelect={onLocationSelect} />
-        ) : (
-          <>
-            <MapCenterUpdater markerPosition={markerPosition} />
-            <MapClickHandler onLocationSelect={onLocationSelect} showPopup={showPopup && !isPreview} />
-          </>
-        )}
-
-        {/* Draggable panda marker */}
-        {draggable && markerPosition ? (
-          <DraggableMarker
-            position={markerPosition}
-            icon={icon}
-            onDragEnd={onDragEnd}
-            onOutOfBounds={onOutOfBounds}
-          />
-        ) : (
-          !fixedCenterMarker && markerPosition && (
-            <Marker position={markerPosition} icon={icon} />
-          )
-        )}
+        <MapMoveHandler
+          onLocationSelect={onLocationSelect}
+          onDragEnd={onDragEnd}
+          onOutOfBounds={onOutOfBounds}
+        />
       </MapContainer>
 
-      {/* Fixed center crosshair (for fixedCenterMarker mode) */}
-      {fixedCenterMarker && (
-        <div className="absolute inset-0 pointer-events-none z-[1000] flex items-center justify-center">
-          <div
-            className="w-5 h-5 border-[3px] border-primary-vibrant rounded-full bg-white/30 backdrop-blur-sm"
-            style={{ boxShadow: '0 0 0 6px rgba(203,32,39,0.15), 0 2px 8px rgba(0,0,0,0.3)' }}
-          />
-        </div>
-      )}
+      {/* Fixed center pin — always visible, never moves */}
+      <div className="absolute inset-0 pointer-events-none z-[1000] flex items-center justify-center">
+        {/* Outer ring */}
+        <div
+          className="w-8 h-8 rounded-full border-[3px]"
+          style={{
+            borderColor: pinColor,
+            backgroundColor: `${pinColor}22`,
+            boxShadow: `0 0 0 8px ${pinColor}15, 0 2px 10px rgba(0,0,0,0.3)`,
+          }}
+        />
+        {/* Inner dot */}
+        <div
+          className="absolute w-3 h-3 rounded-full"
+          style={{
+            backgroundColor: pinColor,
+            boxShadow: `0 0 6px ${pinColor}88`,
+          }}
+        />
+      </div>
     </div>
   );
 }

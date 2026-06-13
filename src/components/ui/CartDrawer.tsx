@@ -737,12 +737,6 @@ export function CartDrawer({
                                     onLocationSelect={handleMapLocationSelect}
                                     onDragEnd={handleMapDragEnd}
                                     onOutOfBounds={handleMapOutOfBounds}
-                                    markerPosition={deliveryCoordinates ? [deliveryCoordinates.lat, deliveryCoordinates.lng] : undefined}
-                                    style="modern"
-                                    showPopup={false}
-                                    isPreview={false}
-                                    fixedCenterMarker={!deliveryCoordinates}
-                                    draggable={!!deliveryCoordinates}
                                     markerColor={isWithinRange && addressStatus !== 'out_of_zone' ? 'red' : 'orange'}
                                   />
                                   {!deliveryCoordinates && (
@@ -819,10 +813,6 @@ export function CartDrawer({
                         onLocationSelect={handleMapLocationSelect}
                         onDragEnd={handleMapDragEnd}
                         onOutOfBounds={handleMapOutOfBounds}
-                        markerPosition={deliveryCoordinates ? [deliveryCoordinates.lat, deliveryCoordinates.lng] : undefined}
-                        style="modern"
-                        showPopup={true}
-                        draggable={true}
                         markerColor="red"
                       />
                     </div>

@@ -3,13 +3,13 @@
   "scope": "codebase",
   "type": "frontend",
   "localEndpoint": "http://localhost:5173/",
-  "serverPort": 54603,
+  "serverPort": 56872,
   "executionArgs": {
-    "projectName": "pndaexpress-main",
-    "projectPath": "C:\\Users\\pc\\Desktop\\Proyects\\Pndaexpress-main",
+    "projectName": "pndaexpress",
+    "projectPath": "C:\\Users\\pc\\Pictures\\Pndaexpress-main",
     "testIds": [],
-    "additionalInstruction": "Test the full ordering flow: landing page, location selection, menu browsing, cart management, and checkout form. Also test admin panel login and CRUD operations.",
-    "serverMode": "production",
+    "additionalInstruction": "Focus on testing the geocoding system, map component with draggable panda marker, address autocomplete in CartDrawer, and the checkout flow with GPS auto-location.",
+    "serverMode": "development",
     "envs": {
       "API_KEY": "sk-user-59EabTvovZ3lPsU5pkZzRPw5io2pOqAcpzBXLQ1vrtFwH-F6WJB_ZevN04uavXlvoXjO9y15Zpzq22YYlHRcmj0hd0WWY6mxYjtsCkheEOjYD_v_UiCLikFPPMuepLO5SyI"
     }
