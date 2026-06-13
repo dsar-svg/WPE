@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, memo } from 'react';
-import { Image as ImageIcon } from 'lucide-react';
+import { UtensilsCrossed } from 'lucide-react';
 
 interface OptimizedImageProps {
   src: string | null;
@@ -40,7 +40,7 @@ export const OptimizedImage = memo(function OptimizedImage({
     <div ref={imgRef} className={`relative overflow-hidden bg-dark-card ${className}`}>
       {showPlaceholder ? (
         <div className="w-full h-full flex items-center justify-center bg-zinc-800/50">
-          <ImageIcon className="w-12 h-12 text-zinc-600" />
+          <UtensilsCrossed className="w-10 h-10 text-zinc-600" />
         </div>
       ) : (
         <>
