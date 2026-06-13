@@ -78,6 +78,7 @@ export function LandingPage() {
 
   const featuredIds = Array.isArray(config.featuredProductIds) ? config.featuredProductIds : [];
   console.log('[DEBUG Landing] config.featuredProductIds:', config.featuredProductIds, 'featuredIds:', featuredIds);
+  console.log('[DEBUG Landing] menuItems IDs:', menuItems.map(m => m.id));
   const featuredItems = featuredIds.length > 0
     ? menuItems.filter(item => {
         const match = featuredIds.includes(item.id);
