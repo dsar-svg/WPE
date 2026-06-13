@@ -39,6 +39,7 @@ export function CartDrawer({
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState({ name: '', phone: '', address: '' });
+  const [showMapPreview, setShowMapPreview] = useState(false);
   const [locationSelected, setLocationSelected] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
 
@@ -126,7 +127,8 @@ export function CartDrawer({
     setShowSuggestions(false);
     clearSuggestions();
     setLocationSelected(true);
-    setTimeout(() => { setShowMapPreview(true); setTimeout(() => setLocationSelected(false), 1000); }, 500);
+    setShowMapPreview(true);
+    setTimeout(() => setLocationSelected(false), 1000);
   };
 
   const handleMapLocationSelect = async (lat: number, lng: number) => {
@@ -146,7 +148,8 @@ export function CartDrawer({
         validateField('address', address);
       }
     } catch (error) { console.log('Error en geocodificación inversa:', error); }
-    setTimeout(() => { setShowMapPreview(true); setTimeout(() => setLocationSelected(false), 1000); }, 500);
+    setShowMapPreview(true);
+    setTimeout(() => setLocationSelected(false), 1000);
   };
 
   const handleGetUserLocation = async () => {

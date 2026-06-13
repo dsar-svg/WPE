@@ -2,7 +2,7 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { LogIn, MapPin, Clock, MessageCircle, Power, RefreshCcw, Plus, Trash2, Tag, Edit2, Eye, EyeOff, Menu, X } from 'lucide-react';
 import { useRestaurant } from '../context/RestaurantContext';
-import { Product } from '../types';
+import { Product, Location } from '../types';
 import { Link } from 'react-router-dom';
 import { LocationForm } from '../components/admin/LocationForm';
 import { ProductForm } from '../components/admin/ProductForm';
