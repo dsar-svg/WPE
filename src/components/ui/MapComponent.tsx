@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -24,6 +24,7 @@ const TILE_LAYERS = {
 // ── Types ───────────────────────────────────────────────────────────────────
 interface MapComponentProps {
   center: [number, number];
+  centerKey?: number;
   zoom?: number;
   onLocationSelect: (lat: number, lng: number) => void | Promise<void>;
   onDragEnd?: (lat: number, lng: number, address: string | null) => void | Promise<void>;
@@ -41,37 +42,37 @@ function isInsideVenezuela(lat: number, lng: number): boolean {
 // ── Inner components ────────────────────────────────────────────────────────
 
 /**
- * Watches `center` prop and flies the map there when it changes.
- * Used when the user types/selects an address and we need the pin to move.
+ * Flies the map to `center` every time `centerKey` changes.
+ * `centerKey` is a counter the parent increments to force a fly.
  */
 function CenterFlyer({
   center,
   zoom,
+  centerKey,
   skipNextRef,
 }: {
   center: [number, number];
   zoom: number;
+  centerKey: number;
   skipNextRef: React.MutableRefObject<boolean>;
 }) {
   const map = useMap();
-  const prevCenter = useRef(center);
+  const prevKey = useRef(centerKey);
 
   useEffect(() => {
-    const [lat, lng] = center;
-    const [prevLat, prevLng] = prevCenter.current;
-    if (lat !== prevLat || lng !== prevLng) {
+    if (centerKey !== prevKey.current) {
+      prevKey.current = centerKey;
       skipNextRef.current = true;
-      map.flyTo([lat, lng], zoom, { duration: 0.8 });
-      prevCenter.current = center;
+      map.flyTo(center, zoom, { duration: 0.8 });
     }
-  }, [center, zoom, map, skipNextRef]);
+  }, [centerKey, center, zoom, map, skipNextRef]);
 
   return null;
 }
 
 /**
- * Fires on every map move/end — reports the center coordinates to the parent.
- * The center is the "pin" position since the marker is fixed in the middle.
+ * Debounced moveend — waits 600ms after the user stops moving before firing.
+ * This prevents intermediate pauses during drag from triggering geocode.
  */
 function MapMoveHandler({
   onLocationSelect,
@@ -91,6 +92,27 @@ function MapMoveHandler({
   const onOutOfBoundsRef = useRef(onOutOfBounds);
   onOutOfBoundsRef.current = onOutOfBounds;
   const isInitialMove = useRef(true);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const map = useMap();
+
+  const processCenter = useCallback(() => {
+    const c = map.getCenter();
+    const lat = c.lat;
+    const lng = c.lng;
+
+    if (!isInsideVenezuela(lat, lng)) {
+      onOutOfBoundsRef.current?.(lat, lng);
+      return;
+    }
+
+    onSelectRef.current(lat, lng);
+
+    if (onDragEndRef.current) {
+      reverseGeocode(lat, lng).then((addr) => {
+        onDragEndRef.current?.(lat, lng, addr);
+      });
+    }
+  }, [map]);
 
   useMapEvents({
     moveend() {
@@ -103,26 +125,11 @@ function MapMoveHandler({
         skipNextRef.current = false;
         return;
       }
-      const c = map.getCenter();
-      const lat = c.lat;
-      const lng = c.lng;
-
-      if (!isInsideVenezuela(lat, lng)) {
-        onOutOfBoundsRef.current?.(lat, lng);
-        return;
-      }
-
-      onSelectRef.current(lat, lng);
-
-      // Reverse geocode the center and report via onDragEnd
-      if (onDragEndRef.current) {
-        reverseGeocode(lat, lng).then((addr) => {
-          onDragEndRef.current?.(lat, lng, addr);
-        });
-      }
+      // Debounce: wait 600ms after last moveend before processing
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      debounceTimer.current = setTimeout(processCenter, 600);
     },
   });
-  const map = useMap();
   return null;
 }
 
@@ -130,6 +137,7 @@ function MapMoveHandler({
 
 export function MapComponent({
   center,
+  centerKey = 0,
   zoom = 13,
   onLocationSelect,
   onDragEnd,
@@ -157,7 +165,7 @@ export function MapComponent({
         scrollWheelZoom={!isPreview}
       >
         <TileLayer attribution={tile.attribution} url={tile.url} />
-        <CenterFlyer center={center} zoom={zoom} skipNextRef={skipNextRef} />
+        <CenterFlyer center={center} zoom={zoom} centerKey={centerKey} skipNextRef={skipNextRef} />
         <MapMoveHandler
           onLocationSelect={onLocationSelect}
           onDragEnd={onDragEnd}
@@ -166,9 +174,8 @@ export function MapComponent({
         />
       </MapContainer>
 
-      {/* Fixed center pin — always visible, never moves */}
+      {/* Fixed center pin */}
       <div className="absolute inset-0 pointer-events-none z-[1000] flex items-center justify-center">
-        {/* Outer ring */}
         <div
           className="w-8 h-8 rounded-full border-[3px]"
           style={{
@@ -177,7 +184,6 @@ export function MapComponent({
             boxShadow: `0 0 0 8px ${pinColor}15, 0 2px 10px rgba(0,0,0,0.3)`,
           }}
         />
-        {/* Inner dot */}
         <div
           className="absolute w-3 h-3 rounded-full"
           style={{

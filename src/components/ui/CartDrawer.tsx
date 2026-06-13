@@ -77,6 +77,7 @@ export function CartDrawer({
   const [isLocating, setIsLocating] = useState(false);
   const [addressStatus, setAddressStatus] = useState<AddressStatus>('idle');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [mapCenterKey, setMapCenterKey] = useState(0);
 
   // Keep ref in sync with state for use inside effects
   useEffect(() => { addressStatusRef.current = addressStatus; }, [addressStatus]);
@@ -108,6 +109,7 @@ export function CartDrawer({
       const loc = await autoGeolocate();
       if (loc) {
         setDeliveryCoordinates(loc);
+        setMapCenterKey((k) => k + 1);
         const addr = await reverseGeocodeAddress(loc.lat, loc.lng);
         if (addr) {
           setFormData((p) => ({ ...p, address: addr }));
@@ -153,6 +155,7 @@ export function CartDrawer({
       const lng = parseFloat(suggestion.lon);
       setFormData((p) => ({ ...p, address: addr }));
       setDeliveryCoordinates({ lat, lng });
+      setMapCenterKey((k) => k + 1);
       setShowSuggestions(false);
       clearSuggestions();
       setAddressStatus('valid');
@@ -191,6 +194,7 @@ export function CartDrawer({
   const handleMapLocationSelect = useCallback(
     async (lat: number, lng: number) => {
       setDeliveryCoordinates({ lat, lng });
+      setMapCenterKey((k) => k + 1);
       setLocationSelected(true);
       setShowSuggestions(false);
       clearSuggestions();
@@ -240,6 +244,7 @@ export function CartDrawer({
       const userLocation = await autoGeolocate();
       if (userLocation) {
         setDeliveryCoordinates(userLocation);
+        setMapCenterKey((k) => k + 1);
         setLocationSelected(true);
         setAddressStatus('searching');
         const addr = await reverseGeocodeAddress(userLocation.lat, userLocation.lng);
@@ -737,6 +742,7 @@ export function CartDrawer({
                                           ? [location.latitude, location.longitude]
                                           : [10.162, -68.007]
                                     }
+                                    centerKey={mapCenterKey}
                                     zoom={deliveryCoordinates ? 16 : 13}
                                     onLocationSelect={handleMapLocationSelect}
                                     onDragEnd={handleMapDragEnd}
@@ -814,6 +820,7 @@ export function CartDrawer({
                             ? [location.latitude, location.longitude]
                             : [10.162, -68.007]
                         }
+                        centerKey={mapCenterKey}
                         onLocationSelect={handleMapLocationSelect}
                         onDragEnd={handleMapDragEnd}
                         onOutOfBounds={handleMapOutOfBounds}
