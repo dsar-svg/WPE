@@ -1,68 +1,62 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 
 interface OptimizedImageProps {
   src: string | null;
   alt: string;
   className?: string;
-  width?: number;
-  height?: number;
 }
 
-export function OptimizedImage({
+export const OptimizedImage = memo(function OptimizedImage({
   src,
   alt,
   className = '',
-  width = 400,
-  height = 300
 }: OptimizedImageProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const [isInView, setIsInView] = useState(false);
   const imgRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const el = imgRef.current;
+    if (!el) return;
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setIsInView(true);
+          setIsLoaded(true);
           observer.disconnect();
         }
       },
-      { rootMargin: '50px' }
+      { rootMargin: '100px', threshold: 0.01 }
     );
 
-    if (imgRef.current) {
-      observer.observe(imgRef.current);
-    }
-
+    observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
-  const fallbackSrc = `https://picsum.photos/seed/${alt.replace(/\s+/g, '-')}/${width}/${height}`;
+  const fallbackSrc = `https://picsum.photos/seed/${alt.replace(/\s+/g, '-')}/400/300`;
   const imageSrc = hasError ? fallbackSrc : src || fallbackSrc;
 
   return (
     <div ref={imgRef} className={`relative overflow-hidden ${className}`}>
       {!isLoaded && (
-        <div className="absolute inset-0 bg-gradient-to-r from-zinc-800 via-zinc-700 to-zinc-800 animate-pulse" />
+        <div className="absolute inset-0 bg-zinc-800 animate-pulse" />
       )}
 
-      {isInView && (
-        <img
-          src={imageSrc}
-          alt={alt}
-          loading="lazy"
-          onLoad={() => setIsLoaded(true)}
-          onError={() => {
-            if (!hasError) setHasError(true);
-            else setIsLoaded(true);
-          }}
-          className={`w-full h-full object-cover transition-opacity duration-500 ${
-            isLoaded ? 'opacity-100' : 'opacity-0'
-          }`}
-          referrerPolicy="no-referrer"
-        />
-      )}
+      <img
+        src={imageSrc}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        onLoad={() => setIsLoaded(true)}
+        onError={() => {
+          if (!hasError) setHasError(true);
+          else setIsLoaded(true);
+        }}
+        className={`w-full h-full object-cover transition-opacity duration-300 ${
+          isLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
+        referrerPolicy="no-referrer"
+      />
     </div>
   );
-}
+});
