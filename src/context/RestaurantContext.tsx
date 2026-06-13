@@ -121,6 +121,14 @@ function rowToOrder(row: any): Order {
   };
 }
 
+function parsePgArray(val: unknown): string[] {
+  if (Array.isArray(val)) return val as string[];
+  if (typeof val === 'string' && val.length > 0) {
+    return val.replace(/[{}"]/g, '').split(',').map(s => s.trim()).filter(Boolean);
+  }
+  return [];
+}
+
 function rowToConfig(row: any): RestaurantConfig {
   const logoUrl = row.logo || '';
   return {
@@ -131,7 +139,7 @@ function rowToConfig(row: any): RestaurantConfig {
     secondaryColor: row.secondary_color,
     aboutUs: row.about_us,
     socialMedia: row.social_media || {},
-    featuredProductIds: Array.isArray(row.featured_product_ids) ? row.featured_product_ids : [],
+    featuredProductIds: parsePgArray(row.featured_product_ids),
     taxRate: row.tax_rate,
     deliveryFee: row.delivery_fee,
     exchangeRate: row.exchange_rate,
