@@ -131,7 +131,7 @@ function rowToConfig(row: any): RestaurantConfig {
     secondaryColor: row.secondary_color,
     aboutUs: row.about_us,
     socialMedia: row.social_media || {},
-    featuredProductIds: row.featured_product_ids || [],
+    featuredProductIds: Array.isArray(row.featured_product_ids) ? row.featured_product_ids : [],
     taxRate: row.tax_rate,
     deliveryFee: row.delivery_fee,
     exchangeRate: row.exchange_rate,

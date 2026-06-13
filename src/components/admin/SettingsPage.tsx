@@ -16,7 +16,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
     ...initialConfig,
     aboutUs: initialConfig.aboutUs || '',
     socialMedia: initialConfig.socialMedia || {},
-    featuredProductIds: initialConfig.featuredProductIds || [],
+    featuredProductIds: Array.isArray(initialConfig.featuredProductIds) ? initialConfig.featuredProductIds : [],
     distancePricing: initialConfig.distancePricing || {
       ranges: [
         { maxDistance: 5, fee: 3.00 },
@@ -79,7 +79,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
   useEffect(() => { setFeaturedPage(1); }, [featuredCategory]);
 
   const toggleFeaturedProduct = (id: string) => {
-    const ids = data.featuredProductIds || [];
+    const ids = Array.isArray(data.featuredProductIds) ? data.featuredProductIds : [];
     if (ids.includes(id)) {
       setData({ ...data, featuredProductIds: ids.filter(i => i !== id) });
     } else {
@@ -216,7 +216,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
                   key={item.id}
                   onClick={() => toggleFeaturedProduct(item.id)}
                   className={`p-3 rounded-xl text-xs font-bold text-left border transition-all ${
-                    data.featuredProductIds?.includes(item.id)
+                    (Array.isArray(data.featuredProductIds) && data.featuredProductIds.includes(item.id))
                       ? 'bg-primary-vibrant text-white border-primary-vibrant'
                       : 'bg-zinc-950 text-zinc-400 border-zinc-800'
                   }`}
