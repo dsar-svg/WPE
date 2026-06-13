@@ -220,13 +220,13 @@ export function CartDrawer({
                           <div className="w-16 h-16 shrink-0 rounded-2xl overflow-hidden border border-white/10">
                             <OptimizedImage
                               src={item.image}
-                              alt={t(`prod.${item.id}.name`)}
+                              alt={item.name}
                               className="w-full h-full p-1"
                             />
                           </div>
                           <div className="flex-1 min-w-0 flex flex-col justify-between">
                             <div className="flex justify-between items-start gap-2">
-                              <h3 className="font-bold text-sm text-white uppercase tracking-wider truncate">{t(`prod.${item.id}.name`)}</h3>
+                              <h3 className="font-bold text-sm text-white uppercase tracking-wider truncate">{item.name}</h3>
                               <p className="font-display text-secondary-vibrant text-sm tracking-wider">${(item.price * item.quantity).toFixed(2)}</p>
                             </div>
                             <div className="flex items-center justify-between mt-2">
@@ -234,14 +234,14 @@ export function CartDrawer({
                                 <motion.button whileTap={{ scale: 0.8 }}
                                   onClick={() => updateQuantity(item.id, item.quantity - 1)}
                                   className="w-11 h-11 bg-white/10 hover:bg-white/15 rounded-lg flex items-center justify-center text-zinc-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-vibrant focus:ring-offset-1 focus:ring-offset-dark"
-                                  aria-label={`Decrease quantity of ${t(`prod.${item.id}.name`)}`}>
+                                  aria-label={`Decrease quantity of ${item.name}`}>
                                   <Minus className="w-4 h-4" />
                                 </motion.button>
                                 <span className="w-7 text-center font-bold text-sm text-white">{item.quantity}</span>
                                 <motion.button whileTap={{ scale: 0.8 }}
                                   onClick={() => updateQuantity(item.id, item.quantity + 1)}
                                   className="w-11 h-11 bg-primary-vibrant text-white rounded-lg flex items-center justify-center shadow-lg shadow-primary-vibrant/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-1 focus:ring-offset-primary-vibrant"
-                                  aria-label={`Increase quantity of ${t(`prod.${item.id}.name`)}`}>
+                                  aria-label={`Increase quantity of ${item.name}`}>
                                   <Plus className="w-4 h-4" />
                                 </motion.button>
                               </div>
@@ -472,7 +472,7 @@ export function CartDrawer({
                       <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary-vibrant">Resumen del Pedido</p>
                       {items.map(item => (
                         <div key={item.id} className="flex justify-between items-center text-[11px] text-zinc-300">
-                          <span className="truncate flex-1">{item.quantity}x {t(`prod.${item.id}.name`)}</span>
+                          <span className="truncate flex-1">{item.quantity}x {item.name}</span>
                           <span className="font-medium text-white">${(item.price * item.quantity).toFixed(2)}</span>
                         </div>
                       ))}

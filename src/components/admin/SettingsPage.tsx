@@ -79,14 +79,14 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
   useEffect(() => { setFeaturedPage(1); }, [featuredCategory]);
 
   const toggleFeaturedProduct = (id: string) => {
-    const ids = Array.isArray(data.featuredProductIds) ? data.featuredProductIds : [];
-    if (ids.includes(id)) {
-      setData({ ...data, featuredProductIds: ids.filter(i => i !== id) });
-    } else {
-      if (ids.length < 5) {
-        setData({ ...data, featuredProductIds: [...ids, id] });
+    setData(prev => {
+      const ids = Array.isArray(prev.featuredProductIds) ? prev.featuredProductIds : [];
+      if (ids.includes(id)) {
+        return { ...prev, featuredProductIds: ids.filter(i => i !== id) };
       }
-    }
+      if (ids.length >= 5) return prev;
+      return { ...prev, featuredProductIds: [...ids, id] };
+    });
   };
 
   return (

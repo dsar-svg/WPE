@@ -292,7 +292,7 @@ export function LandingPage() {
                 <div className="relative h-64 overflow-hidden">
                   <OptimizedImage
                     src={item.image}
-                    alt={language === 'es' ? item.name : t(`prod.${item.id}.name`)}
+                    alt={item.name}
                     className="w-full h-full p-2"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-dark-card via-transparent to-transparent opacity-80" />
@@ -304,7 +304,7 @@ export function LandingPage() {
                   <div className="flex items-start justify-between">
                     <h3 className="font-display text-xl uppercase tracking-wider text-white group-hover:text-secondary-vibrant transition-colors">{item.name}</h3>
                   </div>
-                  <p className="text-zinc-400 text-sm leading-relaxed line-clamp-2">{language === 'es' ? item.description : t(`prod.${item.id}.desc`)}</p>
+                  <p className="text-zinc-400 text-sm leading-relaxed line-clamp-2">{item.description}</p>
                   <div className="w-8 h-1 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-full group-hover:w-16 transition-all duration-300" />
                 </div>
               </motion.div>
