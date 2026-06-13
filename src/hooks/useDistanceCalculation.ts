@@ -1,12 +1,29 @@
 import { useState, useCallback } from 'react';
 import { AddressSuggestion } from '../types';
-import { DistanceService } from '../lib/DistanceService';
+import {
+  geocodeAddressBounded,
+  reverseGeocode,
+  calculateDistance,
+  calculateDeliveryFee,
+  isWithinDeliveryRange,
+  getRoadDistance,
+  getUserLocation,
+} from '../lib/DistanceService';
+
+const LAST_ADDRESS_KEY = 'wpd_last_address';
+const LAST_ADDRESS_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+interface LastAddress {
+  address: string;
+  lat: number;
+  lng: number;
+  ts: number;
+}
 
 export interface DistanceCalculationResult {
   distance: number;
   deliveryFee: number;
   isWithinRange: boolean;
-  suggestions: AddressSuggestion[];
   isLoading: boolean;
   error: string | null;
 }
@@ -16,57 +33,120 @@ export function useDistanceCalculation() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * Busca sugerencias de direcciones para autocompletado
-   */
+  // ── Autocomplete search ─────────────────────────────────────────────────
+
   const searchAddress = useCallback(async (query: string) => {
     if (!query || query.trim().length < 3) {
       setSuggestions([]);
       return;
     }
-
     setIsLoading(true);
     setError(null);
-
     try {
-      const results = await DistanceService.geocodeAddress(query);
+      const results = await geocodeAddressBounded(query);
       setSuggestions(results);
-    } catch (err) {
+    } catch {
       setError('Error al buscar direcciones');
-      console.error('Error en búsqueda de direcciones:', err);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  /**
-   * Calcula distancia y tarifa entre dos puntos
-   */
-  const calculateDistanceAndFee = useCallback((
-    originLat: number,
-    originLng: number,
-    destinationLat: number,
-    destinationLng: number,
-    pricingRanges: { maxDistance: number | null; fee: number }[],
-    maxDeliveryDistance: number
-  ): DistanceCalculationResult => {
-    const distance = DistanceService.calculateDistance(originLat, originLng, destinationLat, destinationLng);
-    const deliveryFee = DistanceService.calculateDeliveryFee(distance, pricingRanges);
-    const isWithinRange = DistanceService.isWithinDeliveryRange(distance, maxDeliveryDistance);
+  // ── Reverse geocode ─────────────────────────────────────────────────────
 
-    return {
-      distance,
-      deliveryFee,
-      isWithinRange,
-      suggestions: [],
-      isLoading: false,
-      error: null
-    };
+  const reverseGeocodeAddress = useCallback(
+    async (lat: number, lng: number): Promise<string | null> => {
+      return reverseGeocode(lat, lng);
+    },
+    [],
+  );
+
+  // ── Auto-geocode on blur ────────────────────────────────────────────────
+
+  const autoGeocode = useCallback(
+    async (address: string): Promise<AddressSuggestion | null> => {
+      if (!address || address.trim().length < 5) return null;
+      try {
+        const results = await geocodeAddressBounded(address);
+        return results.length > 0 ? results[0] : null;
+      } catch {
+        return null;
+      }
+    },
+    [],
+  );
+
+  // ── Road distance ───────────────────────────────────────────────────────
+
+  const calculateDistanceAndFee = useCallback(
+    (
+      originLat: number,
+      originLng: number,
+      destLat: number,
+      destLng: number,
+      pricingRanges: { maxDistance: number | null; fee: number }[],
+      maxDeliveryDistance: number,
+      useRoadDistance = false,
+    ): DistanceCalculationResult => {
+      const distance = calculateDistance(originLat, originLng, destLat, destLng);
+      const deliveryFee = calculateDeliveryFee(distance, pricingRanges);
+      const isWithinRange = isWithinDeliveryRange(distance, maxDeliveryDistance);
+      void useRoadDistance; // road distance is async, handled separately
+      return { distance, deliveryFee, isWithinRange, isLoading: false, error: null };
+    },
+    [],
+  );
+
+  const getRoadDistanceCalc = useCallback(
+    async (lat1: number, lon1: number, lat2: number, lon2: number): Promise<number> => {
+      return getRoadDistance(lat1, lon1, lat2, lon2);
+    },
+    [],
+  );
+
+  // ── GPS auto-location ───────────────────────────────────────────────────
+
+  const autoGeolocate = useCallback(async (): Promise<{ lat: number; lng: number } | null> => {
+    try {
+      const loc = await getUserLocation();
+      return loc;
+    } catch {
+      return null;
+    }
   }, []);
 
-  /**
-   * Limpia las sugerencias y errores
-   */
+  // ── Last address persistence ────────────────────────────────────────────
+
+  const saveLastAddress = useCallback((address: string, lat: number, lng: number) => {
+    try {
+      const data: LastAddress = { address, lat, lng, ts: Date.now() };
+      localStorage.setItem(LAST_ADDRESS_KEY, JSON.stringify(data));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const loadLastAddress = useCallback((): LastAddress | null => {
+    try {
+      const raw = localStorage.getItem(LAST_ADDRESS_KEY);
+      if (!raw) return null;
+      const data: LastAddress = JSON.parse(raw);
+      if (Date.now() - data.ts > LAST_ADDRESS_TTL_MS) {
+        localStorage.removeItem(LAST_ADDRESS_KEY);
+        return null;
+      }
+      return data;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const clearLastAddress = useCallback(() => {
+    localStorage.removeItem(LAST_ADDRESS_KEY);
+  }, []);
+
+  // ── Cleanup ─────────────────────────────────────────────────────────────
+
   const clearSuggestions = useCallback(() => {
     setSuggestions([]);
     setError(null);
@@ -74,10 +154,17 @@ export function useDistanceCalculation() {
 
   return {
     searchAddress,
+    reverseGeocodeAddress,
+    autoGeocode,
     calculateDistanceAndFee,
+    getRoadDistanceCalc,
+    autoGeolocate,
+    saveLastAddress,
+    loadLastAddress,
+    clearLastAddress,
     clearSuggestions,
     suggestions,
     isLoading,
-    error
+    error,
   };
 }

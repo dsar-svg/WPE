@@ -1,245 +1,278 @@
 import { AddressSuggestion } from '../types';
 
-const routeCache = new Map<string, { distance: number; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+// Venezuela bounds for bounded geocoding
+const VENEZUELA_BOUNDS = [[0.6, -73.5], [12.5, -59.8]] as const;
+const USER_AGENT = 'WPandaExpress/2.0 (PWA App)';
+const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
+const OSRM_MIRRORS = [
+  'https://router.project-osrm.org',
+  'https://router.osrm.ch',
+  'https://osrm.pleiades.edu.uy',
+];
+const VALHALLA_URL = 'https://valhalla1.openstreetmap.de';
 
-function cacheKey(lat1: number, lon1: number, lat2: number, lon2: number): string {
-  const r = (n: number) => n.toFixed(3);
+// ── localStorage cache helpers ──────────────────────────────────────────────
+interface CacheEntry {
+  value: number;
+  ts: number;
+}
+const CACHE_KEY_PREFIX = 'wpd_route_cache_';
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 min
+
+function routeCacheKey(lat1: number, lon1: number, lat2: number, lon2: number): string {
+  const r = (n: number) => n.toFixed(4);
   return `${r(lat1)},${r(lon1)}|${r(lat2)},${r(lon2)}`;
 }
 
-function getCached(key: string): number | null {
-  const entry = routeCache.get(key);
-  if (entry && Date.now() - entry.timestamp < CACHE_TTL) return entry.distance;
-  routeCache.delete(key);
+function getRouteCache(key: string): number | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_PREFIX + key);
+    if (!raw) return null;
+    const entry: CacheEntry = JSON.parse(raw);
+    if (Date.now() - entry.ts > CACHE_TTL_MS) {
+      localStorage.removeItem(CACHE_KEY_PREFIX + key);
+      return null;
+    }
+    return entry.value;
+  } catch {
+    return null;
+  }
+}
+
+function setRouteCache(key: string, value: number): void {
+  try {
+    localStorage.setItem(CACHE_KEY_PREFIX + key, JSON.stringify({ value, ts: Date.now() }));
+  } catch {
+    // storage full or unavailable — ignore
+  }
+}
+
+// ── Nominatim helpers ───────────────────────────────────────────────────────
+
+/**
+ * Reverse geocode: lat/lng → address string
+ * Uses Nominatim reverse with Venezuela-only filter
+ */
+export async function reverseGeocode(lat: number, lon: number): Promise<string | null> {
+  const url = `${NOMINATIM_BASE}/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=es&countrycodes=ve&zoom=18`;
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.display_name ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Forward geocode with Venezuela bounding box — returns up to 10 suggestions
+ */
+export async function geocodeAddressBounded(query: string): Promise<AddressSuggestion[]> {
+  if (!query || query.trim().length < 3) return [];
+  const [south, west] = VENEZUELA_BOUNDS[0];
+  const [north, east] = VENEZUELA_BOUNDS[1];
+  const viewbox = `${west},${south},${east},${north}`;
+  const url = `${NOMINATIM_BASE}/search?q=${encodeURIComponent(query)}&format=jsonv2&limit=10&countrycodes=ve&addressdetails=1&viewbox=${viewbox}&bounded=1`;
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+    if (!res.ok) return [];
+    const data = await res.json() as Array<{ place_id: number; display_name: string; lat: string; lon: string; boundingbox?: string[] }>;
+    return data.map((item) => ({
+      place_id: String(item.place_id),
+      display_name: item.display_name,
+      lat: item.lat,
+      lon: item.lon,
+      boundingbox: item.boundingbox,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Plain forward geocode (no viewbox, still Venezuela-only)
+ */
+export async function geocodeAddress(query: string): Promise<AddressSuggestion[]> {
+  if (!query || query.trim().length < 3) return [];
+  const url = `${NOMINATIM_BASE}/search?q=${encodeURIComponent(query)}&format=jsonv2&limit=10&countrycodes=ve&addressdetails=1`;
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+    if (!res.ok) return [];
+    const data = await res.json() as Array<{ place_id: number; display_name: string; lat: string; lon: string; boundingbox?: string[] }>;
+    return data.map((item) => ({
+      place_id: String(item.place_id),
+      display_name: item.display_name,
+      lat: item.lat,
+      lon: item.lon,
+      boundingbox: item.boundingbox,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ── Haversine ───────────────────────────────────────────────────────────────
+
+function toRad(deg: number): number {
+  return deg * (Math.PI / 180);
+}
+
+/**
+ * Haversine straight-line distance in km
+ */
+export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+  return Math.round(R * c * 10) / 10;
+}
+
+// ── OSRM road distance (with mirrors) ──────────────────────────────────────
+
+async function tryOSRMMirror(
+  mirror: string,
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): Promise<number | null> {
+  const url = `${mirror}/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`;
+  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(5000) });
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (data.code === 'Ok' && data.routes?.length > 0) {
+    return Math.round((data.routes[0].distance / 1000) * 10) / 10;
+  }
   return null;
 }
 
-function setCache(key: string, distance: number): void {
-  if (routeCache.size > 500) routeCache.clear();
-  routeCache.set(key, { distance, timestamp: Date.now() });
+async function getOSRMDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): Promise<number | null> {
+  for (const mirror of OSRM_MIRRORS) {
+    try {
+      const d = await tryOSRMMirror(mirror, lat1, lon1, lat2, lon2);
+      if (d !== null) return d;
+    } catch {
+      // try next mirror
+    }
+  }
+  return null;
 }
 
-export class DistanceService {
-  /**
-   * Geocodifica una dirección usando Nominatim (OpenStreetMap)
-   * @param address Dirección a geocodificar
-   * @returns Array de sugerencias de direcciones
-   */
-  static async geocodeAddress(address: string): Promise<AddressSuggestion[]> {
-    if (!address || address.trim().length < 3) {
-      return [];
-    }
+// ── Valhalla road distance ─────────────────────────────────────────────────
 
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=10&countrycodes=ve&addressdetails=1`,
-        {
-          headers: {
-            'User-Agent': 'WPandaExpress/1.0 (PWA App)'
-          }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Error en geocodificación: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.map((item: any) => ({
-        place_id: item.place_id,
-        display_name: item.display_name,
-        lat: item.lat,
-        lon: item.lon,
-        boundingbox: item.boundingbox
-      }));
-    } catch (error) {
-      console.error('Error en geocodificación:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Calcula la distancia en kilómetros entre dos puntos usando la fórmula Haversine
-   * @param lat1 Latitud del punto 1
-   * @param lon1 Longitud del punto 1
-   * @param lat2 Latitud del punto 2
-   * @param lon2 Longitud del punto 2
-   * @returns Distancia en kilómetros
-   */
-  static calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // Radio de la Tierra en km
-    const dLat = this.degreesToRadians(lat2 - lat1);
-    const dLon = this.degreesToRadians(lon2 - lon1);
-
-    const a =
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(this.degreesToRadians(lat1)) * Math.cos(this.degreesToRadians(lat2)) *
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
-    const distance = R * c;
-
-    return Math.round(distance * 10) / 10; // Redondear a 1 decimal
-  }
-
-  /**
-   * Calcula la tarifa de delivery basada en la distancia y los rangos configurados
-   * @param distance Distancia en kilómetros
-   * @param ranges Rangos de tarifas configurados
-   * @returns Tarifa calculada
-   */
-  static calculateDeliveryFee(distance: number, ranges: { maxDistance: number | null; fee: number }[]): number {
-    // Ordenar rangos por distancia máxima (ascendente)
-    const sortedRanges = [...ranges].sort((a, b) => {
-      const aMax = a.maxDistance === null ? Infinity : a.maxDistance;
-      const bMax = b.maxDistance === null ? Infinity : b.maxDistance;
-      return aMax - bMax;
+async function getValhallaDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): Promise<number | null> {
+  const url = `${VALHALLA_URL}/route?json={"locations":[{"lat":${lat1},"lon":${lon1}},{"lat":${lat2},"lon":${lon2}}],"costing":"auto","directions_options":{"units":"km"}}`;
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': USER_AGENT },
+      signal: AbortSignal.timeout(8000),
     });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const km = data.trip?.summary?.length;
+    if (typeof km === 'number') return Math.round(km * 10) / 10;
+    return null;
+  } catch {
+    return null;
+  }
+}
 
-    // Encontrar el rango que corresponde a la distancia
-    for (const range of sortedRanges) {
-      if (range.maxDistance === null) {
-        // Este es el rango "cachall" para distancias más allá de todos los límites finitos
-        return range.fee;
-      }
-      if (distance <= range.maxDistance) {
-        return range.fee;
-      }
-    }
+// ── Public API ──────────────────────────────────────────────────────────────
 
-    // No debería llegar aquí si ranges no está vacío, pero por seguridad
-    return sortedRanges[sortedRanges.length - 1]?.fee || 0;
+/**
+ * Road distance with 3-tier fallback:
+ * 1. OSRM mirrors (3 endpoints)
+ * 2. Valhalla
+ * 3. Haversine (last resort)
+ * Results are cached in localStorage for 5 min
+ */
+export async function getRoadDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): Promise<number> {
+  const key = routeCacheKey(lat1, lon1, lat2, lon2);
+  const cached = getRouteCache(key);
+  if (cached !== null) return cached;
+
+  // 1 — OSRM mirrors
+  let distance = await getOSRMDistance(lat1, lon1, lat2, lon2);
+
+  // 2 — Valhalla
+  if (distance === null) {
+    distance = await getValhallaDistance(lat1, lon1, lat2, lon2);
   }
 
-  /**
-   * Verifica si una distancia está dentro del rango de delivery permitido
-   * @param distance Distancia en kilómetros
-   * @param maxDeliveryDistance Distancia máxima permitida
-   * @returns true si está dentro del rango
-   */
-  static isWithinDeliveryRange(distance: number, maxDeliveryDistance: number): boolean {
-    return distance <= maxDeliveryDistance;
+  // 3 — Haversine (always available)
+  if (distance === null) {
+    distance = calculateDistance(lat1, lon1, lat2, lon2);
   }
 
-  /**
-   * Obtiene distancia real por carretera con 3 niveles de precisión:
-   * 1. GraphHopper (API key configurable, recomendado)
-   * 2. OSRM público (fallback gratuito)
-   * 3. Haversine (último recurso, línea recta)
-   */
-  static async getRoadDistance(lat1: number, lon1: number, lat2: number, lon2: number): Promise<number> {
-    const key = cacheKey(lat1, lon1, lat2, lon2);
-    const cached = getCached(key);
-    if (cached !== null) return cached;
+  setRouteCache(key, distance);
+  return distance;
+}
 
-    const apiKey = import.meta.env.VITE_GRAPHOPPER_API_KEY as string | undefined;
-    let distance: number;
-
-    if (apiKey) {
-      try {
-        distance = await this.getGraphHopperDistance(lat1, lon1, lat2, lon2, apiKey);
-        setCache(key, distance);
-        return distance;
-      } catch (error) {
-        console.warn('GraphHopper no disponible, usando OSRM:', error);
-      }
-    }
-
-    try {
-      distance = await this.getOSRMDistance(lat1, lon1, lat2, lon2);
-    } catch (error) {
-      console.warn('OSRM no disponible, usando Haversine:', error);
-      distance = this.calculateDistance(lat1, lon1, lat2, lon2);
-    }
-
-    setCache(key, distance);
-    return distance;
+/**
+ * Delivery fee calculator based on distance pricing ranges
+ */
+export function calculateDeliveryFee(
+  distance: number,
+  ranges: { maxDistance: number | null; fee: number }[],
+): number {
+  const sorted = [...ranges].sort((a, b) => {
+    const aMax = a.maxDistance === null ? Infinity : a.maxDistance;
+    const bMax = b.maxDistance === null ? Infinity : b.maxDistance;
+    return aMax - bMax;
+  });
+  for (const range of sorted) {
+    if (range.maxDistance === null) return range.fee;
+    if (distance <= range.maxDistance) return range.fee;
   }
+  return sorted[sorted.length - 1]?.fee ?? 0;
+}
 
-  /**
-   * Distancia por GraphHopper (API key requerida)
-   * Plan gratuito: 1,000 solicitudes/día
-   */
-  private static async getGraphHopperDistance(
-    lat1: number, lon1: number, lat2: number, lon2: number, apiKey: string
-  ): Promise<number> {
-    const url = `https://graphhopper.com/api/1/route?point=${lat1},${lon1}&point=${lat2},${lon2}&vehicle=car&locale=es&key=${apiKey}`;
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`GraphHopper error: ${response.status}`);
-    const data = await response.json();
-    if (data.paths?.length > 0) {
-      return Math.round((data.paths[0].distance / 1000) * 10) / 10;
-    }
-    throw new Error('GraphHopper: no route found');
+/**
+ * Checks if distance is within allowed delivery radius
+ */
+export function isWithinDeliveryRange(distance: number, maxDeliveryDistance: number): boolean {
+  return distance <= maxDeliveryDistance;
+}
+
+/**
+ * GPS location via browser Geolocation API
+ */
+export function getUserLocation(): Promise<{ lat: number; lng: number }> {
+  if (!navigator.geolocation) {
+    return Promise.reject(new Error('Geolocalización no soportada por el navegador'));
   }
-
-  /**
-   * Distancia por OSRM público (OpenStreetMap)
-   * Límite: ~1 req/s, sin garantías
-   */
-  private static async getOSRMDistance(
-    lat1: number, lon1: number, lat2: number, lon2: number
-  ): Promise<number> {
-    const response = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`,
-      {
-        headers: { 'User-Agent': 'WPandaExpress/1.0 (PWA App)' }
-      }
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (err) => {
+        const messages: Record<number, string> = {
+          1: 'Permiso de ubicación denegado',
+          2: 'Ubicación no disponible',
+          3: 'Tiempo de espera agotado',
+        };
+        reject(new Error(messages[err.code] ?? 'Error al obtener ubicación'));
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 },
     );
-    if (!response.ok) throw new Error(`OSRM error: ${response.status}`);
-    const data = await response.json();
-    if (data.code === 'Ok' && data.routes?.length > 0) {
-      return Math.round((data.routes[0].distance / 1000) * 10) / 10;
-    }
-    throw new Error('OSRM: no route found');
-  }
-
-  /**
-   * Convierte grados a radianes
-   */
-  private static degreesToRadians(degrees: number): number {
-    return degrees * (Math.PI / 180);
-  }
-
-  /**
-   * Obtiene la ubicación aproximada del usuario usando geolocalización del navegador
-   * @returns Coordenadas del usuario o un mensaje de error si no se puede obtener
-   */
-  static async getUserLocation(): Promise<{ lat: number; lng: number }> {
-    if (!navigator.geolocation) {
-      throw new Error('Geolocalización no soportada por el navegador');
-    }
-
-    return new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          resolve({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              reject(new Error('Permiso de ubicación denegado'));
-              break;
-            case error.POSITION_UNAVAILABLE:
-              reject(new Error('Ubicación no disponible'));
-              break;
-            case error.TIMEOUT:
-              reject(new Error('Tiempo de espera agotado'));
-              break;
-            default:
-              reject(new Error('Error al obtener ubicación'));
-          }
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000
-        }
-      );
-    });
-  }
+  });
 }
