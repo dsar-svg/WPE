@@ -109,7 +109,7 @@ export function PublicMenuPage() {
                   <OptimizedImage
                     src={item.image}
                     alt={item.name}
-                    className="w-full h-full"
+                    className="w-full h-full object-contain p-2"
                   />
                   <div className="absolute top-4 left-4 bg-secondary-vibrant text-dark px-4 py-1.5 rounded-lg font-display text-lg tracking-wider shadow-lg font-bold">
                     ${item.price.toFixed(2)}

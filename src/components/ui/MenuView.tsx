@@ -40,11 +40,11 @@ const ProductCard = memo(function ProductCard({
       }`}
     >
       <div className="relative h-40 md:h-48 rounded-2xl overflow-hidden mb-3 bg-dark-card">
-        <OptimizedImage
-          src={item.image}
-          alt={item.name}
-          className="w-full h-full object-cover"
-        />
+<OptimizedImage
+                    src={item.image}
+                    alt={item.name}
+                    className="w-full h-full object-contain p-2"
+                  />
         <div className="absolute top-2 right-2 bg-secondary-vibrant text-dark font-display text-lg tracking-wider px-3 py-1 rounded-lg shadow-lg font-bold">
           ${item.price.toFixed(2)}
         </div>
