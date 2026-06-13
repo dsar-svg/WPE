@@ -33,7 +33,7 @@ export const OptimizedImage = memo(function OptimizedImage({
     return () => observer.disconnect();
   }, []);
 
-  const fallbackSrc = `https://picsum.photos/seed/${alt.replace(/\s+/g, '-')}/400/300`;
+  const fallbackSrc = `https://picsum.photos/seed/${alt.replace(/\s+/g, '-')}/300/200`;
   const imageSrc = hasError ? fallbackSrc : src || fallbackSrc;
 
   return (

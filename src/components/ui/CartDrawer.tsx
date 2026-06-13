@@ -217,7 +217,7 @@ export function CartDrawer({
                         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
                           key={item.id} className="flex gap-3 bg-dark-card p-4 rounded-xl border border-white/10 group hover:border-primary-vibrant/20 transition-colors duration-300">
                           <div className="w-16 h-16 shrink-0 rounded-2xl overflow-hidden border border-white/10">
-                            <img src={item.image || 'https://picsum.photos/seed/food/400/300'} alt={t(`prod.${item.id}.name`)}
+                            <img src={item.image || 'https://picsum.photos/seed/food/300/200'} alt={t(`prod.${item.id}.name`)}
                               loading="lazy" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                           </div>
                           <div className="flex-1 min-w-0 flex flex-col justify-between">

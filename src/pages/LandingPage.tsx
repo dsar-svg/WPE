@@ -182,16 +182,16 @@ export function LandingPage() {
         {/* Food images grid - decorative background */}
         <div className="absolute inset-0 overflow-hidden opacity-20">
           <div className="absolute top-10 left-10 w-48 h-48 md:w-64 md:h-64 rounded-2xl overflow-hidden rotate-[-5deg]">
-            <img src="https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&q=80" alt="" className="w-full h-full object-cover" />
+            <img src="https://picsum.photos/seed/chinese1/300/200" alt="" className="w-full h-full object-cover" />
           </div>
           <div className="absolute top-20 right-20 w-40 h-40 md:w-56 md:h-56 rounded-2xl overflow-hidden rotate-[8deg]">
-            <img src="https://images.unsplash.com/photo-1585032226651-759b368d7246?w=400&q=80" alt="" className="w-full h-full object-cover" />
+            <img src="https://picsum.photos/seed/chinese2/300/200" alt="" className="w-full h-full object-cover" />
           </div>
           <div className="absolute bottom-20 left-1/4 w-44 h-44 md:w-60 md:h-60 rounded-2xl overflow-hidden rotate-[3deg]">
-            <img src="https://images.unsplash.com/photo-1563379926898-05f4575a45d8?w=400&q=80" alt="" className="w-full h-full object-cover" />
+            <img src="https://picsum.photos/seed/chinese3/300/200" alt="" className="w-full h-full object-cover" />
           </div>
           <div className="absolute bottom-32 right-1/4 w-36 h-36 md:w-48 md:h-48 rounded-2xl overflow-hidden rotate-[-7deg]">
-            <img src="https://images.unsplash.com/photo-1525755662778-989d0524087e?w=400&q=80" alt="" className="w-full h-full object-cover" />
+            <img src="https://picsum.photos/seed/chinese4/300/200" alt="" className="w-full h-full object-cover" />
           </div>
         </div>
         
@@ -297,7 +297,7 @@ export function LandingPage() {
                 onClick={() => setSelectedProduct(item)}
                 className="group cursor-pointer bg-dark-card rounded-2xl overflow-hidden border-2 border-white/10 hover:border-secondary-vibrant/40 hover:shadow-xl hover:shadow-secondary-vibrant/10 transition-all duration-300">
                 <div className="relative h-64 overflow-hidden">
-                  <img src={item.image || 'https://picsum.photos/seed/food/400/300'}
+                  <img src={item.image || 'https://picsum.photos/seed/food/300/200'}
                     alt={language === 'es' ? item.name : t(`prod.${item.id}.name`)}
                     loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -349,7 +349,7 @@ export function LandingPage() {
                   <motion.div key={loc.id} onClick={() => setSelectedLocation(loc)}
                     className="min-w-[300px] sm:min-w-[380px] bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl hover:shadow-primary-vibrant/10 transition-all duration-300 flex flex-col border-2 border-zinc-100 hover:border-primary-vibrant/30 group cursor-pointer">
                     <div className="h-48 relative overflow-hidden bg-zinc-100">
-                      <img src={loc.image || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80'} alt={loc.name}
+                      <img src={loc.image || 'https://picsum.photos/seed/restaurant/300/200'} alt={loc.name}
                         loading="lazy"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                       <div className="absolute inset-0 bg-gradient-to-t from-primary-vibrant/60 via-transparent to-transparent" />

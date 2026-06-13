@@ -37,7 +37,7 @@ export function LocationModal({ location, onClose, onSelect }: LocationModalProp
         <div className="h-64 relative shrink-0 bg-dark-surface">
           <img src={location.image} alt={location.name} loading="lazy"
             className="w-full h-full object-cover"
-            onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80"; }} />
+            onError={(e) => { (e.target as HTMLImageElement).src = "https://picsum.photos/seed/restaurant/400/300"; }} />
           <div className="absolute inset-0 bg-gradient-to-t from-dark-card via-dark-card/40 to-transparent" />
           <div className="absolute bottom-8 left-8">
             <span className="text-secondary-vibrant font-black uppercase tracking-[0.3em] text-[11px]">

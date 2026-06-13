@@ -123,7 +123,7 @@ export function WelcomeScreen({ onSelectLocation, locations, config }: WelcomeSc
                       : "bg-white/[0.02] border-2 border-white/5 cursor-not-allowed opacity-60"
                   }`}>
                   <div className="h-40 w-full relative overflow-hidden">
-                    <img src={loc.image || "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80"} alt={loc.name}
+                    <img src={loc.image || "https://picsum.photos/seed/restaurant/300/200"} alt={loc.name}
                       loading="lazy"
                       className={`w-full h-full object-cover transition-transform duration-500 ${isOpenByTime ? "group-hover:scale-105" : ""}`} />
                     <div className="absolute inset-0 bg-gradient-to-t from-dark-card via-dark-card/60 to-transparent" />

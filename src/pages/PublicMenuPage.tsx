@@ -106,7 +106,7 @@ export function PublicMenuPage() {
                 onClick={() => setSelectedProduct(item)}
                 className="bg-dark-card rounded-2xl overflow-hidden border-2 border-secondary-vibrant/20 hover:border-secondary-vibrant/50 shadow-sm hover:shadow-xl hover:shadow-secondary-vibrant/10 transition-all duration-300 group cursor-pointer">
                 <div className="relative h-64 overflow-hidden">
-                  <img src={item.image || 'https://picsum.photos/seed/food/400/300'} alt={item.name}
+                  <img src={item.image || 'https://picsum.photos/seed/food/300/200'} alt={item.name}
                     loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" referrerPolicy="no-referrer" />
                   <div className="absolute top-4 left-4 bg-secondary-vibrant text-dark px-4 py-1.5 rounded-lg font-display text-lg tracking-wider shadow-lg font-bold">

@@ -153,7 +153,7 @@ return (
                   <div className="space-y-6">
                     <div className="flex justify-between items-start">
                       <div className="relative">
-                        <img src={loc.image || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&q=80'}
+                        <img src={loc.image || 'https://picsum.photos/seed/restaurant/300/200'}
                           loading="lazy"
                           className="w-20 h-20 rounded-2xl object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all border border-admin-border shadow-xl"
                         />
@@ -279,7 +279,7 @@ return (
                         className="bg-admin-surface border border-admin-border rounded-[20px] p-4 flex gap-4 hover:border-admin-border transition-colors group"
                       >
                         <div className="w-24 h-24 rounded-2xl overflow-hidden relative bg-admin-bg">
-                          <img src={item.image || 'https://picsum.photos/seed/food/400/300'}
+                          <img src={item.image || 'https://picsum.photos/seed/food/300/200'}
                             alt={item.name}
                             loading="lazy"
                             className="w-full h-full object-cover grayscale-[0.2] transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer"
