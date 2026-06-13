@@ -37,13 +37,18 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
   }));
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'finanzas'>('general');
   const [featuredCategory, setFeaturedCategory] = useState('Todos');
   const [featuredPage, setFeaturedPage] = useState(1);
+  const [toasts, setToasts] = useState<Array<{ id: number; type: 'success' | 'error'; message: string }>>([]);
   const ITEMS_PER_PAGE = 10;
   const uploadImage = useUploadImage();
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, type, message }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+  };
 
   const filteredFeatured = useMemo(() => {
     return featuredCategory === 'Todos' ? menuItems : menuItems.filter(i => i.category === featuredCategory);
@@ -58,13 +63,10 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
   const handleSave = async () => {
     try {
       setIsSaving(true);
-      setError(null);
-      setSuccess(false);
       await onSave(data);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      showToast('success', 'Cambios guardados correctamente');
     } catch (err: any) {
-      setError(err instanceof Error ? err.message : 'Error al guardar');
+      showToast('error', err instanceof Error ? err.message : 'Error al guardar');
     } finally {
       setIsSaving(false);
     }
@@ -78,7 +80,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
       const url = await uploadImage(file);
       setData({ ...data, logo: url });
     } catch (err: any) {
-      setError(err.message || 'Error al subir logo');
+      showToast('error', err.message || 'Error al subir logo');
     } finally {
       setIsUploading(false);
     }
@@ -92,9 +94,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
       if (ids.includes(id)) {
         return { ...prev, featuredProductIds: ids.filter(i => i !== id) };
       }
-      if (ids.length >= 5) {
-        return { ...prev, featuredProductIds: [...ids.slice(1), id] };
-      }
+      if (ids.length >= 5) return prev;
       return { ...prev, featuredProductIds: [...ids, id] };
     });
   };
@@ -123,17 +123,6 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
           </button>
         ))}
       </div>
-
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl text-red-500 text-xs font-bold">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-2xl text-green-500 text-xs font-bold">
-          Cambios guardados correctamente
-        </div>
-      )}
 
       {activeSettingsTab === 'general' && (
         <div className="space-y-8">
@@ -371,6 +360,22 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
         {isSaving ? <RefreshCcw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
         {isSaving ? 'Guardando...' : 'Guardar Cambios'}
       </button>
+
+      {/* Floating Toasts */}
+      <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 pointer-events-none">
+        {toasts.map(toast => (
+          <div
+            key={toast.id}
+            className={`pointer-events-auto px-5 py-3 rounded-2xl text-sm font-bold shadow-2xl animate-slide-in ${
+              toast.type === 'success'
+                ? 'bg-green-500/90 text-white border border-green-500/30'
+                : 'bg-red-500/90 text-white border border-red-500/30'
+            }`}
+          >
+            {toast.message}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
