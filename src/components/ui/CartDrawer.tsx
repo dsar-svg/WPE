@@ -560,6 +560,8 @@ export function CartDrawer({
                           <input
                             required
                             type="tel"
+                            inputMode="numeric"
+                            pattern="[0-9+\-\s()]*"
                             placeholder={t('cart.whatsapp')}
                             aria-describedby={formErrors.phone ? 'phone-error' : undefined}
                             aria-invalid={formErrors.phone ? 'true' : 'false'}
@@ -568,8 +570,10 @@ export function CartDrawer({
                             }`}
                             value={formData.phone}
                             onChange={(e) => {
-                              setFormData({ ...formData, phone: e.target.value });
-                              validateField('phone', e.target.value);
+                              // Only allow numbers and common phone characters
+                              const filtered = e.target.value.replace(/[^0-9+\-\s()]/g, '');
+                              setFormData({ ...formData, phone: filtered });
+                              validateField('phone', filtered);
                             }}
                           />
                           {formErrors.phone && (

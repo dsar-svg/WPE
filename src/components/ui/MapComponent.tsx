@@ -47,11 +47,11 @@ function isInsideVenezuela(lat: number, lng: number): boolean {
 function CenterFlyer({
   center,
   zoom,
-  onFlyStart,
+  skipNextRef,
 }: {
   center: [number, number];
   zoom: number;
-  onFlyStart: () => void;
+  skipNextRef: React.MutableRefObject<boolean>;
 }) {
   const map = useMap();
   const prevCenter = useRef(center);
@@ -59,13 +59,12 @@ function CenterFlyer({
   useEffect(() => {
     const [lat, lng] = center;
     const [prevLat, prevLng] = prevCenter.current;
-    // Only fly if the coordinates actually changed (not from our own moveend)
     if (lat !== prevLat || lng !== prevLng) {
-      onFlyStart();
+      skipNextRef.current = true;
       map.flyTo([lat, lng], zoom, { duration: 0.8 });
       prevCenter.current = center;
     }
-  }, [center, zoom, map, onFlyStart]);
+  }, [center, zoom, map, skipNextRef]);
 
   return null;
 }
@@ -143,10 +142,6 @@ export function MapComponent({
   const pinColor = markerColor === 'orange' ? '#ff6b00' : '#cb2027';
   const skipNextRef = useRef(false);
 
-  const handleFlyStart = () => {
-    skipNextRef.current = true;
-  };
-
   return (
     <div className="relative">
       <MapContainer
@@ -162,7 +157,7 @@ export function MapComponent({
         scrollWheelZoom={!isPreview}
       >
         <TileLayer attribution={tile.attribution} url={tile.url} />
-        <CenterFlyer center={center} zoom={zoom} onFlyStart={handleFlyStart} />
+        <CenterFlyer center={center} zoom={zoom} skipNextRef={skipNextRef} />
         <MapMoveHandler
           onLocationSelect={onLocationSelect}
           onDragEnd={onDragEnd}
