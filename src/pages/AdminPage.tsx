@@ -11,14 +11,13 @@ import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { SettingsPage } from '../components/admin/SettingsPage';
 import { OrdersPage } from '../components/admin/OrdersPage';
 import { DashboardView } from '../components/admin/DashboardView';
-import { LegalEditor } from '../components/admin/LegalEditor';
 import { Pagination } from '../components/ui/Pagination';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
 const formatTime12h = (time: string) => { if (!time) return ''; const [hours, minutes] = time.split(':');
 const h = parseInt(hours);
 const ampm = h >= 12 ? 'PM' : 'AM'; const h12 = h % 12 || 12; return `${h12}:${minutes} ${ampm}`;};
 export function AdminPage() { const { locations, menuItems, categories, config, isAdmin, isLoading, isSuperAdmin, managedLocationId, userEmail, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, orders, signIn, signOut } = useRestaurant(); const isSedesHidden = !isSuperAdmin;
-const [activeTab, setActiveTab] = useState<'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'legal'>('dashboard');
+const [activeTab, setActiveTab] = useState<'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos'>('dashboard');
 const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
 const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
@@ -344,10 +343,6 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
 
         {activeTab === 'pedidos' && (
           <OrdersPage />
-        )}
-
-        {activeTab === 'legal' && (
-          <LegalEditor />
         )}
 
         {activeTab === 'dashboard' && (

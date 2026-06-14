@@ -71,11 +71,6 @@ export interface AddressSuggestion {
 export type DeliveryType = 'Delivery' | 'Pick-up';
 export type OrderStatus = 'exitoso' | 'cancelado';
 
-export interface LegalContent {
-  terms_html: string;
-  privacy_html: string;
-}
-
 export interface CheckoutData {
   name: string;
   phone: string;
