@@ -1,6 +1,6 @@
--- Add status column to orders table (default 'pending' for existing orders)
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending'
-  CHECK (status IN ('pending', 'cancelled'));
+-- Add status column to orders table (default 'exitoso' for all orders)
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'exitoso'
+  CHECK (status IN ('exitoso', 'cancelado'));
 
 -- Allow authenticated users to update order status
 CREATE POLICY "Authenticated can update orders" ON public.orders

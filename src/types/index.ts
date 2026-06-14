@@ -69,7 +69,7 @@ export interface AddressSuggestion {
 }
 
 export type DeliveryType = 'Delivery' | 'Pick-up';
-export type OrderStatus = 'pending' | 'cancelled';
+export type OrderStatus = 'exitoso' | 'cancelado';
 
 export interface CheckoutData {
   name: string;

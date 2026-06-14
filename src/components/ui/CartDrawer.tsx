@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
+import { Link } from 'react-router-dom';
 import {
   ShoppingCart,
   User,
@@ -942,6 +943,12 @@ export function CartDrawer({
                     {t('cart.continue')} <ArrowRight className="w-5 h-5" />
                   </motion.button>
                 ) : (
+                  <>
+                  <p className="text-[10px] text-zinc-500 text-center mb-3">
+                    <Link to="/legal" className="underline hover:text-white transition-colors">{t('legal.terms.title')}</Link>
+                    {' '}&{' '}
+                    <Link to="/legal#privacidad" className="underline hover:text-white transition-colors">{t('legal.privacy.title')}</Link>
+                  </p>
                   <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <motion.button
                       whileTap={{ scale: 0.95 }}
@@ -963,6 +970,7 @@ export function CartDrawer({
                       {deliveryType === 'Delivery' && !isWithinRange ? t('cart.outOfCoverage') : t('cart.confirmWhatsApp')}
                     </motion.button>
                   </div>
+                  </>
                 )}
               </div>
             )}

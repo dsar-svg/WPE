@@ -1,17 +1,19 @@
 {
-  "status": "init",
-  "scope": "codebase",
+  "status": "commited",
   "type": "frontend",
-  "localEndpoint": "http://localhost:5173/",
-  "serverPort": 56872,
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:5173",
+  "loginUser": "pandaexpresswallace@gmail.com",
+  "loginPassword": "Wallace123",
   "executionArgs": {
     "projectName": "pndaexpress",
     "projectPath": "C:\\Users\\pc\\Pictures\\Pndaexpress-main",
     "testIds": [],
-    "additionalInstruction": "Focus on testing the geocoding system, map component with draggable panda marker, address autocomplete in CartDrawer, and the checkout flow with GPS auto-location.",
+    "additionalInstruction": "Focus on core user flows: landing page, menu browsing, location selection, cart/checkout, and admin login. Test responsive behavior on mobile and desktop viewports. Verify WhatsApp order generation works correctly.",
     "serverMode": "development",
     "envs": {
       "API_KEY": "sk-user-59EabTvovZ3lPsU5pkZzRPw5io2pOqAcpzBXLQ1vrtFwH-F6WJB_ZevN04uavXlvoXjO9y15Zpzq22YYlHRcmj0hd0WWY6mxYjtsCkheEOjYD_v_UiCLikFPPMuepLO5SyI"
     }
-  }
+  },
+  "serverPort": 61437
 }

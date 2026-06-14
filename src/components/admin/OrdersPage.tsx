@@ -8,7 +8,7 @@ export function OrdersPage() {
   const [search, setSearch] = useState('');
   const [locationFilter, setLocationFilter] = useState('all');
   const [deliveryFilter, setDeliveryFilter] = useState<'all' | 'Delivery' | 'Pick-up'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'cancelled'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'exitoso' | 'cancelado'>('all');
   const [sortField, setSortField] = useState<'created_at' | 'total' | 'customer_name'>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -112,8 +112,8 @@ export function OrdersPage() {
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
           className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-zinc-300 focus:border-primary-vibrant/50 outline-none transition-colors">
           <option value="all">Todos los estados</option>
-          <option value="pending">Pendiente</option>
-          <option value="cancelled">Cancelado</option>
+          <option value="exitoso">Exitoso</option>
+          <option value="cancelado">Cancelado</option>
         </select>
       </div>
 
@@ -190,19 +190,19 @@ export function OrdersPage() {
                 </td>
                 <td className="p-4">
                   <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg ${
-                    order.status === 'cancelled'
+                    order.status === 'cancelado'
                       ? 'bg-red-500/10 text-red-400'
                       : 'bg-green-500/10 text-green-400'
                   }`}>
-                    {order.status === 'cancelled' ? 'Cancelado' : 'Pendiente'}
+                    {order.status === 'cancelado' ? 'Cancelado' : 'Exitoso'}
                   </span>
                 </td>
                 <td className="p-4 text-xs text-zinc-500">{getLocationName(order.location_id)}</td>
                 <td className="p-4 text-right font-bold text-green-500 text-sm">${order.total.toFixed(2)}</td>
                 <td className="p-4">
                   <div className="flex items-center justify-end gap-1">
-                    {order.status === 'pending' && (
-                      <button onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                    {order.status === 'exitoso' && (
+                      <button onClick={() => updateOrderStatus(order.id, 'cancelado')}
                         className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                         title="Cancelar pedido">
                         <Ban className="w-4 h-4" />
@@ -267,17 +267,17 @@ export function OrdersPage() {
             <div className="flex justify-between items-center pt-1">
               <div className="flex items-center gap-2">
                 <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg ${
-                  order.status === 'cancelled'
+                  order.status === 'cancelado'
                     ? 'bg-red-500/10 text-red-400'
                     : 'bg-green-500/10 text-green-400'
                 }`}>
-                  {order.status === 'cancelled' ? 'Cancelado' : 'Pendiente'}
+                  {order.status === 'cancelado' ? 'Cancelado' : 'Exitoso'}
                 </span>
                 <span className="text-[10px] text-zinc-600 uppercase tracking-widest">Total</span>
               </div>
               <div className="flex items-center gap-2">
-                {order.status === 'pending' && (
-                  <button onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                {order.status === 'exitoso' && (
+                  <button onClick={() => updateOrderStatus(order.id, 'cancelado')}
                     className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
                     title="Cancelar pedido">
                     <Ban className="w-4 h-4" />

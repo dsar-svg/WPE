@@ -1,166 +1,307 @@
 version: "2"
 type: frontend
 tech_stack:
-  - TypeScript
+  - TypeScript 5.8
   - React 19
-  - Vite 6
+  - React Router v7
   - Tailwind CSS v4
-  - Supabase
-  - Leaflet (OpenStreetMap/Nominatim)
-  - motion/react
+  - Vite 6
+  - Supabase (PostgreSQL + Auth + Storage)
+  - Leaflet + react-leaflet
+  - framer-motion v12
+  - lucide-react
+  - React Query (TanStack Query)
 routes:
   - path: /
     file: src/pages/LandingPage.tsx
     auth_required: false
-    description: Marketing landing page with hero, featured dishes, locations, reviews, socials
+    description: Marketing homepage with hero, featured dishes, locations carousel, reviews, social media links
   - path: /menu
     file: src/pages/PublicMenuPage.tsx
     auth_required: false
-    description: Public menu view without location selection
+    description: Public menu browsing with category tabs, product grid, search, pagination
   - path: /pedir
-    file: src/App.tsx (MainView)
+    file: src/App.tsx (inline MainView)
     auth_required: false
-    description: Order flow - select location, browse menu by category, cart, checkout, send via WhatsApp
+    description: Order flow - location selection, menu browsing, cart, checkout with map and WhatsApp submission
   - path: /admin
     file: src/pages/AdminPage.tsx
     auth_required: true
-    description: Admin panel for CRUD on locations, products, categories, settings, and orders
+    description: Admin panel with dashboard, locations CRUD, products CRUD, orders management, settings
 features:
-  - name: Landing Page
-    description: Marketing homepage with hero, about, featured dishes, locations, reviews, social media
-    files:
-      - src/pages/LandingPage.tsx
-    entry_route: /
-    user_interactions:
-      - View hero section with tagline and CTA button
-      - Scroll through about section, featured dishes, locations, reviews, social media
-      - Click CTA to navigate to /pedir
-      - Click location cards to view details
-      - Switch language via LanguageToggle (es/en/zh)
-    api_calls:
-      - method: GET
-        endpoint: Supabase config table (featuredProductIds, socialMedia, aboutUs)
-    auth_required: false
   - name: Location Selection
-    description: User selects a restaurant location to start ordering
+    description: Select a restaurant location before ordering
     files:
-      - src/components/WelcomeScreen.tsx
+      - src/pages/MainView.tsx
+      - src/context/RestaurantContext.tsx
     entry_route: /pedir
     user_interactions:
-      - View restaurant logo and name
-      - Browse location cards with image, address, hours, open/closed status
-      - Click open location to proceed to menu
-      - Closed locations are disabled/non-clickable
+      - View list of available locations with images, addresses, schedules
+      - Click on an open location to select it
+      - See toast warning when clicking a closed location
+      - Auto-selection via URL query params (?sede= or ?location=)
     api_calls:
       - method: GET
         endpoint: Supabase locations table
     auth_required: false
+
   - name: Menu Browsing
-    description: Browse menu items filtered by category, view product details
+    description: Browse menu products by category with search and pagination
     files:
-      - src/components/MenuView.tsx
-      - src/components/ProductModal.tsx
-    entry_route: /pedir (after location selection)
+      - src/components/ui/MenuView.tsx
+      - src/components/ui/ProductCard.tsx
+    entry_route: /pedir
     user_interactions:
-      - Scroll through sticky category tabs horizontally
-      - Click category tab to filter products
-      - View product cards with image, name, description, price
-      - Click product card to open detail modal
-      - Click + button to add item to cart
-      - Out-of-stock items shown as disabled
-      - Floating cart button shows item count and total
+      - Switch between category tabs
+      - View products in grid layout (1-3 columns responsive)
+      - Search products by name
+      - Paginate through products (12 per page)
+      - Click product to open detail modal
+      - See stock status (available/out of stock)
     api_calls:
       - method: GET
-        endpoint: Supabase menu_items table filtered by category
+        endpoint: Supabase menu_items table
     auth_required: false
+
   - name: Cart Management
-    description: Manage cart items, quantities, special notes
+    description: Add products to cart, manage quantities, add notes per item
     files:
-      - src/components/CartDrawer.tsx
       - src/hooks/useCart.ts
-    entry_route: /pedir (cart drawer)
+      - src/components/ui/CartDrawer.tsx
+    entry_route: /pedir
     user_interactions:
-      - Open cart drawer from floating button
-      - View cart items with image, name, unit price, quantity
-      - Increment/decrement quantity with +/- buttons
-      - Add special notes per item (max 100 chars)
-      - Remove item from cart
-      - View subtotal, proceed to checkout
+      - Add products from menu or product modal
+      - Increment/decrement item quantities
+      - Remove items when quantity reaches 0
+      - Add notes to individual items (max 100 chars)
+      - View cart with item list, subtotal per item
+      - Open/close cart drawer with spring animation
     api_calls: []
     auth_required: false
-  - name: Checkout and Order via WhatsApp
-    description: Fill order form, set delivery address via map/search, calculate shipping, send order via WhatsApp
+
+  - name: Geolocation Address Search
+    description: Multi-provider address search with Nominatim and Photon, GPS auto-location
     files:
-      - src/components/CartDrawer.tsx
-      - src/utils.ts
-    entry_route: /pedir (checkout step in cart)
+      - src/lib/DistanceService.ts
+      - src/hooks/useDistanceCalculation.ts
+    entry_route: /pedir
     user_interactions:
-      - Fill name (validated: min 2 chars)
-      - Fill phone number (validated: min 10 digits)
-      - Toggle between Delivery/Pick-up
-      - Search address via Nominatim autocomplete
-      - Select address suggestion to set coordinates
-      - Use "Use my location" button (Geolocation API)
-      - Interact with Leaflet map to pin delivery location
-      - View calculated distance and shipping fee
-      - See coverage validation (out of range blocked)
-      - Add reference point
-      - View order summary: subtotal, tax, shipping, total in USD and Bs
-      - Click "Order via WhatsApp" to send formatted message
+      - Type address in textarea with autocomplete dropdown
+      - See debounced search results (400ms after 3+ chars)
+      - Select suggestion to fill address and center map
+      - Click GPS button for auto-geolocation
+      - See distance/fee calculation update
+      - View status indicator (green=valid, red=out of zone, pulsing=searching)
     api_calls:
       - method: GET
-        endpoint: Nominatim API (address search/geocoding)
-      - method: POST
-        endpoint: Supabase orders table (save order)
+        endpoint: Nominatim geocoding API
+      - method: GET
+        endpoint: Photon geocoding API
+      - method: GET
+        endpoint: OSRM routing API
     auth_required: false
-  - name: Admin Panel
-    description: Full CRUD management for locations, products, categories, settings, and orders
+
+  - name: Checkout and WhatsApp Order
+    description: Complete checkout form and submit order via WhatsApp
+    files:
+      - src/components/ui/CartDrawer.tsx
+      - src/utils.ts
+      - src/lib/supabase.ts
+    entry_route: /pedir
+    user_interactions:
+      - Fill customer name (required, min 2 chars)
+      - Fill phone number (numbers only, min 10 chars)
+      - Select delivery type (delivery or pickup)
+      - View distance and delivery fee
+      - View order summary with items, subtotal, tax, total
+      - Click submit to create order and open WhatsApp
+    api_calls:
+      - method: POST
+        endpoint: Supabase orders table
+    auth_required: false
+
+  - name: Admin Authentication
+    description: Login with email/password via Supabase Auth
     files:
       - src/pages/AdminPage.tsx
-      - src/components/admin/LocationForm.tsx
-      - src/components/admin/ProductForm.tsx
-      - src/components/admin/CategoryModal.tsx
-      - src/components/admin/SettingsPage.tsx
-      - src/components/admin/OrdersPage.tsx
-      - src/components/admin/AdminSidebar.tsx
+      - src/lib/supabase.ts
     entry_route: /admin
     user_interactions:
-      - Login with email/password or Google OAuth
-      - View dashboard with counts (locations, products, orders)
-      - CRUD locations: create, edit, delete, toggle active/inactive
-      - CRUD products: create, edit, delete, toggle inStock global
-      - CRUD categories: create, edit, delete
-      - Toggle product availability per location (local admin)
-      - Edit restaurant config: name, logo, colors, tax, delivery fee, exchange rate, distance pricing, social media
-      - View orders list
-      - Logout
+      - Enter email and password
+      - Toggle password visibility
+      - Click login button
+      - See error for invalid credentials
+      - See error for non-admin users
     api_calls:
       - method: POST
-        endpoint: Supabase Auth (login)
-      - method: GET/POST/PUT/DELETE
-        endpoint: Supabase locations, menu_items, categories, config, orders, admins tables
+        endpoint: Supabase Auth signInWithPassword
+    auth_required: false
+
+  - name: Admin Dashboard
+    description: View sales metrics, top products, recent orders
+    files:
+      - src/pages/AdminPage.tsx
+    entry_route: /admin
+    user_interactions:
+      - View stat cards (locations, products, orders, sales)
+      - Filter by date range (today, week, month, all)
+      - View bar chart of daily sales
+      - View top 5 best/worst selling products
+      - View last 5 orders
+    api_calls:
+      - method: GET
+        endpoint: Supabase orders, locations, menu_items tables
     auth_required: true
-  - name: Multi-language Support
-    description: UI translations in Spanish, English, and Chinese
+
+  - name: Admin Locations CRUD
+    description: Create, read, update, delete restaurant locations
+    files:
+      - src/components/admin/LocationForm.tsx
+    entry_route: /admin
+    user_interactions:
+      - View locations grid (1-3 columns responsive)
+      - Toggle location open/closed status
+      - Create new location with form
+      - Edit existing location
+      - Delete location with confirmation
+    api_calls:
+      - method: GET/POST/PUT/DELETE
+        endpoint: Supabase locations table
+    auth_required: true
+
+  - name: Admin Products CRUD
+    description: Manage menu products and categories
+    files:
+      - src/components/admin/ProductForm.tsx
+      - src/components/admin/CategoryModal.tsx
+    entry_route: /admin
+    user_interactions:
+      - Toggle product stock status
+      - Toggle product availability (local admin)
+      - Create new product with image upload
+      - Edit existing product
+      - Delete product with confirmation
+      - Add/edit/delete categories (super admin only)
+      - Paginate products (10 per page)
+    api_calls:
+      - method: GET/POST/PUT/DELETE
+        endpoint: Supabase menu_items, categories tables
+    api_calls:
+      - method: POST
+        endpoint: Supabase Storage image upload
+    auth_required: true
+
+  - name: Admin Orders Management
+    description: View and manage customer orders
+    files:
+      - src/components/admin/OrdersPage.tsx
+    entry_route: /admin
+    user_interactions:
+      - View orders as cards (mobile) or table (desktop)
+      - Search orders by name, phone, address
+      - Filter by location and type
+      - Sort by date, total, name
+    api_calls:
+      - method: GET
+        endpoint: Supabase orders table
+    auth_required: true
+
+  - name: Admin Settings
+    description: Configure restaurant settings, branding, and pricing
+    files:
+      - src/components/admin/SettingsPage.tsx
+    entry_route: /admin
+    user_interactions:
+      - Edit general settings (name, about, logo, social links)
+      - Configure financial settings (tax rate, delivery fee, exchange rate)
+      - Upload restaurant logo (max 5MB, WebP)
+      - Toggle featured products (max 5)
+      - Configure distance-based delivery pricing
+      - Save changes with toast notification
+    api_calls:
+      - method: GET/PUT
+        endpoint: Supabase config table
+    auth_required: true
+
+  - name: Internationalization (i18n)
+    description: Three-language support (Spanish, English, Chinese)
     files:
       - src/context/LanguageContext.tsx
-      - src/components/LanguageToggle.tsx
-    entry_route: All routes
+      - src/i18n/locales/es.json
+      - src/i18n/locales/en.json
+      - src/i18n/locales/zh.json
+    entry_route: /
     user_interactions:
-      - Click language toggle button
-      - Switch between ES, EN, ZH
-      - All UI text updates immediately
+      - Toggle language from dropdown menu
+      - See all UI text update immediately
+      - Language persists during session
     api_calls: []
     auth_required: false
-  - name: PWA Support
+
+  - name: PWA Installation
     description: Progressive Web App with install prompt
     files:
-      - src/hooks/usePWAInstall.ts
-      - src/components/PWAInstallPrompt.tsx
-    entry_route: All routes
+      - src/components/ui/PWAInstallPrompt.tsx
+      - public/manifest.json
+      - public/sw.js
+    entry_route: /
     user_interactions:
-      - See install prompt when available
+      - See install prompt on mobile after 1.5s
       - Click install to add to home screen
+      - Dismiss prompt (saved in sessionStorage)
     api_calls: []
     auth_required: false
-known_limitations: []
+
+  - name: Image Upload
+    description: Upload and compress images to Supabase Storage
+    files:
+      - src/lib/uploadImage.ts
+    entry_route: /admin
+    user_interactions:
+      - Select image file (max 5MB)
+      - Image auto-compressed to WebP (800px, quality 0.7)
+      - Upload to Supabase Storage bucket
+    api_calls:
+      - method: POST
+        endpoint: Supabase Storage images bucket
+    auth_required: true
+
+  - name: Distance Calculation
+    description: Multi-tier distance and delivery fee calculation
+    files:
+      - src/lib/DistanceService.ts
+      - src/hooks/useDistanceCalculation.ts
+    entry_route: /pedir
+    user_interactions:
+      - Distance calculated automatically when address changes
+      - Delivery fee shown based on distance ranges
+      - "Out of delivery zone" message when too far
+      - Last address saved in localStorage (30-day TTL)
+    api_calls:
+      - method: GET
+        endpoint: OSRM routing API (with Valhalla and Haversine fallbacks)
+    auth_required: false
+
+  - name: Dark Theme UI
+    description: Consistent dark theme with custom CSS properties
+    files:
+      - src/index.css
+      - src/App.css
+    entry_route: /
+    user_interactions:
+      - Dark background (#0f1117) throughout
+      - Custom primary/secondary colors from restaurant config
+      - Smooth animations and transitions
+    api_calls: []
+    auth_required: false
+
+known_limitations:
+  - issue: No test suite configured
+    location: project root
+    impact: Manual testing via browser required, TestSprite used for automated testing
+  - issue: Admin role checks are client-side only
+    location: src/pages/AdminPage.tsx
+    impact: No granular RLS policies - admin checks via email comparison
+  - issue: Geocoding depends on external APIs
+    location: src/lib/DistanceService.ts
+    impact: Nominatim/Photon/OSRM rate limits may affect usage

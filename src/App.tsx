@@ -71,7 +71,7 @@ function MainView() {
         delivery_fee: deliveryFee,
         total: total * (1 + (config.taxRate ?? 0)) + deliveryFee,
         notes: data.notes,
-        status: 'pending',
+        status: 'exitoso',
       });
       // Only clear cart and open WhatsApp if order saved successfully
       const link = generateWhatsAppLink(selectedLocation, items, data, config);
