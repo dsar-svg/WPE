@@ -131,11 +131,19 @@ function MapMoveHandler({
         skipNextRef.current = false;
         return;
       }
-      // Debounce: wait 600ms after last moveend before processing
+      // Debounce: wait 1s after last moveend before processing
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(processCenter, 1000);
     },
   });
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, []);
+
   return null;
 }
 

@@ -29,7 +29,6 @@ interface CartDrawerProps {
   location: Location;
   updateQuantity: (id: string, qty: number) => void;
   updateNotes: (id: string, notes: string) => void;
-  removeItem: (id: string) => void;
   onCheckout: (data: CheckoutData) => void;
 }
 
@@ -105,23 +104,26 @@ export function CartDrawer({
     if (step !== 'checkout' || gpsAttempted.current) return;
     if (deliveryCoordinates) { gpsAttempted.current = true; return; }
     gpsAttempted.current = true;
+    let aborted = false;
     (async () => {
       setAddressStatus('gps_pending');
       const loc = await autoGeolocate();
+      if (aborted) return;
       if (loc) {
         setDeliveryCoordinates(loc);
         setMapCenterKey((k) => k + 1);
         const addr = await reverseGeocodeAddress(loc.lat, loc.lng);
+        if (aborted) return;
         if (addr) {
           setFormData((p) => ({ ...p, address: addr }));
           setAddressStatus('valid');
-    
           saveLastAddress(addr, loc.lat, loc.lng);
         }
       } else {
         setAddressStatus('idle');
       }
     })();
+    return () => { aborted = true; };
   }, [step, deliveryCoordinates, autoGeolocate, reverseGeocodeAddress, saveLastAddress]);
 
   // ── Address input debounce → autocomplete ────────────────────────────
@@ -278,6 +280,9 @@ export function CartDrawer({
   }, [autoGeolocate, reverseGeocodeAddress, saveLastAddress]);
 
   // ── Distance / fee calculation ───────────────────────────────────────
+  const tRef = useRef(t);
+  tRef.current = t;
+
   useEffect(() => {
     if (deliveryType !== 'Delivery' || !deliveryCoordinates || !location.latitude || !location.longitude) {
       if (deliveryType !== 'Delivery') {
@@ -307,17 +312,18 @@ export function CartDrawer({
     setCalculatedFee(quick.deliveryFee);
     setIsWithinRange(quick.isWithinRange);
 
-      if (!quick.isWithinRange) {
-        setAddressError(t('cart.error.addressOutOfRange'));
-        setAddressStatus('out_of_zone');
-      } else {
-        setAddressError(null);
-        if (addressStatusRef.current !== 'searching' && addressStatusRef.current !== 'gps_pending') {
-          setAddressStatus('valid');
-        }
+    if (!quick.isWithinRange) {
+      setAddressError(tRef.current('cart.error.addressOutOfRange'));
+      setAddressStatus('out_of_zone');
+    } else {
+      setAddressError(null);
+      if (addressStatusRef.current !== 'searching' && addressStatusRef.current !== 'gps_pending') {
+        setAddressStatus('valid');
       }
+    }
 
-    // Async road distance update
+    // Async road distance update with abort cleanup
+    let aborted = false;
     (async () => {
       try {
         const roadKm = await getRoadDistanceCalc(
@@ -326,6 +332,7 @@ export function CartDrawer({
           deliveryCoordinates.lat,
           deliveryCoordinates.lng,
         );
+        if (aborted) return;
         setCalculatedDistance(roadKm);
         const roadFee = calculateDistanceAndFee(
           location.latitude,
@@ -338,13 +345,15 @@ export function CartDrawer({
         setCalculatedFee(roadFee);
         setIsWithinRange(roadKm <= maxDist);
         if (roadKm > maxDist) {
-          setAddressError(t('cart.error.addressOutOfRange'));
+          setAddressError(tRef.current('cart.error.addressOutOfRange'));
           setAddressStatus('out_of_zone');
         }
       } catch {
         // keep Haversine result
       }
     })();
+
+    return () => { aborted = true; };
   }, [
     deliveryType,
     deliveryCoordinates,
@@ -352,7 +361,6 @@ export function CartDrawer({
     config,
     calculateDistanceAndFee,
     getRoadDistanceCalc,
-    t,
   ]);
 
   // ── Validation ───────────────────────────────────────────────────────

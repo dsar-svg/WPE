@@ -63,7 +63,7 @@ const groupedPaginatedItems = useMemo(() => {
   return groups;
 }, [paginatedProductItems]);
 
-const totalFacturado = orders.reduce((sum, o) => sum + o.total, 0);
+const totalFacturado = orders.reduce((sum, o) => sum + (Number.isFinite(o.total) ? o.total : 0), 0);
 
 const handleSignIn = async (e: React.FormEvent) => { e.preventDefault();
 try { setAuthError(null);
@@ -384,3 +384,5 @@ return (
     </AnimatePresence>
   </div>
 );}
+
+export default AdminPage;

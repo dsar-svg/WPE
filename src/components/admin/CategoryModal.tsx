@@ -12,6 +12,7 @@ interface CategoryModalProps {
 
 export function CategoryModal({ categories, onClose, onSave, onDelete }: CategoryModalProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
   const [newName, setNewName] = useState('');
   const [, setIsSaving] = useState(false);
 
@@ -32,6 +33,19 @@ export function CategoryModal({ categories, onClose, onSave, onDelete }: Categor
     if (!newName.trim()) return;
     const id = `cat-${Date.now()}`;
     handleSave({ id, name: newName, order: categories.length });
+  };
+
+  const startEditing = (cat: Category) => {
+    setEditingId(cat.id);
+    setEditingName(cat.name);
+  };
+
+  const commitEdit = (cat: Category) => {
+    if (editingName.trim() && editingName !== cat.name) {
+      handleSave({ ...cat, name: editingName });
+    } else {
+      setEditingId(null);
+    }
   };
 
   return (
@@ -82,17 +96,20 @@ export function CategoryModal({ categories, onClose, onSave, onDelete }: Categor
                   <input
                     autoFocus
                     className="flex-1 bg-zinc-900 border border-zinc-800 p-2 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
-                    value={cat.name}
-                    onChange={e => onSave({ ...cat, name: e.target.value })}
-                    onBlur={() => setEditingId(null)}
-                    onKeyDown={e => e.key === 'Enter' && setEditingId(null)}
+                    value={editingName}
+                    onChange={e => setEditingName(e.target.value)}
+                    onBlur={() => commitEdit(cat)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') commitEdit(cat);
+                      if (e.key === 'Escape') setEditingId(null);
+                    }}
                   />
                 ) : (
                   <span className="font-bold text-zinc-300">{cat.name}</span>
                 )}
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
-                    onClick={() => setEditingId(cat.id)}
+                    onClick={() => startEditing(cat)}
                     className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-all"
                   >
                     <Edit2 className="w-4 h-4" />

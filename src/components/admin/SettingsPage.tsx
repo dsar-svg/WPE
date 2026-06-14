@@ -1,4 +1,4 @@
-import { useState, ChangeEvent, useMemo, useEffect } from 'react';
+import { useState, ChangeEvent, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Save, RefreshCcw, Image as ImageIcon, Plus, Trash2, Settings, DollarSign } from 'lucide-react';
 import { RestaurantConfig, Product, Category } from '../../types';
 import { useUploadImage } from '../../hooks/useUploadImage';
@@ -41,14 +41,28 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
   const [featuredCategory, setFeaturedCategory] = useState('Todos');
   const [featuredPage, setFeaturedPage] = useState(1);
   const [toasts, setToasts] = useState<Array<{ id: number; type: 'success' | 'error'; message: string }>>([]);
+  const toastTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const ITEMS_PER_PAGE = 10;
   const uploadImage = useUploadImage();
 
-  const showToast = (type: 'success' | 'error', message: string) => {
+  // Cleanup all toast timers on unmount
+  useEffect(() => {
+    const timers = toastTimers.current;
+    return () => {
+      timers.forEach((t) => clearTimeout(t));
+      timers.clear();
+    };
+  }, []);
+
+  const showToast = useCallback((type: 'success' | 'error', message: string) => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, type, message }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
-  };
+    const timer = setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+      toastTimers.current.delete(id);
+    }, 4000);
+    toastTimers.current.set(id, timer);
+  }, []);
 
   const filteredFeatured = useMemo(() => {
     return featuredCategory === 'Todos' ? menuItems : menuItems.filter(i => i.category === featuredCategory);
