@@ -25,6 +25,8 @@ interface RestaurantContextType {
   deleteProduct: (id: string) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
   createOrder: (order: Omit<Order, 'id' | 'created_at'>) => Promise<void>;
+  deleteOrder: (id: string) => Promise<void>;
+  updateOrderStatus: (id: string, status: Order['status']) => Promise<void>;
   fetchOrders: () => void;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
