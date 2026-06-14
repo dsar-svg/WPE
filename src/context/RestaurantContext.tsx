@@ -119,7 +119,7 @@ function rowToOrder(row: any): Order {
     delivery_fee: row.delivery_fee,
     total: row.total,
     notes: row.notes || '',
-    status: (row.status || 'exitoso') as Order['status'],
+    status: (row.status === 'cancelado' ? 'cancelado' : 'exitoso') as Order['status'],
     created_at: row.created_at,
   };
 }
