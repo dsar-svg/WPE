@@ -84,6 +84,7 @@ export function CartDrawer({
 
   const addressInputRef = useRef<HTMLTextAreaElement | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const addressStatusRef = useRef<AddressStatus>('idle');
 
   // ── Load last address on mount ───────────────────────────────────────
@@ -150,6 +151,9 @@ export function CartDrawer({
   // ── Suggestion selected ──────────────────────────────────────────────
   const handleAddressSelect = useCallback(
     (suggestion: AddressSuggestion) => {
+      // Cancel any pending blur timeout so the dropdown doesn't flicker
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+
       const addr = suggestion.display_name;
       const lat = parseFloat(suggestion.lat);
       const lng = parseFloat(suggestion.lon);
@@ -170,7 +174,11 @@ export function CartDrawer({
   // ── Address blur → auto-geocode ──────────────────────────────────────
   const handleAddressBlur = useCallback(async () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    setShowSuggestions(false);
+
+    // Delay hiding suggestions so button clicks can register first
+    blurTimeoutRef.current = setTimeout(() => {
+      setShowSuggestions(false);
+    }, 200);
 
     const addr = formData.address.trim();
     if (addr.length < 5 || deliveryCoordinates) return;
