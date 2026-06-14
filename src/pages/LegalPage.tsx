@@ -2,10 +2,12 @@ import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Shield, FileText, ChevronUp } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { useRestaurant } from '../context/RestaurantContext';
 import { SEO } from '../components/ui/SEO';
 
 export function LegalPage() {
   const { t } = useLanguage();
+  const { legalContent } = useRestaurant();
   const location = useLocation();
 
   useEffect(() => {
@@ -18,6 +20,9 @@ export function LegalPage() {
   }, [location]);
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  const hasCustomTerms = !!legalContent?.terms_html;
+  const hasCustomPrivacy = !!legalContent?.privacy_html;
 
   return (
     <div className="min-h-screen bg-white font-sans">
@@ -67,72 +72,70 @@ export function LegalPage() {
             <h2 className="font-display text-2xl uppercase tracking-wider">{t('legal.terms.title')}</h2>
           </div>
 
-          <div className="space-y-8 text-zinc-700 leading-relaxed text-[15px]">
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s1.title')}</h3>
-              <p>{t('legal.terms.s1.text')}</p>
+          {hasCustomTerms ? (
+            <div
+              className="prose prose-zinc max-w-none text-zinc-700 leading-relaxed text-[15px]"
+              dangerouslySetInnerHTML={{ __html: legalContent!.terms_html }}
+            />
+          ) : (
+            <div className="space-y-8 text-zinc-700 leading-relaxed text-[15px]">
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s1.title')}</h3>
+                <p>{t('legal.terms.s1.text')}</p>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s2.title')}</h3>
+                <p className="mb-3">{t('legal.terms.s2.p1')}</p>
+                <p>{t('legal.terms.s2.p2')}</p>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s3.title')}</h3>
+                <p className="mb-3">{t('legal.terms.s3.p1')}</p>
+                <ul className="list-disc list-inside space-y-2 ml-4">
+                  <li>{t('legal.terms.s3.li1')}</li>
+                  <li>{t('legal.terms.s3.li2')}</li>
+                  <li>{t('legal.terms.s3.li3')}</li>
+                  <li>{t('legal.terms.s3.li4')}</li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s4.title')}</h3>
+                <p className="mb-3">{t('legal.terms.s4.p1')}</p>
+                <p>{t('legal.terms.s4.p2')}</p>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s5.title')}</h3>
+                <p className="mb-3">{t('legal.terms.s5.p1')}</p>
+                <p>{t('legal.terms.s5.p2')}</p>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s6.title')}</h3>
+                <p className="mb-3">{t('legal.terms.s6.p1')}</p>
+                <ul className="list-disc list-inside space-y-2 ml-4">
+                  <li>{t('legal.terms.s6.li1')}</li>
+                  <li>{t('legal.terms.s6.li2')}</li>
+                  <li>{t('legal.terms.s6.li3')}</li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s7.title')}</h3>
+                <p>{t('legal.terms.s7.text')}</p>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s8.title')}</h3>
+                <p className="mb-3">{t('legal.terms.s8.p1')}</p>
+                <p>{t('legal.terms.s8.p2')}</p>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s9.title')}</h3>
+                <p>{t('legal.terms.s9.text')}</p>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s10.title')}</h3>
+                <p>{t('legal.terms.s10.text')}</p>
+              </div>
             </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s2.title')}</h3>
-              <p className="mb-3">{t('legal.terms.s2.p1')}</p>
-              <p>{t('legal.terms.s2.p2')}</p>
-            </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s3.title')}</h3>
-              <p className="mb-3">{t('legal.terms.s3.p1')}</p>
-              <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>{t('legal.terms.s3.li1')}</li>
-                <li>{t('legal.terms.s3.li2')}</li>
-                <li>{t('legal.terms.s3.li3')}</li>
-                <li>{t('legal.terms.s3.li4')}</li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s4.title')}</h3>
-              <p className="mb-3">{t('legal.terms.s4.p1')}</p>
-              <p>{t('legal.terms.s4.p2')}</p>
-            </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s5.title')}</h3>
-              <p className="mb-3">{t('legal.terms.s5.p1')}</p>
-              <p>{t('legal.terms.s5.p2')}</p>
-            </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s6.title')}</h3>
-              <p className="mb-3">{t('legal.terms.s6.p1')}</p>
-              <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>{t('legal.terms.s6.li1')}</li>
-                <li>{t('legal.terms.s6.li2')}</li>
-                <li>{t('legal.terms.s6.li3')}</li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s7.title')}</h3>
-              <p>{t('legal.terms.s7.text')}</p>
-            </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s8.title')}</h3>
-              <p className="mb-3">{t('legal.terms.s8.p1')}</p>
-              <p>{t('legal.terms.s8.p2')}</p>
-            </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s9.title')}</h3>
-              <p>{t('legal.terms.s9.text')}</p>
-            </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.terms.s10.title')}</h3>
-              <p>{t('legal.terms.s10.text')}</p>
-            </div>
-          </div>
+          )}
         </section>
 
         {/* Divider */}
@@ -151,69 +154,68 @@ export function LegalPage() {
             <h2 className="font-display text-2xl uppercase tracking-wider">{t('legal.privacy.title')}</h2>
           </div>
 
-          <div className="space-y-8 text-zinc-700 leading-relaxed text-[15px]">
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s1.title')}</h3>
-              <p className="mb-3">{t('legal.privacy.s1.p1')}</p>
-              <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>{t('legal.privacy.s1.li1')}</li>
-                <li>{t('legal.privacy.s1.li2')}</li>
-                <li>{t('legal.privacy.s1.li3')}</li>
-                <li>{t('legal.privacy.s1.li4')}</li>
-              </ul>
+          {hasCustomPrivacy ? (
+            <div
+              className="prose prose-zinc max-w-none text-zinc-700 leading-relaxed text-[15px]"
+              dangerouslySetInnerHTML={{ __html: legalContent!.privacy_html }}
+            />
+          ) : (
+            <div className="space-y-8 text-zinc-700 leading-relaxed text-[15px]">
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s1.title')}</h3>
+                <p className="mb-3">{t('legal.privacy.s1.p1')}</p>
+                <ul className="list-disc list-inside space-y-2 ml-4">
+                  <li>{t('legal.privacy.s1.li1')}</li>
+                  <li>{t('legal.privacy.s1.li2')}</li>
+                  <li>{t('legal.privacy.s1.li3')}</li>
+                  <li>{t('legal.privacy.s1.li4')}</li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s2.title')}</h3>
+                <p className="mb-3">{t('legal.privacy.s2.p1')}</p>
+                <ul className="list-disc list-inside space-y-2 ml-4">
+                  <li>{t('legal.privacy.s2.li1')}</li>
+                  <li>{t('legal.privacy.s2.li2')}</li>
+                  <li>{t('legal.privacy.s2.li3')}</li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s3.title')}</h3>
+                <p className="mb-3">{t('legal.privacy.s3.p1')}</p>
+                <p>{t('legal.privacy.s3.p2')}</p>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s4.title')}</h3>
+                <p>{t('legal.privacy.s4.text')}</p>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s5.title')}</h3>
+                <p>{t('legal.privacy.s5.text')}</p>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s6.title')}</h3>
+                <p className="mb-3">{t('legal.privacy.s6.p1')}</p>
+                <ul className="list-disc list-inside space-y-2 ml-4">
+                  <li>{t('legal.privacy.s6.li1')}</li>
+                  <li>{t('legal.privacy.s6.li2')}</li>
+                  <li>{t('legal.privacy.s6.li3')}</li>
+                </ul>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s7.title')}</h3>
+                <p>{t('legal.privacy.s7.text')}</p>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s8.title')}</h3>
+                <p>{t('legal.privacy.s8.text')}</p>
+              </div>
+              <div>
+                <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s9.title')}</h3>
+                <p>{t('legal.privacy.s9.text')}</p>
+              </div>
             </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s2.title')}</h3>
-              <p className="mb-3">{t('legal.privacy.s2.p1')}</p>
-              <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>{t('legal.privacy.s2.li1')}</li>
-                <li>{t('legal.privacy.s2.li2')}</li>
-                <li>{t('legal.privacy.s2.li3')}</li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s3.title')}</h3>
-              <p className="mb-3">{t('legal.privacy.s3.p1')}</p>
-              <p>{t('legal.privacy.s3.p2')}</p>
-            </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s4.title')}</h3>
-              <p>{t('legal.privacy.s4.text')}</p>
-            </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s5.title')}</h3>
-              <p>{t('legal.privacy.s5.text')}</p>
-            </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s6.title')}</h3>
-              <p className="mb-3">{t('legal.privacy.s6.p1')}</p>
-              <ul className="list-disc list-inside space-y-2 ml-4">
-                <li>{t('legal.privacy.s6.li1')}</li>
-                <li>{t('legal.privacy.s6.li2')}</li>
-                <li>{t('legal.privacy.s6.li3')}</li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s7.title')}</h3>
-              <p>{t('legal.privacy.s7.text')}</p>
-            </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s8.title')}</h3>
-              <p>{t('legal.privacy.s8.text')}</p>
-            </div>
-
-            <div>
-              <h3 className="font-display text-lg uppercase tracking-wide text-dark mb-3">{t('legal.privacy.s9.title')}</h3>
-              <p>{t('legal.privacy.s9.text')}</p>
-            </div>
-          </div>
+          )}
         </section>
       </div>
 

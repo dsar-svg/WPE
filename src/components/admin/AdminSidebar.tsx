@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import {
   LayoutDashboard, MapPin, Utensils, Settings, ShoppingBag,
-  LogOut, ChevronRight, User
+  LogOut, ChevronRight, User, FileText
 } from 'lucide-react';
 import { RestaurantConfig } from '../../types';
 
-export type AdminPageTab = 'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos';
+export type AdminPageTab = 'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'legal';
 
 interface AdminSidebarProps {
   activeTab: AdminPageTab;
@@ -26,6 +26,7 @@ const navItems: { id: AdminPageTab; label: string; icon: React.ComponentType<{ c
   { id: 'sedes', label: 'Sedes', icon: MapPin },
   { id: 'productos', label: 'Productos', icon: Utensils },
   { id: 'pedidos', label: 'Pedidos', icon: ShoppingBag },
+  { id: 'legal', label: 'Legal', icon: FileText },
   { id: 'ajustes', label: 'Ajustes', icon: Settings },
 ];
 

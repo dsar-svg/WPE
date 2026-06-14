@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useMemo, ReactNode, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
-import { Location, Product, RestaurantConfig, Category, Order } from '../types';
+import { Location, Product, RestaurantConfig, Category, Order, LegalContent } from '../types';
 
 interface RestaurantContextType {
   locations: Location[];
@@ -9,6 +9,7 @@ interface RestaurantContextType {
   categories: Category[];
   config: RestaurantConfig;
   orders: Order[];
+  legalContent: LegalContent | null;
   isLoading: boolean;
   isAdmin: boolean;
   isSuperAdmin: boolean;
@@ -27,6 +28,7 @@ interface RestaurantContextType {
   createOrder: (order: Omit<Order, 'id' | 'created_at'>) => Promise<void>;
   deleteOrder: (id: string) => Promise<void>;
   updateOrderStatus: (id: string, status: Order['status']) => Promise<void>;
+  updateLegalContent: (content: Partial<LegalContent>) => Promise<void>;
   fetchOrders: () => void;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
@@ -190,6 +192,14 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     },
     staleTime: 3600000,
   });
+  const legalQuery = useQuery({
+    queryKey: ['legal_content'],
+    queryFn: async () => {
+      const { data } = await supabase.from('legal_content').select('*').limit(1).maybeSingle();
+      return data || null;
+    },
+    staleTime: 3600000,
+  });
   const adminsQuery = useQuery({
     queryKey: ['admins'],
     queryFn: async () => {
@@ -215,6 +225,12 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     ...rawConfig,
     featuredProductIds: rawConfig.featuredProductIds?.filter(id => menuItemIds.has(id)) || []
   }), [rawConfig, menuItemIds]);
+
+  const legalContent: LegalContent | null = useMemo(() => {
+    const row = legalQuery.data;
+    if (!row) return null;
+    return { terms_html: row.terms_html || '', privacy_html: row.privacy_html || '' };
+  }, [legalQuery.data]);
 
   const [isAdmin, setIsAdmin] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -418,18 +434,29 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     catch (error) { console.error('Error updating order status:', error); }
   }, [invalidate]);
 
+  const updateLegalContent = useCallback(async (content: Partial<LegalContent>) => {
+    try {
+      const dbRow: Record<string, any> = {};
+      if (content.terms_html !== undefined) dbRow.terms_html = content.terms_html;
+      if (content.privacy_html !== undefined) dbRow.privacy_html = content.privacy_html;
+      const { error } = await supabase.from('legal_content').upsert({ id: 1, ...dbRow });
+      if (error) throw error;
+      invalidate(['legal_content']);
+    } catch (error) { console.error('Error updating legal content:', error); }
+  }, [invalidate]);
+
   const fetchOrders = useCallback(() => ordersQuery.refetch(), [ordersQuery]);
 
   const isLoading = !sessionReady || !dataFetched;
 
   const value = useMemo(() => ({
-    locations, menuItems, categories, config, orders,
+    locations, menuItems, categories, config, orders, legalContent,
     isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail,
     selectedLocation, setSelectedLocation,
     updateLocation, updateProduct, updateConfig, updateCategory,
     deleteLocation, deleteProduct, deleteCategory,
-    createOrder, deleteOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut,
-  }), [locations, menuItems, categories, config, orders, isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, selectedLocation, setSelectedLocation, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, createOrder, deleteOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut]);
+    createOrder, deleteOrder, updateOrderStatus, updateLegalContent, fetchOrders, signIn, signUp, signOut,
+  }), [locations, menuItems, categories, config, orders, legalContent, isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, selectedLocation, setSelectedLocation, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, createOrder, deleteOrder, updateOrderStatus, updateLegalContent, fetchOrders, signIn, signUp, signOut]);
 
   return (
     <RestaurantContext.Provider value={value}>
