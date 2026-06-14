@@ -42,8 +42,8 @@ function isInsideVenezuela(lat: number, lng: number): boolean {
 // ── Inner components ────────────────────────────────────────────────────────
 
 /**
- * Flies the map to `center` every time `centerKey` changes.
- * `centerKey` is a counter the parent increments to force a fly.
+ * Flies the map to `center` every time `centerKey` changes OR center coordinates change.
+ * Tracks both the counter and actual lat/lng to avoid missed updates from batched state.
  */
 function CenterFlyer({
   center,
@@ -58,10 +58,16 @@ function CenterFlyer({
 }) {
   const map = useMap();
   const prevKey = useRef(centerKey);
+  const prevCenter = useRef(center);
 
   useEffect(() => {
-    if (centerKey !== prevKey.current) {
+    const keyChanged = centerKey !== prevKey.current;
+    const centerChanged =
+      prevCenter.current[0] !== center[0] || prevCenter.current[1] !== center[1];
+
+    if (keyChanged || centerChanged) {
       prevKey.current = centerKey;
+      prevCenter.current = center;
       skipNextRef.current = true;
       map.flyTo(center, zoom, { duration: 0.8 });
     }
