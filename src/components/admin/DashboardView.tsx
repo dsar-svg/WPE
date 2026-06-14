@@ -69,20 +69,12 @@ function buildChartData(orders: Order[], range: DateRange) {
 
   if (range === 'month') {
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const step = Math.max(1, Math.floor(daysInMonth / 15));
     const days: { label: string; total: number }[] = [];
-    for (let i = 5; i <= daysInMonth; i += step) {
+    for (let i = 1; i <= daysInMonth; i++) {
       const total = orders
         .filter(o => { const od = new Date(o.created_at); return od.getDate() === i && od.getMonth() === now.getMonth() && od.getFullYear() === now.getFullYear(); })
         .reduce((s, o) => s + o.total, 0);
       days.push({ label: `${i}`, total });
-    }
-    const lastDay = daysInMonth;
-    if (days.length === 0 || days[days.length - 1].label !== `${lastDay}`) {
-      const total = orders
-        .filter(o => { const od = new Date(o.created_at); return od.getDate() === lastDay && od.getMonth() === now.getMonth() && od.getFullYear() === now.getFullYear(); })
-        .reduce((s, o) => s + o.total, 0);
-      days.push({ label: `${lastDay}`, total });
     }
     return { labels: days.map(d => d.label), values: days.map(d => d.total), title: `${monthNames[now.getMonth()]} ${now.getFullYear()}` };
   }
@@ -107,9 +99,8 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
 
   const maxVal = Math.max(...chart.values, 1);
   const BAR_HEIGHT = 140;
-  const BAR_GAP = 4;
+  const BAR_GAP = 6;
   const barCount = chart.labels.length;
-  const svgWidth = Math.max(barCount * (24 + BAR_GAP) + 20, 300);
 
   const productSales = filtered.reduce((acc, order) => {
     order.items.forEach(item => {
@@ -181,7 +172,7 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
           <p className="text-zinc-600 text-sm text-center py-12">Sin ventas en este período</p>
         ) : (
           <div className="overflow-x-auto pb-2">
-            <svg width={svgWidth} height={BAR_HEIGHT + 40} className="min-w-full">
+            <svg width="100%" height={BAR_HEIGHT + 40} viewBox={`0 0 ${barCount * (28 + BAR_GAP) + 20} ${BAR_HEIGHT + 40}`} preserveAspectRatio="xMidYMid meet" className="min-w-full">
               <defs>
                 <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#cb2027" stopOpacity="1" />
@@ -190,27 +181,26 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
               </defs>
               {chart.values.map((val, i) => {
                 const barH = maxVal > 0 ? (val / maxVal) * BAR_HEIGHT : 0;
-                const x = i * (24 + BAR_GAP) + 10;
+                const x = i * (28 + BAR_GAP) + 10;
                 const y = BAR_HEIGHT - barH;
                 return (
                   <g key={i}>
-                    <rect x={x} y={y} width={20} height={barH} rx={4} fill="url(#barGrad)" className="hover:opacity-80 transition-opacity">
+                    <rect x={x} y={y} width={24} height={barH} rx={4} fill="url(#barGrad)" className="hover:opacity-80 transition-opacity">
                       <title>${val.toFixed(2)}</title>
                     </rect>
                     {val > 0 && (
-                      <text x={x + 10} y={y - 6} textAnchor="middle" fill="#a1a1aa" fontSize="9" fontWeight="bold">
+                      <text x={x + 12} y={y - 6} textAnchor="middle" fill="#a1a1aa" fontSize="9" fontWeight="bold">
                         ${val.toFixed(2)}
                       </text>
                     )}
-                    <text x={x + 10} y={BAR_HEIGHT + 16} textAnchor="middle" fill="#52525b" fontSize="9" fontWeight="bold">
+                    <text x={x + 12} y={BAR_HEIGHT + 16} textAnchor="middle" fill="#52525b" fontSize="9" fontWeight="bold">
                       {chart.labels[i]}
                     </text>
                   </g>
                 );
               })}
-              {/* horizontal grid lines */}
               {[0, 0.25, 0.5, 0.75, 1].map(pct => (
-                <line key={pct} x1="0" y1={BAR_HEIGHT - pct * BAR_HEIGHT} x2={svgWidth - 10} y2={BAR_HEIGHT - pct * BAR_HEIGHT}
+                <line key={pct} x1="0" y1={BAR_HEIGHT - pct * BAR_HEIGHT} x2={barCount * (28 + BAR_GAP) + 10} y2={BAR_HEIGHT - pct * BAR_HEIGHT}
                   stroke="#27272a" strokeWidth="1" strokeDasharray="4 4" />
               ))}
             </svg>
