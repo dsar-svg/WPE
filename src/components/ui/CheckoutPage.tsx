@@ -404,8 +404,8 @@ export function CheckoutPage({
             </div>
           </div>
 
-          {/* Map — 50% of viewport height */}
-          <div className="w-full h-[50vh] relative">
+          {/* Map — 65% of viewport height */}
+          <div className="w-full h-[65vh] relative">
             <MapComponent
               center={
                 deliveryCoordinates

@@ -127,7 +127,7 @@ function MapMoveHandler({
       }
       // Debounce: wait 600ms after last moveend before processing
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      debounceTimer.current = setTimeout(processCenter, 600);
+      debounceTimer.current = setTimeout(processCenter, 1000);
     },
   });
   return null;
