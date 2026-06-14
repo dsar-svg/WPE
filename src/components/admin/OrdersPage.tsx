@@ -105,14 +105,9 @@ export function OrdersPage() {
         </select>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-2xl border border-zinc-800 -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="sm:hidden flex items-center gap-2 text-[10px] text-zinc-500 mb-2 px-1">
-          <span className="animate-pulse">←</span>
-          <span>Desliza para ver más columnas</span>
-          <span className="animate-pulse">→</span>
-        </div>
-        <table className="w-full text-sm min-w-[800px]">
+      {/* Desktop Table */}
+      <div className="hidden md:block overflow-x-auto rounded-2xl border border-zinc-800">
+        <table className="w-full text-sm">
           <thead>
             <tr className="bg-zinc-900 border-b border-zinc-800">
               <th className="text-left p-4 font-bold text-zinc-400 uppercase tracking-[0.15em] text-[11px]">
@@ -185,6 +180,57 @@ export function OrdersPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {filtered.map((order) => (
+          <div key={order.id} className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-4 space-y-3">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="font-bold text-white text-sm">{order.customer_name}</p>
+                <p className="text-[10px] text-zinc-500 mt-0.5">{formatDate(order.created_at)}</p>
+              </div>
+              <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg ${
+                order.delivery_type === 'Delivery'
+                  ? 'bg-primary-vibrant/10 text-primary-vibrant'
+                  : 'bg-secondary-vibrant/10 text-secondary-vibrant'
+              }`}>
+                {order.delivery_type === 'Delivery' ? 'Delivery' : 'Pick-up'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-3 text-xs text-zinc-400">
+              <div className="flex items-center gap-1">
+                <Phone className="w-3 h-3" />
+                <span>{order.customer_phone}</span>
+              </div>
+              <span className="text-zinc-700">|</span>
+              <span className="text-zinc-500">{getLocationName(order.location_id)}</span>
+            </div>
+
+            {order.delivery_address && (
+              <div className="flex items-start gap-1.5 text-xs text-zinc-400">
+                <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                <span className="truncate">{order.delivery_address}</span>
+              </div>
+            )}
+
+            <div className="border-t border-zinc-800 pt-2">
+              {order.items.map((item, idx) => (
+                <div key={idx} className="text-xs text-zinc-300">
+                  <span className="text-zinc-500">{item.quantity}x</span> {item.name}
+                  {item.notes && <span className="text-zinc-600 italic ml-1">({item.notes})</span>}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-between items-center pt-1">
+              <span className="text-[10px] text-zinc-600 uppercase tracking-widest">Total</span>
+              <span className="font-bold text-green-500 text-sm">${order.total.toFixed(2)}</span>
+            </div>
+          </div>
+        ))}
       </div>
 
       {filtered.length === 0 && (

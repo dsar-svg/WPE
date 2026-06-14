@@ -85,8 +85,8 @@ className="space-y-4"> <input type="email" placeholder="Correo electrónico" cla
 className="absolute right-4 top-1/2 -translate-y-1/2 text-admin-muted hover:text-admin-text transition-colors" > {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />} </button> </div> <button type="submit" disabled={isLoggingIn}
 
 className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform active:scale-95 disabled:opacity-50" > {isLoggingIn ? ( <RefreshCcw className="w-6 h-6 animate-spin" /> ) : ( <LogIn className="w-6 h-6" /> )} Iniciar Sesión </button> </form> <Link to="/" className="block text-admin-muted hover:text-admin-text text-sm font-bold transition-colors"> Volver a la vista pública </Link> </motion.div> </div> ); }
-return (
-  <div className="min-h-screen bg-admin-bg text-white font-sans flex">
+  return (
+    <div className="min-h-screen bg-admin-bg text-white font-sans flex overflow-x-hidden">
     {/* Mobile hamburger button */}
     <button
       onClick={toggleSidebar}
@@ -119,7 +119,7 @@ return (
       isOpen={isSidebarOpen}
     />
 
-    <main className="flex-1 min-h-screen p-4 pt-16 lg:pt-8 lg:pl-64">
+    <main className="flex-1 min-h-screen p-4 pt-16 lg:pt-8 lg:pl-64 overflow-hidden">
       <div className="max-w-6xl mx-auto">
         {activeTab === 'sedes' && (
           <div>
@@ -232,7 +232,7 @@ return (
                 </button>
               </div>
             </div>
-            <div className="flex gap-2 p-1.5 bg-admin-surface border border-admin-border rounded-2xl overflow-x-auto">
+            <div className="flex gap-2 p-1.5 bg-admin-surface border border-admin-border rounded-2xl overflow-x-auto no-scrollbar">
               <button
                 onClick={() => setActiveProductCategory('Todos')}
                 className={`px-4 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
