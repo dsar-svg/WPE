@@ -140,11 +140,11 @@ export function CartDrawer({
       }
 
       debounceRef.current = setTimeout(async () => {
-        await searchAddress(value);
+        await searchAddress(value, location.latitude, location.longitude);
         setShowSuggestions(true);
       }, 400);
     },
-    [searchAddress, clearSuggestions],
+    [searchAddress, clearSuggestions, location.latitude, location.longitude],
   );
 
   // ── Suggestion selected ──────────────────────────────────────────────
@@ -176,7 +176,7 @@ export function CartDrawer({
     if (addr.length < 5 || deliveryCoordinates) return;
 
     setAddressStatus('searching');
-    const result = await autoGeocode(addr);
+    const result = await autoGeocode(addr, location.latitude, location.longitude);
     if (result) {
       const lat = parseFloat(result.lat);
       const lng = parseFloat(result.lon);
@@ -188,7 +188,7 @@ export function CartDrawer({
     } else {
       setAddressStatus('invalid');
     }
-  }, [formData.address, deliveryCoordinates, autoGeocode, saveLastAddress]);
+  }, [formData.address, deliveryCoordinates, autoGeocode, saveLastAddress, location.latitude, location.longitude]);
 
   // ── Map click / drag-end ─────────────────────────────────────────────
   const handleMapLocationSelect = useCallback(
@@ -624,6 +624,20 @@ export function CartDrawer({
                               </motion.div>
                             )}
 
+                            {/* Reference — above map so users know to add landmarks */}
+                            <div className="space-y-1.5">
+                              <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
+                                <MapPin className="w-3 h-3 text-primary-vibrant" />
+                                Referencia de entrega
+                              </label>
+                              <input
+                                placeholder="Ej: frente al Mercado XYZ, al lado de la farmacia..."
+                                className="w-full px-5 py-3.5 bg-dark-surface border-2 border-white/10 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-600"
+                                value={formData.reference}
+                                onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                              />
+                            </div>
+
                             {/* GPS button */}
                             <motion.button
                               whileHover={{ scale: 1.02 }}
@@ -709,9 +723,18 @@ export function CartDrawer({
                                 </div>
                               )}
 
+                              {/* No results — helpful message */}
                               {showSuggestions && suggestions.length === 0 && !isLoadingAddress && formData.address.length > 3 && (
-                                <div className="absolute z-10 w-full bg-dark-surface border border-white/10 rounded-[20px] mt-2 shadow-2xl p-4">
-                                  <p className="text-[11px] text-zinc-500 font-medium text-center">No se encontraron direcciones</p>
+                                <div className="absolute z-10 w-full bg-dark-surface border border-white/10 rounded-[20px] mt-2 shadow-2xl p-5">
+                                  <div className="flex flex-col items-center text-center gap-3">
+                                    <div className="w-10 h-10 bg-primary-vibrant/10 rounded-xl flex items-center justify-center">
+                                      <MapPin className="w-5 h-5 text-primary-vibrant" />
+                                    </div>
+                                    <div>
+                                      <p className="text-[11px] font-bold text-zinc-300 mb-1">No encontramos tu dirección</p>
+                                      <p className="text-[10px] text-zinc-500">Arrastra el mapa para fijar tu ubicación exacta</p>
+                                    </div>
+                                  </div>
                                 </div>
                               )}
 
@@ -764,16 +787,6 @@ export function CartDrawer({
                                 )}
                               </motion.div>
                             )}
-
-                            {/* Reference */}
-                            <div className="relative">
-                              <input
-                                placeholder={t('cart.reference')}
-                                className="w-full px-6 py-4 bg-dark-surface border-2 border-white/10 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500"
-                                value={formData.reference}
-                                onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
-                              />
-                            </div>
                           </motion.div>
                         )}
                       </div>

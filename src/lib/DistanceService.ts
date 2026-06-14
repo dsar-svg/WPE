@@ -112,6 +112,166 @@ export async function geocodeAddress(query: string): Promise<AddressSuggestion[]
   }
 }
 
+// ── Photon (Komoot) geocoding ───────────────────────────────────────────────
+
+const PHOTON_BASE = 'https://photon.komoot.io';
+
+/**
+ * Forward geocode via Photon — OSM-based, better POI search, typo-tolerant
+ * Supports location bias via lat/lon params
+ */
+async function geocodePhoton(
+  query: string,
+  biasLat?: number,
+  biasLon?: number,
+): Promise<AddressSuggestion[]> {
+  if (!query || query.trim().length < 3) return [];
+  const params = new URLSearchParams({
+    q: query,
+    lang: 'es',
+    limit: '10',
+  });
+  if (biasLat !== undefined && biasLon !== undefined) {
+    params.set('lat', String(biasLat));
+    params.set('lon', String(biasLon));
+  }
+  const url = `${PHOTON_BASE}/api/?${params.toString()}`;
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return [];
+    const data = await res.json() as {
+      features: Array<{
+        geometry: { coordinates: [number, number] };
+        properties: {
+          name?: string;
+          city?: string;
+          state?: string;
+          country?: string;
+          postcode?: string;
+          street?: string;
+          housenumber?: string;
+          label?: string;
+        };
+      }>;
+    };
+    return (data.features ?? []).map((f, i) => {
+      const p = f.properties;
+      const parts = [p.name, p.housenumber, p.street, p.city, p.state, p.country].filter(Boolean);
+      const display = p.label || parts.join(', ') || 'Sin dirección';
+      return {
+        place_id: `photon_${i}_${f.geometry.coordinates[0]}`,
+        display_name: display,
+        lat: String(f.geometry.coordinates[1]),
+        lon: String(f.geometry.coordinates[0]),
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
+// ── Multi-provider geocoding ────────────────────────────────────────────────
+
+/**
+ * Haversine distance in meters between two coordinates
+ */
+function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+  return R * c;
+}
+
+/**
+ * Multi-provider forward geocode — runs Nominatim (bounded), Nominatim (unbounded),
+ * and Photon in parallel, then deduplicates and sorts by distance to the restaurant.
+ */
+export async function geocodeAddressMulti(
+  query: string,
+  restaurantLat?: number,
+  restaurantLon?: number,
+): Promise<AddressSuggestion[]> {
+  if (!query || query.trim().length < 3) return [];
+
+  const [south, west] = VENEZUELA_BOUNDS[0];
+  const [north, east] = VENEZUELA_BOUNDS[1];
+  const viewbox = `${west},${south},${east},${north}`;
+
+  // 1 — Fire all three providers in parallel
+  const [nomBounded, nomUnbounded, photon] = await Promise.all([
+    // Nominatim bounded (strict Venezuela box)
+    (async () => {
+      const url = `${NOMINATIM_BASE}/search?q=${encodeURIComponent(query)}&format=jsonv2&limit=10&countrycodes=ve&addressdetails=1&viewbox=${viewbox}&bounded=1`;
+      try {
+        const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(6000) });
+        if (!res.ok) return [];
+        const data = await res.json() as Array<{ place_id: number; display_name: string; lat: string; lon: string }>;
+        return data.map((item) => ({
+          place_id: String(item.place_id),
+          display_name: item.display_name,
+          lat: item.lat,
+          lon: item.lon,
+        }));
+      } catch {
+        return [];
+      }
+    })(),
+    // Nominatim unbounded (Venezuela-only but no box restriction)
+    (async () => {
+      const url = `${NOMINATIM_BASE}/search?q=${encodeURIComponent(query)}&format=jsonv2&limit=10&countrycodes=ve&addressdetails=1`;
+      try {
+        const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(6000) });
+        if (!res.ok) return [];
+        const data = await res.json() as Array<{ place_id: number; display_name: string; lat: string; lon: string }>;
+        return data.map((item) => ({
+          place_id: `nom2_${item.place_id}`,
+          display_name: item.display_name,
+          lat: item.lat,
+          lon: item.lon,
+        }));
+      } catch {
+        return [];
+      }
+    })(),
+    // Photon (OSM, better POI search, typo-tolerant)
+    geocodePhoton(query, restaurantLat, restaurantLon),
+  ]);
+
+  // 2 — Merge all results
+  const all = [...nomBounded, ...nomUnbounded, ...photon];
+
+  // 3 — Deduplicate: if two results are <50m apart, keep the first one
+  const DEDUP_RADIUS_M = 50;
+  const unique: AddressSuggestion[] = [];
+  for (const item of all) {
+    const lat = parseFloat(item.lat);
+    const lon = parseFloat(item.lon);
+    if (Number.isNaN(lat) || Number.isNaN(lon)) continue;
+    const isDuplicate = unique.some((u) => {
+      const uLat = parseFloat(u.lat);
+      const uLon = parseFloat(u.lon);
+      return haversineMeters(lat, lon, uLat, uLon) < DEDUP_RADIUS_M;
+    });
+    if (!isDuplicate) unique.push(item);
+  }
+
+  // 4 — Sort by distance to restaurant (closest first)
+  if (restaurantLat !== undefined && restaurantLon !== undefined) {
+    unique.sort((a, b) => {
+      const dA = haversineMeters(parseFloat(a.lat), parseFloat(a.lon), restaurantLat, restaurantLon);
+      const dB = haversineMeters(parseFloat(b.lat), parseFloat(b.lon), restaurantLat, restaurantLon);
+      return dA - dB;
+    });
+  }
+
+  // 5 — Return top 10
+  return unique.slice(0, 10);
+}
+
 // ── Haversine ───────────────────────────────────────────────────────────────
 
 function toRad(deg: number): number {

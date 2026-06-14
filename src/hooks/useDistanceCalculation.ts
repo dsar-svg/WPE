@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { AddressSuggestion } from '../types';
 import {
-  geocodeAddressBounded,
+  geocodeAddressMulti,
   reverseGeocode,
   calculateDistance,
   calculateDeliveryFee,
@@ -33,9 +33,9 @@ export function useDistanceCalculation() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ── Autocomplete search ─────────────────────────────────────────────────
+  // ── Autocomplete search (multi-provider, sorted by distance to restaurant) ──
 
-  const searchAddress = useCallback(async (query: string) => {
+  const searchAddress = useCallback(async (query: string, restaurantLat?: number, restaurantLon?: number) => {
     if (!query || query.trim().length < 3) {
       setSuggestions([]);
       return;
@@ -43,7 +43,7 @@ export function useDistanceCalculation() {
     setIsLoading(true);
     setError(null);
     try {
-      const results = await geocodeAddressBounded(query);
+      const results = await geocodeAddressMulti(query, restaurantLat, restaurantLon);
       setSuggestions(results);
     } catch {
       setError('Error al buscar direcciones');
@@ -64,10 +64,10 @@ export function useDistanceCalculation() {
   // ── Auto-geocode on blur ────────────────────────────────────────────────
 
   const autoGeocode = useCallback(
-    async (address: string): Promise<AddressSuggestion | null> => {
+    async (address: string, restaurantLat?: number, restaurantLon?: number): Promise<AddressSuggestion | null> => {
       if (!address || address.trim().length < 5) return null;
       try {
-        const results = await geocodeAddressBounded(address);
+        const results = await geocodeAddressMulti(address, restaurantLat, restaurantLon);
         return results.length > 0 ? results[0] : null;
       } catch {
         return null;
