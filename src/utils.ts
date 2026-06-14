@@ -28,6 +28,10 @@ export function generateWhatsAppLink(
   if (checkout.calculatedDistance != null) {
     message += `*Distancia:* ${checkout.calculatedDistance} km\n`;
   }
+  if (checkout.deliveryCoordinates) {
+    const { lat, lng } = checkout.deliveryCoordinates;
+    message += `*Ubicación:* https://www.google.com/maps?q=${lat},${lng}\n`;
+  }
 
   message += `----------------------------------\n`;
   message += `*PRODUCTOS:*\n`;
