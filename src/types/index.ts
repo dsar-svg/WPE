@@ -69,6 +69,7 @@ export interface AddressSuggestion {
 }
 
 export type DeliveryType = 'Delivery' | 'Pick-up';
+export type OrderStatus = 'pending' | 'cancelled';
 
 export interface CheckoutData {
   name: string;
@@ -103,5 +104,6 @@ export interface Order {
   delivery_fee: number;
   total: number;
   notes: string;
+  status: OrderStatus;
   created_at: string;
 }

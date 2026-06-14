@@ -4,6 +4,8 @@ import { WelcomeScreen } from "./components/ui/WelcomeScreen";
 import { MenuView } from "./components/ui/MenuView";
 import { LandingPage } from "./pages/LandingPage";
 import { PublicMenuPage } from "./pages/PublicMenuPage";
+import { LegalPage } from "./pages/LegalPage";
+import { SEO } from "./components/ui/SEO";
 import { useCart } from "./context/CartContext";
 import { CheckoutData } from "./types";
 import { generateWhatsAppLink } from "./utils";
@@ -83,6 +85,11 @@ function MainView() {
 
   return (
     <div className="min-h-screen bg-white font-sans selection:bg-primary-vibrant selection:text-white">
+      <SEO
+        title="Hacer Pedido - Delivery Rápido"
+        description="Haz tu pedido en Wallace Panda Express. Selecciona tu ubicación, elige tus platillos favoritos y recíbelo en la comodidad de tu hogar. Delivery rápido y seguro."
+        canonical="/pedir"
+      />
       {!selectedLocation ? (
         <WelcomeScreen onSelectLocation={(loc) => setSelectedLocation({ ...loc })} locations={locations} config={config} />
       ) : (
@@ -129,6 +136,7 @@ export default function App() {
                   <Route path="/menu" element={<PublicMenuPage />} />
                   <Route path="/pedir" element={<MainView />} />
                   <Route path="/admin" element={<AdminPage />} />
+                  <Route path="/legal" element={<LegalPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </Suspense>

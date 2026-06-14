@@ -117,6 +117,7 @@ function rowToOrder(row: any): Order {
     delivery_fee: row.delivery_fee,
     total: row.total,
     notes: row.notes || '',
+    status: (row.status || 'pending') as Order['status'],
     created_at: row.created_at,
   };
 }
@@ -405,6 +406,16 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     } catch (error) { console.error('Error creating order:', error); throw error; }
   }, [invalidate]);
 
+  const deleteOrder = useCallback(async (id: string) => {
+    try { await supabase.from('orders').delete().eq('id', id); invalidate(['orders']); }
+    catch (error) { console.error('Error deleting order:', error); }
+  }, [invalidate]);
+
+  const updateOrderStatus = useCallback(async (id: string, status: Order['status']) => {
+    try { await supabase.from('orders').update({ status }).eq('id', id); invalidate(['orders']); }
+    catch (error) { console.error('Error updating order status:', error); }
+  }, [invalidate]);
+
   const fetchOrders = useCallback(() => ordersQuery.refetch(), [ordersQuery]);
 
   const isLoading = !sessionReady || !dataFetched;
@@ -415,8 +426,8 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     selectedLocation, setSelectedLocation,
     updateLocation, updateProduct, updateConfig, updateCategory,
     deleteLocation, deleteProduct, deleteCategory,
-    createOrder, fetchOrders, signIn, signUp, signOut,
-  }), [locations, menuItems, categories, config, orders, isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, selectedLocation, setSelectedLocation, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, createOrder, fetchOrders, signIn, signUp, signOut]);
+    createOrder, deleteOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut,
+  }), [locations, menuItems, categories, config, orders, isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, selectedLocation, setSelectedLocation, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, createOrder, deleteOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut]);
 
   return (
     <RestaurantContext.Provider value={value}>

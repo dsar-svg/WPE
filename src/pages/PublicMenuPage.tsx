@@ -9,6 +9,7 @@ import { ProductModal } from '../components/ui/ProductModal';
 import { PWAInstallPrompt } from '../components/ui/PWAInstallPrompt';
 import { Pagination } from '../components/ui/Pagination';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
+import { SEO } from '../components/ui/SEO';
 import { Product } from '../types';
 
 export function PublicMenuPage() {
@@ -49,6 +50,11 @@ export function PublicMenuPage() {
 
   return (
     <div className="min-h-screen bg-dark font-body selection:bg-primary-vibrant text-white">
+      <SEO
+        title="Menú - Platos y Precios"
+        description="Explora el menú completo de Wallace Panda Express. Arroz chino, pollo agridulce, wonton, egg rolls, sopa y más. Precios accesibles y delivery rápido."
+        canonical="/menu"
+      />
       {/* Header */}
       <header className="bg-dark p-10 md:p-16 text-white relative overflow-hidden border-b-2 border-primary-vibrant/20">
         <div className="absolute top-0 right-0 w-80 h-80 bg-primary-vibrant/15 rounded-full blur-[40px] -mr-40 -mt-40" />
@@ -157,6 +163,11 @@ export function PublicMenuPage() {
             <div className="w-16 h-1.5 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-full" />
           </div>
           <p className="text-zinc-500 text-xs font-medium tracking-wider">{t('menu.title')} {config.name}</p>
+          <div className="flex items-center gap-3 text-zinc-500 text-xs">
+            <Link to="/legal" className="hover:text-white transition-colors">{t('legal.terms.title')}</Link>
+            <span className="text-zinc-700">|</span>
+            <Link to="/legal#privacidad" className="hover:text-white transition-colors">{t('legal.privacy.title')}</Link>
+          </div>
         </div>
       </footer>
 

@@ -9,6 +9,7 @@ import { ProductModal } from '../components/ui/ProductModal';
 import { LocationModal } from '../components/ui/LocationModal';
 import { PWAInstallPrompt } from '../components/ui/PWAInstallPrompt';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
+import { SEO } from '../components/ui/SEO';
 import { Product, Location } from '../types';
 
 export function LandingPage() {
@@ -106,6 +107,11 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50 font-body text-zinc-900 pt-16 md:pt-0">
+      <SEO
+        title="Menú Digital y Delivery de Comida China"
+        description="Ordena tu comida china favorita en Wallace Panda Express: arroz chino, pollo agridulce, wonton, egg rolls y más. Delivery rápido a domicilio. Precios y ubicaciones."
+        canonical="/"
+      />
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-[100] bg-white/90 backdrop-blur-2xl border-b-2 border-primary-vibrant/20 px-6 py-4 md:px-12">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -455,6 +461,22 @@ export function LandingPage() {
           </Link>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="py-8 bg-dark border-t border-zinc-800">
+        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-zinc-500 text-xs">&copy; {new Date().getFullYear()} {config.name}</p>
+          <div className="flex items-center gap-4">
+            <Link to="/legal" className="text-zinc-500 hover:text-white text-xs font-medium transition-colors">
+              {t('legal.terms.title')}
+            </Link>
+            <span className="text-zinc-700">|</span>
+            <Link to="/legal#privacidad" className="text-zinc-500 hover:text-white text-xs font-medium transition-colors">
+              {t('legal.privacy.title')}
+            </Link>
+          </div>
+        </div>
+      </footer>
 
       <AnimatePresence>
         {selectedProduct && (

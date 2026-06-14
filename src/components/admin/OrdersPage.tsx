@@ -1,13 +1,14 @@
 import { useEffect, useState, useMemo } from 'react';
-import { ShoppingBag, MapPin, Phone, User, Clock, ChevronDown, ChevronUp, Search } from 'lucide-react';
+import { ShoppingBag, MapPin, Phone, User, Clock, ChevronDown, ChevronUp, Search, Trash2, Ban } from 'lucide-react';
 import { useRestaurant } from '../../context/RestaurantContext';
 
 export function OrdersPage() {
-  const { orders, fetchOrders, locations } = useRestaurant();
+  const { orders, fetchOrders, locations, deleteOrder, updateOrderStatus } = useRestaurant();
 
   const [search, setSearch] = useState('');
   const [locationFilter, setLocationFilter] = useState('all');
   const [deliveryFilter, setDeliveryFilter] = useState<'all' | 'Delivery' | 'Pick-up'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'cancelled'>('all');
   const [sortField, setSortField] = useState<'created_at' | 'total' | 'customer_name'>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
@@ -35,6 +36,10 @@ export function OrdersPage() {
       result = result.filter(o => o.delivery_type === deliveryFilter);
     }
 
+    if (statusFilter !== 'all') {
+      result = result.filter(o => o.status === statusFilter);
+    }
+
     result.sort((a, b) => {
       let cmp = 0;
       if (sortField === 'created_at') cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -44,7 +49,7 @@ export function OrdersPage() {
     });
 
     return result;
-  }, [orders, search, locationFilter, deliveryFilter, sortField, sortDir]);
+  }, [orders, search, locationFilter, deliveryFilter, statusFilter, sortField, sortDir]);
 
   const toggleSort = (field: typeof sortField) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -103,6 +108,13 @@ export function OrdersPage() {
           <option value="Delivery">Delivery</option>
           <option value="Pick-up">Pick-up</option>
         </select>
+
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
+          className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-zinc-300 focus:border-primary-vibrant/50 outline-none transition-colors">
+          <option value="all">Todos los estados</option>
+          <option value="pending">Pendiente</option>
+          <option value="cancelled">Cancelado</option>
+        </select>
       </div>
 
       {/* Desktop Table */}
@@ -124,12 +136,14 @@ export function OrdersPage() {
               <th className="text-left p-4 font-bold text-zinc-400 uppercase tracking-[0.15em] text-[11px]">Dirección</th>
               <th className="text-left p-4 font-bold text-zinc-400 uppercase tracking-[0.15em] text-[11px]">Items</th>
               <th className="text-left p-4 font-bold text-zinc-400 uppercase tracking-[0.15em] text-[11px]">Tipo</th>
+              <th className="text-left p-4 font-bold text-zinc-400 uppercase tracking-[0.15em] text-[11px]">Estado</th>
               <th className="text-left p-4 font-bold text-zinc-400 uppercase tracking-[0.15em] text-[11px]">Sede</th>
               <th className="text-right p-4 font-bold text-zinc-400 uppercase tracking-[0.15em] text-[11px]">
                 <button onClick={() => toggleSort('total')} className="flex items-center gap-1.5 hover:text-white transition-colors justify-end w-full">
                   Total <SortIcon field="total" />
                 </button>
               </th>
+              <th className="text-right p-4 font-bold text-zinc-400 uppercase tracking-[0.15em] text-[11px]">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-800/50">
@@ -174,8 +188,33 @@ export function OrdersPage() {
                     {order.delivery_type === 'Delivery' ? 'Delivery' : 'Pick-up'}
                   </span>
                 </td>
+                <td className="p-4">
+                  <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg ${
+                    order.status === 'cancelled'
+                      ? 'bg-red-500/10 text-red-400'
+                      : 'bg-green-500/10 text-green-400'
+                  }`}>
+                    {order.status === 'cancelled' ? 'Cancelado' : 'Pendiente'}
+                  </span>
+                </td>
                 <td className="p-4 text-xs text-zinc-500">{getLocationName(order.location_id)}</td>
                 <td className="p-4 text-right font-bold text-green-500 text-sm">${order.total.toFixed(2)}</td>
+                <td className="p-4">
+                  <div className="flex items-center justify-end gap-1">
+                    {order.status === 'pending' && (
+                      <button onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                        className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                        title="Cancelar pedido">
+                        <Ban className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button onClick={() => { if (confirm('Eliminar este pedido permanentemente?')) deleteOrder(order.id); }}
+                      className="p-1.5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                      title="Eliminar pedido">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -226,8 +265,31 @@ export function OrdersPage() {
             </div>
 
             <div className="flex justify-between items-center pt-1">
-              <span className="text-[10px] text-zinc-600 uppercase tracking-widest">Total</span>
-              <span className="font-bold text-green-500 text-sm">${order.total.toFixed(2)}</span>
+              <div className="flex items-center gap-2">
+                <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-lg ${
+                  order.status === 'cancelled'
+                    ? 'bg-red-500/10 text-red-400'
+                    : 'bg-green-500/10 text-green-400'
+                }`}>
+                  {order.status === 'cancelled' ? 'Cancelado' : 'Pendiente'}
+                </span>
+                <span className="text-[10px] text-zinc-600 uppercase tracking-widest">Total</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {order.status === 'pending' && (
+                  <button onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                    className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                    title="Cancelar pedido">
+                    <Ban className="w-4 h-4" />
+                  </button>
+                )}
+                <button onClick={() => { if (confirm('Eliminar este pedido permanentemente?')) deleteOrder(order.id); }}
+                  className="p-1.5 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                  title="Eliminar pedido">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <span className="font-bold text-green-500 text-sm">${order.total.toFixed(2)}</span>
+              </div>
             </div>
           </div>
         ))}
