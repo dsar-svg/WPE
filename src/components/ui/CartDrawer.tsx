@@ -431,7 +431,7 @@ export function CartDrawer({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/70 z-50 backdrop-blur-md"
+            className="fixed inset-0 bg-black/70 z-50"
             id="cart-overlay"
           />
 
@@ -475,8 +475,9 @@ export function CartDrawer({
                   {items.length === 0 ? (
                     <div className="py-24 text-center space-y-6">
                       <motion.div
-                        animate={{ rotate: [0, 10, -10, 0] }}
-                        transition={{ duration: 4, repeat: Infinity }}
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', damping: 15, stiffness: 200 }}
                         className="w-24 h-24 bg-primary-vibrant/10 rounded-2xl flex items-center justify-center mx-auto border border-primary-vibrant/20"
                       >
                         <ShoppingCart className="w-12 h-12 text-primary-vibrant" />
@@ -819,7 +820,7 @@ export function CartDrawer({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-md p-6 flex items-center justify-center"
+                  className="fixed inset-0 z-[60] bg-black/70 p-6 flex items-center justify-center"
                 >
                   <motion.div
                     initial={{ scale: 0.9, y: 20 }}

@@ -49,7 +49,7 @@ const ProductCard = memo(function ProductCard({
           ${item.price.toFixed(2)}
         </div>
         {!item.inStock && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center backdrop-blur-sm">
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
             <span className="bg-red-500/20 text-red-400 text-[11px] font-bold px-4 py-1.5 rounded-full uppercase tracking-wider border border-red-500/30">
               Agotado
             </span>
@@ -125,8 +125,8 @@ export function MenuView({
     <div className="min-h-screen bg-dark-card pb-32 flex flex-col font-body overflow-x-hidden">
       {/* Header */}
       <div className="bg-dark p-8 md:p-14 text-white relative overflow-hidden border-b-2 border-secondary-vibrant/30">
-        <div className="absolute top-0 right-0 w-72 h-72 bg-primary-vibrant/25 rounded-full blur-[60px] -mr-36 -mt-36" />
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary-vibrant/20 rounded-full blur-[60px] -ml-24 -mb-24" />
+        <div className="absolute top-0 right-0 w-72 h-72 bg-primary-vibrant/25 rounded-full blur-[40px] -mr-36 -mt-36" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-secondary-vibrant/20 rounded-full blur-[40px] -ml-24 -mb-24" />
 
         <div className="max-w-7xl mx-auto relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div className="space-y-4">
@@ -146,7 +146,7 @@ export function MenuView({
       </div>
 
       {/* Sticky Categories */}
-      <div className="sticky top-0 bg-dark/95 backdrop-blur-xl z-30 border-b border-white/10">
+      <div className="sticky top-0 bg-dark z-30 border-b border-white/10">
         <div className="max-w-7xl mx-auto relative">
           <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-dark/95 to-transparent z-10 pointer-events-none" />
           <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-dark/95 to-transparent z-10 pointer-events-none" />
@@ -206,12 +206,11 @@ export function MenuView({
           onClick={onOpenCart}
           className="fixed bottom-6 left-6 right-6 max-w-lg mx-auto text-white p-5 rounded-2xl flex items-center justify-between z-40 group transition-all duration-200"
           style={{
-            background: 'linear-gradient(135deg, rgba(203,32,39,0.95) 0%, rgba(139,15,21,0.95) 100%)',
-            backdropFilter: 'blur(20px)',
-            boxShadow: '0 20px 60px rgba(203,32,39,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
+            background: 'linear-gradient(135deg, rgba(203,32,39,0.98) 0%, rgba(139,15,21,0.98) 100%)',
+            boxShadow: '0 10px 30px rgba(203,32,39,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
           }}>
           <div className="flex items-center gap-4">
-            <div className="relative bg-white/15 p-3 rounded-2xl backdrop-blur-md">
+            <div className="relative bg-white/15 p-3 rounded-2xl">
               <ShoppingCart className="w-6 h-6" />
               <span
                 className="absolute -top-2 -right-2 bg-secondary-vibrant text-dark text-[11px] font-bold w-6 h-6 rounded-xl flex items-center justify-center shadow-xl"

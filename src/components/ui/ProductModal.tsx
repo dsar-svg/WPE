@@ -17,7 +17,7 @@ export function ProductModal({ product, onClose, onAddToCart, showAddToCart = tr
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-6">
       {/* Backdrop */}
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}
-        className="absolute inset-0 bg-black/85 backdrop-blur-md" />
+        className="absolute inset-0 bg-black/85" />
 
       {/* Modal Content */}
       <motion.div initial={{ opacity: 0, scale: 0.85, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }}

@@ -53,12 +53,12 @@ export function WelcomeScreen({ onSelectLocation, locations, config }: WelcomeSc
   return (
     <div className="min-h-screen bg-dark flex flex-col text-white font-body overflow-hidden">
       {/* Background glow */}
-      <div className="absolute top-0 left-0 w-full h-72 bg-primary-vibrant/15 blur-[60px] -z-10 will-change-[filter]" />
-      <div className="absolute bottom-0 right-0 w-full h-72 bg-secondary-vibrant/10 blur-[60px] -z-10 will-change-[filter]" />
+      <div className="absolute top-0 left-0 w-full h-72 bg-primary-vibrant/15 blur-[40px] -z-10" />
+      <div className="absolute bottom-0 right-0 w-full h-72 bg-secondary-vibrant/10 blur-[40px] -z-10" />
 
       {/* Top Header */}
       <div className="relative z-20 p-6 flex items-center justify-between max-w-lg mx-auto w-full">
-        <Link to="/" className="group flex items-center gap-2 bg-primary-vibrant/10 backdrop-blur-md px-4 py-2 rounded-full border border-primary-vibrant/20 hover:bg-primary-vibrant/20 hover:border-primary-vibrant/40 transition-all duration-300 active:scale-95">
+        <Link to="/" className="group flex items-center gap-2 bg-primary-vibrant/10 px-4 py-2 rounded-full border border-primary-vibrant/20 hover:bg-primary-vibrant/20 hover:border-primary-vibrant/40 transition-all duration-300 active:scale-95">
           <ArrowLeft className="w-4 h-4 text-primary-vibrant group-hover:-translate-x-1 transition-transform duration-300" />
           <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-primary-vibrant group-hover:text-white transition-colors">{t("nav.home")}</span>
         </Link>

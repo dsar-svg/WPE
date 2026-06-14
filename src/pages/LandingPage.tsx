@@ -191,8 +191,8 @@ export function LandingPage() {
           <div className="absolute bottom-32 right-1/4 w-36 h-36 md:w-48 md:h-48 rounded-2xl rotate-[-7deg] bg-gradient-to-br from-secondary-vibrant/20 to-transparent" />
         </div>
         
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary-vibrant/20 rounded-full blur-[60px] -mr-48 -mt-48 will-change-[filter]" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-secondary-vibrant/15 rounded-full blur-[60px] -ml-48 -mb-48 will-change-[filter]" />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary-vibrant/20 rounded-full blur-[40px] -mr-48 -mt-48" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-secondary-vibrant/15 rounded-full blur-[40px] -ml-48 -mb-48" />
 
         <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="relative z-10 text-center space-y-10 px-6 max-w-4xl mx-auto">

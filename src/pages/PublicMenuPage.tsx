@@ -51,8 +51,8 @@ export function PublicMenuPage() {
     <div className="min-h-screen bg-dark font-body selection:bg-primary-vibrant text-white">
       {/* Header */}
       <header className="bg-dark p-10 md:p-16 text-white relative overflow-hidden border-b-2 border-primary-vibrant/20">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-primary-vibrant/15 rounded-full blur-[60px] -mr-40 -mt-40 will-change-[filter]" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary-vibrant/10 rounded-full blur-[60px] -ml-32 -mb-32 will-change-[filter]" />
+        <div className="absolute top-0 right-0 w-80 h-80 bg-primary-vibrant/15 rounded-full blur-[40px] -mr-40 -mt-40" />
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary-vibrant/10 rounded-full blur-[40px] -ml-32 -mb-32" />
 
         <div className="max-w-7xl mx-auto relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
           <div className="space-y-5">

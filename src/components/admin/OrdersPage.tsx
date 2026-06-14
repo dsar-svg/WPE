@@ -106,8 +106,13 @@ export function OrdersPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-2xl border border-zinc-800">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-zinc-800 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="sm:hidden flex items-center gap-2 text-[10px] text-zinc-500 mb-2 px-1">
+          <span className="animate-pulse">←</span>
+          <span>Desliza para ver más columnas</span>
+          <span className="animate-pulse">→</span>
+        </div>
+        <table className="w-full text-sm min-w-[800px]">
           <thead>
             <tr className="bg-zinc-900 border-b border-zinc-800">
               <th className="text-left p-4 font-bold text-zinc-400 uppercase tracking-[0.15em] text-[11px]">

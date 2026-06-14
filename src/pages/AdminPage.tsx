@@ -104,7 +104,7 @@ return (
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={closeSidebar}
-          className="lg:hidden fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
+          className="lg:hidden fixed inset-0 bg-black/60 z-40"
         />
       )}
     </AnimatePresence>
