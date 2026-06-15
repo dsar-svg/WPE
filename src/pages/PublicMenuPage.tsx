@@ -159,12 +159,12 @@ export function PublicMenuPage() {
               <Utensils className="w-8 h-8 text-secondary-vibrant" />
             )}
           </div>
-          <h2 className="text-3xl uppercase"><BrandName className="text-3xl uppercase text-secondary-vibrant" /></h2>
+          <h2 className="text-3xl uppercase"><BrandName className="text-3xl uppercase" theme="dark" /></h2>
           <div className="flex justify-center gap-3">
             <div className="w-16 h-1.5 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-full" />
           </div>
           <p className="text-xs font-medium tracking-wider"><BrandName className="text-xs" theme="dark" /></p>
-          <div className="flex items-center gap-3 text-zinc-500 text-xs">
+          <div className="flex items-center justify-center gap-3 text-zinc-500 text-xs">
             <Link to="/legal" className="hover:text-white transition-colors">{t('legal.terms.title')}</Link>
             <span className="text-zinc-700">|</span>
             <Link to="/legal#privacidad" className="hover:text-white transition-colors">{t('legal.privacy.title')}</Link>

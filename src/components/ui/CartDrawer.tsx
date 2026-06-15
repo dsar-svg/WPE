@@ -417,9 +417,15 @@ export function CartDrawer({
     if (!cedulaOk) setFormErrors(prev => ({ ...prev, cedula: 'Mínimo 7 dígitos' }));
     const addressOk = deliveryType === 'Pick-up' || validateField('address', formData.address);
     if (!nameOk || !phoneOk || !cedulaOk || !addressOk) return;
-    if (deliveryType === 'Delivery' && !isWithinRange) {
-      setAddressError(t('cart.error.addressOutOfRange'));
-      return;
+    if (deliveryType === 'Delivery') {
+      if (!deliveryCoordinates) {
+        setAddressError('Selecciona tu ubicación en el mapa');
+        return;
+      }
+      if (!isWithinRange) {
+        setAddressError(t('cart.error.addressOutOfRange'));
+        return;
+      }
     }
     onCheckout({
       ...formData,
