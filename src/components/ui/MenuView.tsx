@@ -4,11 +4,12 @@ import { ShoppingCart, Plus, Tag, ArrowLeft, Check } from "lucide-react";
 import { Product, Location, Category } from "../../types";
 import { useLanguage } from "../../context/LanguageContext";
 import { ProductModal } from "./ProductModal";
+import { ChoiceSelectorModal } from "./ChoiceSelectorModal";
 import { Pagination } from "./Pagination";
 import { OptimizedImage } from "./OptimizedImage";
 
 interface MenuViewProps {
-  onAddToCart: (p: Product, selectedChoices?: Record<string, string>) => void;
+  onAddToCart: (p: Product, selectedChoices?: string[]) => void;
   cartCount: number;
   total: number;
   menuItems: Product[];
@@ -97,11 +98,12 @@ export function MenuView({
   const { t, language } = useLanguage();
   const [activeCategory, setActiveCategory] = useState(categories[0]?.name || "");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [choiceProduct, setChoiceProduct] = useState<Product | null>(null);
   const [page, setPage] = useState(1);
   const [addedItem, setAddedItem] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 12;
 
-  const handleAddToCart = useCallback((product: Product, selectedChoices?: Record<string, string>) => {
+  const handleAddToCart = useCallback((product: Product, selectedChoices?: string[]) => {
     onAddToCart(product, selectedChoices);
     setAddedItem(product.id);
     setTimeout(() => setAddedItem(null), 1500);
@@ -186,7 +188,13 @@ export function MenuView({
                 key={item.id}
                 item={item}
                 isAdded={addedItem === item.id}
-                onSelect={() => setSelectedProduct(item)}
+                onSelect={() => {
+                  if (item.choices && item.choices.length > 0) {
+                    setChoiceProduct(item);
+                  } else {
+                    setSelectedProduct(item);
+                  }
+                }}
                 onAddToCart={(e) => { e.stopPropagation(); handleAddToCart(item); }}
               />
             ))}
@@ -196,11 +204,25 @@ export function MenuView({
         )}
       </div>
 
-      {/* Product Modal */}
+      {/* Product Modal (no choices) */}
       <AnimatePresence>
         {selectedProduct && (
           <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)}
-            onAddToCart={(p, sc) => { onAddToCart(p, sc); setSelectedProduct(null); }} showAddToCart={false} />
+            onAddToCart={(p) => { handleAddToCart(p); setSelectedProduct(null); }} showAddToCart={false} />
+        )}
+      </AnimatePresence>
+
+      {/* Choice Selector Modal */}
+      <AnimatePresence>
+        {choiceProduct && (
+          <ChoiceSelectorModal
+            product={choiceProduct}
+            onClose={() => setChoiceProduct(null)}
+            onConfirm={(selectedChoices) => {
+              handleAddToCart(choiceProduct, selectedChoices);
+              setChoiceProduct(null);
+            }}
+          />
         )}
       </AnimatePresence>
 

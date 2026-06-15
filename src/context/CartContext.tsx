@@ -3,7 +3,7 @@ import { Product, CartItem } from '../types';
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product, selectedChoices?: Record<string, string>) => void;
+  addToCart: (product: Product, selectedChoices?: string[]) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   updateNotes: (productId: string, notes: string) => void;
@@ -13,20 +13,18 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | null>(null);
 
-function getItemKey(productId: string, selectedChoices?: Record<string, string>): string {
-  if (!selectedChoices || Object.keys(selectedChoices).length === 0) return productId;
-  const choiceStr = Object.entries(selectedChoices).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}:${v}`).join('|');
-  return `${productId}__${choiceStr}`;
+function getItemKey(productId: string, selectedChoices?: string[]): string {
+  if (!selectedChoices || selectedChoices.length === 0) return productId;
+  const sorted = [...selectedChoices].sort().join('|');
+  return `${productId}__${sorted}`;
 }
 
-function getChoicePriceAdjust(product: Product, selectedChoices?: Record<string, string>): number {
+function getChoicePriceAdjust(product: Product, selectedChoices?: string[]): number {
   if (!selectedChoices || !product.choices) return 0;
   let adjust = 0;
   for (const choice of product.choices) {
-    const selected = selectedChoices[choice.name];
-    if (selected) {
-      const opt = choice.options.find(o => o.name === selected);
-      if (opt?.priceAdjust) adjust += opt.priceAdjust;
+    if (selectedChoices.includes(choice.name)) {
+      adjust += choice.priceAdjust ?? 0;
     }
   }
   return adjust;
@@ -35,7 +33,7 @@ function getChoicePriceAdjust(product: Product, selectedChoices?: Record<string,
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  const addToCart = useCallback((product: Product, selectedChoices?: Record<string, string>) => {
+  const addToCart = useCallback((product: Product, selectedChoices?: string[]) => {
     setItems((prev) => {
       const key = getItemKey(product.id, selectedChoices);
       const existing = prev.find((item) => getItemKey(item.id, item.selectedChoices) === key);

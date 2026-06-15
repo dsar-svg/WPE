@@ -37,8 +37,8 @@ export function generateWhatsAppLink(
   message += `*PRODUCTOS:*\n`;
 
   items.forEach((item) => {
-    const choicesText = item.selectedChoices && Object.keys(item.selectedChoices).length > 0
-      ? ` - ${Object.values(item.selectedChoices).join(', ')}`
+    const choicesText = item.selectedChoices && item.selectedChoices.length > 0
+      ? ` — ${item.selectedChoices.join(', ')}`
       : '';
     message += `• ${item.quantity}x ${item.name}${choicesText} ($${(item.price * item.quantity).toFixed(2)})\n`;
     if (item.notes) {

@@ -1,7 +1,7 @@
 import { useState, ChangeEvent } from 'react';
 import { motion } from 'motion/react';
 import { X, Save, RefreshCcw, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
-import { Product, Category, ProductChoice, ProductChoiceOption } from '../../types';
+import { Product, Category, ProductChoice } from '../../types';
 import { useUploadImage } from '../../hooks/useUploadImage';
 import { validateImageSize } from '../../lib/uploadImage';
 
@@ -23,6 +23,7 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
     inStock: true,
     order: 0,
     choices: [],
+    maxSelections: 0,
   });
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -30,6 +31,7 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
   const uploadImage = useUploadImage();
 
   const choices = data.choices || [];
+  const maxSelections = data.maxSelections ?? 0;
 
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -54,45 +56,18 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
     }
   };
 
-  const addChoiceGroup = () => {
-    const newChoice: ProductChoice = {
-      name: '',
-      required: true,
-      options: [{ name: '', priceAdjust: 0 }],
-    };
+  const addChoice = () => {
+    const newChoice: ProductChoice = { name: '', priceAdjust: 0 };
     setData({ ...data, choices: [...choices, newChoice] });
   };
 
-  const updateChoiceGroup = (index: number, patch: Partial<ProductChoice>) => {
+  const updateChoice = (index: number, patch: Partial<ProductChoice>) => {
     const updated = choices.map((c, i) => (i === index ? { ...c, ...patch } : c));
     setData({ ...data, choices: updated });
   };
 
-  const removeChoiceGroup = (index: number) => {
+  const removeChoice = (index: number) => {
     setData({ ...data, choices: choices.filter((_, i) => i !== index) });
-  };
-
-  const addOption = (choiceIndex: number) => {
-    const updated = choices.map((c, i) =>
-      i === choiceIndex ? { ...c, options: [...c.options, { name: '', priceAdjust: 0 }] } : c
-    );
-    setData({ ...data, choices: updated });
-  };
-
-  const updateOption = (choiceIndex: number, optionIndex: number, patch: Partial<ProductChoiceOption>) => {
-    const updated = choices.map((c, i) =>
-      i === choiceIndex
-        ? { ...c, options: c.options.map((o, j) => (j === optionIndex ? { ...o, ...patch } : o)) }
-        : c
-    );
-    setData({ ...data, choices: updated });
-  };
-
-  const removeOption = (choiceIndex: number, optionIndex: number) => {
-    const updated = choices.map((c, i) =>
-      i === choiceIndex ? { ...c, options: c.options.filter((_, j) => j !== optionIndex) } : c
-    );
-    setData({ ...data, choices: updated });
   };
 
   const handleSave = async () => {
@@ -229,12 +204,12 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
             <div>
               <h3 className="text-lg font-black tracking-tight">Opciones del Producto</h3>
               <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold mt-1">
-                Ej: Acompañante, Tipo de carne, Tamaño
+                Ej: Chopsuey, Papas Fritas, Queso Extra
               </p>
             </div>
             <button
               type="button"
-              onClick={addChoiceGroup}
+              onClick={addChoice}
               className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
             >
               <Plus className="w-3 h-3" />
@@ -242,83 +217,63 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
             </button>
           </div>
 
+          {/* Max selections */}
+          <div className="flex items-center gap-4">
+            <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500">
+              Máx selecciones:
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="10"
+              className="w-20 bg-zinc-950 border border-zinc-800 px-3 py-2 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary-vibrant outline-none text-center"
+              value={maxSelections}
+              onChange={e => {
+                const val = parseInt(e.target.value);
+                setData({...data, maxSelections: isNaN(val) ? 0 : val});
+              }}
+            />
+            <span className="text-[10px] text-zinc-600">
+              {maxSelections === 0 ? '(sin límite — checkboxes)' : `(selecciona hasta ${maxSelections})`}
+            </span>
+          </div>
+
           {choices.length === 0 && (
             <div className="bg-zinc-950 border border-dashed border-zinc-700 rounded-2xl p-8 text-center">
               <p className="text-zinc-600 text-xs font-bold">Este producto no tiene opciones.</p>
-              <p className="text-zinc-700 text-[10px] mt-1">Haz clic en "Agregar opción" para crear grupos de selección.</p>
+              <p className="text-zinc-700 text-[10px] mt-1">Haz clic en "Agregar opción" para añadir opciones extras.</p>
             </div>
           )}
 
           {choices.map((choice, ci) => (
-            <div key={ci} className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 space-y-4">
-              <div className="flex items-center gap-3">
+            <div key={ci} className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 rounded-2xl p-4">
+              <input
+                className="flex-1 bg-zinc-900 border border-zinc-800 px-4 py-2.5 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
+                placeholder="Nombre de la opción (ej: Chopsuey)"
+                value={choice.name}
+                onChange={e => updateChoice(ci, { name: e.target.value })}
+              />
+              <div className="flex items-center gap-1">
+                <span className="text-[9px] text-zinc-600 font-bold">+$</span>
                 <input
-                  className="flex-1 bg-zinc-900 border border-zinc-800 px-4 py-2.5 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
-                  placeholder="Nombre del grupo (ej: Acompañante)"
-                  value={choice.name}
-                  onChange={e => updateChoiceGroup(ci, { name: e.target.value })}
+                  type="number"
+                  step="0.01"
+                  className="w-24 bg-zinc-900 border border-zinc-800 px-3 py-2 rounded-xl text-sm font-bold focus:ring-1 focus:ring-primary-vibrant outline-none text-right"
+                  placeholder="0"
+                  value={choice.priceAdjust ?? ''}
+                  onChange={e => {
+                    const val = parseFloat(e.target.value);
+                    updateChoice(ci, { priceAdjust: isNaN(val) ? 0 : val });
+                  }}
                 />
-                <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 whitespace-nowrap cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={choice.required}
-                    onChange={e => updateChoiceGroup(ci, { required: e.target.checked })}
-                    className="w-4 h-4 rounded bg-zinc-900 border-zinc-700 text-primary-vibrant focus:ring-primary-vibrant"
-                  />
-                  Requerido
-                </label>
-                <button
-                  type="button"
-                  onClick={() => removeChoiceGroup(ci)}
-                  className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-all"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
-
-              <div className="space-y-2">
-                {choice.options.map((opt, oi) => (
-                  <div key={oi} className="flex items-center gap-2">
-                    <input
-                      className="flex-1 bg-zinc-900 border border-zinc-800 px-3 py-2 rounded-lg text-xs font-medium focus:ring-1 focus:ring-primary-vibrant outline-none"
-                      placeholder="Nombre de la opción (ej: Chopsuey)"
-                      value={opt.name}
-                      onChange={e => updateOption(ci, oi, { name: e.target.value })}
-                    />
-                    <div className="flex items-center gap-1">
-                      <span className="text-[9px] text-zinc-600 font-bold">+$</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        className="w-20 bg-zinc-900 border border-zinc-800 px-2 py-2 rounded-lg text-xs font-medium focus:ring-1 focus:ring-primary-vibrant outline-none text-right"
-                        placeholder="0"
-                        value={opt.priceAdjust ?? ''}
-                        onChange={e => {
-                          const val = parseFloat(e.target.value);
-                          updateOption(ci, oi, { priceAdjust: isNaN(val) ? 0 : val });
-                        }}
-                      />
-                    </div>
-                    {choice.options.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeOption(ci, oi)}
-                        className="p-1.5 bg-zinc-800 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 rounded-lg transition-all"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => addOption(ci)}
-                  className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-500 hover:text-white transition-colors mt-2"
-                >
-                  <Plus className="w-3 h-3" />
-                  Agregar opción
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => removeChoice(ci)}
+                className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
           ))}
         </div>

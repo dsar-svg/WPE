@@ -38,15 +38,9 @@ export interface Location {
   discontinuedProductIds?: string[];
 }
 
-export interface ProductChoiceOption {
-  name: string;
-  priceAdjust?: number;
-}
-
 export interface ProductChoice {
   name: string;
-  required: boolean;
-  options: ProductChoiceOption[];
+  priceAdjust?: number;
 }
 
 export interface Product {
@@ -59,12 +53,13 @@ export interface Product {
   inStock: boolean;
   order: number;
   choices?: ProductChoice[];
+  maxSelections?: number;
 }
 
 export interface CartItem extends Product {
   quantity: number;
   notes?: string;
-  selectedChoices?: Record<string, string>;
+  selectedChoices?: string[];
 }
 
 export interface Category {
@@ -102,7 +97,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
   notes?: string;
-  selectedChoices?: Record<string, string>;
+  selectedChoices?: string[];
 }
 
 export interface Order {
