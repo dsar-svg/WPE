@@ -73,8 +73,9 @@ export async function fetchBcvRate(): Promise<number | null> {
       const data = await res.json();
       const rate = source.parse(data);
       if (typeof rate === 'number' && rate > 0) {
-        setCachedRate(rate);
-        return rate;
+        const rounded = Math.round(rate * 100) / 100;
+        setCachedRate(rounded);
+        return rounded;
       }
     } catch {}
   }
