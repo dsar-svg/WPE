@@ -149,7 +149,7 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
                           alt={loc.name}
                           className="w-20 h-20 rounded-2xl grayscale-[0.3] group-hover:grayscale-0 transition-all border border-admin-border shadow-xl"
                         />
-                        <div className={'absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-admin-bg ' + (loc.isOpen ? 'bg-green-500' : 'bg-admin-muted')} />
+                        <div className={'absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-admin-bg ' + (loc.isOpen ? 'bg-green-500' : loc.isActive ? 'bg-yellow-500' : 'bg-admin-muted')} />
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => setEditingLoc(loc)} className="p-2 hover:bg-admin-border rounded-xl text-admin-muted transition-colors">
@@ -192,14 +192,14 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
                   </div>
                   <div className="mt-8 flex items-center justify-between bg-admin-bg p-3 rounded-2xl border border-admin-border">
                     <div className="flex items-center gap-3 ml-2">
-                      <span className={'text-[11px] font-black uppercase tracking-widest ' + (loc.isOpen ? 'text-primary-vibrant' : 'text-admin-muted')}>
-                        {loc.isOpen ? 'Sede Activa' : 'Sede Oculta'}
+                      <span className={'text-[11px] font-black uppercase tracking-widest ' + (loc.isActive ? 'text-primary-vibrant' : 'text-admin-muted')}>
+                        {loc.isActive ? (loc.isOpen ? 'Sede Activa y Abierta' : 'Sede Activa (Cerrada por horario)') : 'Sede Inactiva'}
                       </span>
                     </div>
-                    <button onClick={() => updateLocation({ ...loc, isOpen: !loc.isOpen })}
-                      className={'w-12 h-6 rounded-full relative transition-colors ' + (loc.isOpen ? 'bg-primary-vibrant' : 'bg-admin-border')}
+                    <button onClick={() => updateLocation({ ...loc, isActive: !loc.isActive })}
+                      className={'w-12 h-6 rounded-full relative transition-colors ' + (loc.isActive ? 'bg-primary-vibrant' : 'bg-admin-border')}
                     >
-                      <motion.div animate={{ x: loc.isOpen ? 24 : 4 }}
+                      <motion.div animate={{ x: loc.isActive ? 24 : 4 }}
                         className="absolute top-1 left-0 w-4 h-4 bg-white rounded-full shadow-md"
                       />
                     </button>

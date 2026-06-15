@@ -328,14 +328,18 @@ export function LandingPage() {
           </div>
 
           <div className="relative">
-            <button onClick={() => setLocationIndex(prev => Math.max(0, prev - 1))} disabled={locationIndex === 0}
-              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-primary-vibrant text-white hover:bg-secondary-vibrant hover:text-dark shadow-lg shadow-primary-vibrant/30 flex items-center justify-center transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed">
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button onClick={() => setLocationIndex(prev => Math.min(locations.length - 1, prev + 1))} disabled={locationIndex >= locations.length - 1}
-              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-primary-vibrant text-white hover:bg-secondary-vibrant hover:text-dark shadow-lg shadow-primary-vibrant/30 flex items-center justify-center transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed">
-              <ChevronRight className="w-5 h-5" />
-            </button>
+            {locations.length > 1 && (
+              <>
+                <button onClick={() => setLocationIndex(prev => Math.max(0, prev - 1))} disabled={locationIndex === 0}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-primary-vibrant text-white hover:bg-secondary-vibrant hover:text-dark shadow-lg shadow-primary-vibrant/30 flex items-center justify-center transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button onClick={() => setLocationIndex(prev => Math.min(locations.length - 1, prev + 1))} disabled={locationIndex >= locations.length - 1}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full bg-primary-vibrant text-white hover:bg-secondary-vibrant hover:text-dark shadow-lg shadow-primary-vibrant/30 flex items-center justify-center transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed">
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </>
+            )}
 
             <div className="overflow-hidden p-2 -m-2">
               <motion.div className="flex gap-6" animate={{ x: `calc(-${locationIndex * 340}px - ${locationIndex * 1.5}rem)` }}

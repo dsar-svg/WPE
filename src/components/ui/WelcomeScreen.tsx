@@ -36,6 +36,7 @@ export function WelcomeScreen({ onSelectLocation, locations, config }: WelcomeSc
   }, [onSelectLocation]);
 
   const isLocationOpen = (loc: Location) => {
+    if (!loc.isActive) return false;
     if (!loc.openTime || !loc.closeTime) return true;
     const now = new Date();
     const currentTime = now.getHours() * 60 + now.getMinutes();

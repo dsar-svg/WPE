@@ -52,6 +52,7 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave, createLo
     openTime: location?.openTime || '12:00',
     closeTime: location?.closeTime || '22:00',
     schedule: location?.schedule || 'Lunes a Domingo',
+    isActive: location?.isActive ?? true,
     isOpen: location?.isOpen ?? true,
     latitude: location?.latitude || undefined,
     longitude: location?.longitude || undefined,

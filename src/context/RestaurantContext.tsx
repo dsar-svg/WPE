@@ -60,7 +60,15 @@ const DEFAULT_CONFIG: RestaurantConfig = {
 };
 
 function computeIsOpen(row: any): boolean {
-  return !!row.is_open;
+  if (!row.is_open) return false;
+  if (!row.open_time || !row.close_time) return row.is_open;
+  const now = new Date();
+  const cur = now.getHours() * 60 + now.getMinutes();
+  const [oh, om] = row.open_time.split(':').map(Number);
+  const [ch, cm] = row.close_time.split(':').map(Number);
+  const open = oh * 60 + om;
+  const close = ch * 60 + cm;
+  return close < open ? cur >= open || cur < close : cur >= open && cur < close;
 }
 
 function rowToLocation(row: any): Location {
@@ -73,6 +81,7 @@ function rowToLocation(row: any): Location {
     image: row.image,
     openTime: row.open_time,
     closeTime: row.close_time,
+    isActive: !!row.is_open,
     isOpen: computeIsOpen(row),
     latitude: row.latitude,
     longitude: row.longitude,
@@ -359,7 +368,8 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
       if (loc.image !== undefined) dbRow.image = loc.image;
       if (loc.openTime !== undefined) dbRow.open_time = loc.openTime;
       if (loc.closeTime !== undefined) dbRow.close_time = loc.closeTime;
-      if (loc.isOpen !== undefined) dbRow.is_open = loc.isOpen;
+      if (loc.isActive !== undefined) dbRow.is_open = loc.isActive;
+      else if (loc.isOpen !== undefined) dbRow.is_open = loc.isOpen;
       if (loc.latitude !== undefined) dbRow.latitude = loc.latitude;
       if (loc.longitude !== undefined) dbRow.longitude = loc.longitude;
       if (loc.adminEmail !== undefined) dbRow.admin_email = loc.adminEmail;

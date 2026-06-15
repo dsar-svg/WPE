@@ -30,6 +30,7 @@ export interface Location {
   image: string;
   openTime: string;
   closeTime: string;
+  isActive: boolean;
   isOpen: boolean;
   latitude?: number;
   longitude?: number;
