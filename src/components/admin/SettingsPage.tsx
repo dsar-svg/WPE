@@ -273,18 +273,6 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Impuesto (%)</label>
-                <input
-                  type="number" step="0.1"
-                  className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
-                  value={isNaN(data.taxRate * 100) ? '' : (data.taxRate * 100).toFixed(1)}
-                  onChange={e => {
-                    const val = parseFloat(e.target.value);
-                    setData({...data, taxRate: isNaN(val) ? 0 : val / 100});
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
                 <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Delivery Base ($)</label>
                 <input
                   type="number" step="0.1"

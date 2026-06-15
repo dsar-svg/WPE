@@ -405,8 +405,7 @@ export function CartDrawer({
   );
 
   // ── Totals ───────────────────────────────────────────────────────────
-  const subtotalWithTax = total * (1 + (config.taxRate ?? 0));
-  const finalTotal = subtotalWithTax + calculatedFee;
+  const finalTotal = total + calculatedFee;
   const totalVES = finalTotal * (config.exchangeRate ?? 1);
 
   // ── Submit ───────────────────────────────────────────────────────────
@@ -952,11 +951,6 @@ export function CartDrawer({
                       <span className="font-display text-2xl sm:text-3xl tracking-wider leading-none text-white">
                         ${finalTotal.toFixed(2)} <span className="text-[10px] text-zinc-400 ml-1 font-medium font-body">USD</span>
                       </span>
-                      {(config.taxRate ?? 0) > 0 && (
-                        <span className="text-[8px] text-zinc-500 uppercase tracking-widest mt-0.5">
-                          {t('cart.includesTax')} ({((config.taxRate ?? 0) * 100).toFixed(1)}%)
-                        </span>
-                      )}
                     </div>
                   </div>
 

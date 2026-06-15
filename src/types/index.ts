@@ -12,7 +12,6 @@ export interface RestaurantConfig {
     tiktok?: string;
   };
   featuredProductIds?: string[];
-  taxRate: number;
   deliveryFee: number;
   exchangeRate: number;
   distancePricing: {

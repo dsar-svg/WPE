@@ -8,13 +8,10 @@ export function generateWhatsAppLink(
   config: RestaurantConfig
 ) {
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const taxRateActive = config.taxRate ?? 0;
-  const tax = subtotal * taxRateActive;
-  const subtotalWithTax = subtotal + tax;
 
   const deliveryFee = checkout.calculatedDeliveryFee ?? config.deliveryFee ?? 0;
 
-  const totalUSD = subtotalWithTax + deliveryFee;
+  const totalUSD = subtotal + deliveryFee;
 
   let message = `*NUEVO PEDIDO - W PANDA EXPRESS*\n`;
   message += `----------------------------------\n`;
@@ -45,7 +42,6 @@ export function generateWhatsAppLink(
 
   message += `----------------------------------\n`;
   message += `*Subtotal:* $${subtotal.toFixed(2)}\n`;
-  if (tax > 0) message += `*Impuesto (${(taxRateActive * 100).toFixed(1)}%):* $${tax.toFixed(2)}\n`;
   message += `*Delivery:* $${deliveryFee.toFixed(2)}\n`;
   message += `*TOTAL:* $${totalUSD.toFixed(2)}\n`;
   message += `----------------------------------\n`;

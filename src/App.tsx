@@ -70,7 +70,7 @@ function MainView() {
         })),
         subtotal: total,
         delivery_fee: deliveryFee,
-        total: total * (1 + (config.taxRate ?? 0)) + deliveryFee,
+        total: total + deliveryFee,
         notes: data.notes,
         status: 'exitoso',
       });

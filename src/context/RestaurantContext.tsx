@@ -45,7 +45,6 @@ const DEFAULT_CONFIG: RestaurantConfig = {
   aboutUs: '',
   socialMedia: {},
   featuredProductIds: [],
-  taxRate: 0.16,
   deliveryFee: 2.00,
   exchangeRate: 1.00,
   distancePricing: {
@@ -147,7 +146,6 @@ function rowToConfig(row: any): RestaurantConfig {
     aboutUs: row.about_us,
     socialMedia: row.social_media || {},
     featuredProductIds: parsePgArray(row.featured_product_ids),
-    taxRate: row.tax_rate,
     deliveryFee: row.delivery_fee,
     exchangeRate: row.exchange_rate,
     distancePricing: row.distance_pricing || DEFAULT_CONFIG.distancePricing,
@@ -331,8 +329,6 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     if (newConfig.secondaryColor !== undefined) dbRow.secondary_color = newConfig.secondaryColor;
     if (newConfig.aboutUs !== undefined) dbRow.about_us = newConfig.aboutUs;
     if (newConfig.socialMedia !== undefined) dbRow.social_media = newConfig.socialMedia;
-    if (newConfig.featuredProductIds !== undefined) dbRow.featured_product_ids = newConfig.featuredProductIds;
-    if (newConfig.taxRate !== undefined) dbRow.tax_rate = newConfig.taxRate;
     if (newConfig.deliveryFee !== undefined) dbRow.delivery_fee = newConfig.deliveryFee;
     if (newConfig.exchangeRate !== undefined) dbRow.exchange_rate = newConfig.exchangeRate;
     if (newConfig.distancePricing !== undefined) dbRow.distance_pricing = newConfig.distancePricing;
