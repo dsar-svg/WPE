@@ -15,7 +15,6 @@ export function generateWhatsAppLink(
   const deliveryFee = checkout.calculatedDeliveryFee ?? config.deliveryFee ?? 0;
 
   const totalUSD = subtotalWithTax + deliveryFee;
-  const totalVES = totalUSD * (config.exchangeRate || 1);
 
   let message = `*NUEVO PEDIDO - W PANDA EXPRESS*\n`;
   message += `----------------------------------\n`;
@@ -25,9 +24,6 @@ export function generateWhatsAppLink(
 
   if (checkout.address) message += `*Dirección:* ${checkout.address}\n`;
   if (checkout.reference) message += `*Referencia:* ${checkout.reference}\n`;
-  if (checkout.calculatedDistance != null) {
-    message += `*Distancia:* ${checkout.calculatedDistance} km\n`;
-  }
   if (checkout.deliveryCoordinates) {
     const { lat, lng } = checkout.deliveryCoordinates;
     message += `*Ubicación:* https://www.google.com/maps?q=${lat},${lng}\n`;
@@ -51,8 +47,6 @@ export function generateWhatsAppLink(
   if (tax > 0) message += `*Impuesto (${(taxRateActive * 100).toFixed(1)}%):* $${tax.toFixed(2)}\n`;
   message += `*Delivery:* $${deliveryFee.toFixed(2)}\n`;
   message += `*TOTAL:* $${totalUSD.toFixed(2)}\n`;
-  message += `*TOTAL (Bs):* ${totalVES.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs.\n`;
-  message += `*(Tasa: ${config.exchangeRate})*\n`;
   message += `----------------------------------\n`;
   message += `_Pedido realizado desde la App Web_`;
 
