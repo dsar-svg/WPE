@@ -39,11 +39,6 @@ export function saveRateSource(source: 'bcv' | 'manual'): void {
 
 const API_SOURCES = [
   {
-    name: 'pydolarve',
-    url: 'https://pydolarve.org/api/v1/dollar',
-    parse: (data: any) => data?.rates?.price ?? data?.price ?? data?.dollar?.price ?? null,
-  },
-  {
     name: 've-dolarapi',
     url: 'https://ve.dolarapi.com/v1/dolares',
     parse: (data: any) => {
