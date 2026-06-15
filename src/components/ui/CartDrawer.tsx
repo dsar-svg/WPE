@@ -20,6 +20,7 @@ import { MapComponent } from './MapComponent';
 import { useLanguage } from '../../context/LanguageContext';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { useDistanceCalculation } from '../../hooks/useDistanceCalculation';
+import { fetchBcvRate } from '../../services/bcvRate';
 import { OptimizedImage } from './OptimizedImage';
 
 interface CartDrawerProps {
@@ -45,7 +46,7 @@ export function CartDrawer({
   updateNotes,
   onCheckout,
 }: CartDrawerProps) {
-  const { config } = useRestaurant();
+  const { config, updateConfig } = useRestaurant();
   const { t, language } = useLanguage();
   const {
     searchAddress,
@@ -98,6 +99,19 @@ export function CartDrawer({
 
     }
   }, [step, loadLastAddress]);
+
+  // ── Fetch BCV rate when cart opens ───────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) return;
+    (async () => {
+      try {
+        const rate = await fetchBcvRate();
+        if (rate !== null && rate !== config.exchangeRate) {
+          await updateConfig({ exchangeRate: rate });
+        }
+      } catch {}
+    })();
+  }, [isOpen, updateConfig, config.exchangeRate]);
 
   // ── Auto GPS geolocation when checkout opens (once) ──────────────────
   const gpsAttempted = useRef(false);
