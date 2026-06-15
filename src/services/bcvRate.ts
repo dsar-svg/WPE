@@ -43,10 +43,10 @@ const API_SOURCES = [
     url: 'https://ve.dolarapi.com/v1/dolares',
     parse: (data: any) => {
       if (Array.isArray(data)) {
-        const usd = data.find((d: any) => d.fuente === 'BCV' || d.nombre === 'Oficial');
-        return usd?.precio ?? usd?.price ?? null;
+        const usd = data.find((d: any) => d.fuente === 'oficial' || d.fuente === 'BCV' || d.nombre === 'Oficial' || d.nombre === 'Dólar');
+        return usd?.promedio ?? usd?.precio ?? usd?.price ?? null;
       }
-      return data?.precio ?? data?.price ?? null;
+      return data?.promedio ?? data?.precio ?? data?.price ?? null;
     },
   },
   {
@@ -54,10 +54,10 @@ const API_SOURCES = [
     url: 'https://dolarapi.com/v1/dolares',
     parse: (data: any) => {
       if (Array.isArray(data)) {
-        const usd = data.find((d: any) => d.fuente === 'BCV' || d.nombre === 'Oficial');
-        return usd?.precio ?? usd?.price ?? null;
+        const usd = data.find((d: any) => d.fuente === 'oficial' || d.fuente === 'BCV' || d.nombre === 'Oficial' || d.nombre === 'Dólar');
+        return usd?.promedio ?? usd?.precio ?? usd?.price ?? null;
       }
-      return data?.precio ?? data?.price ?? null;
+      return data?.promedio ?? data?.precio ?? data?.price ?? null;
     },
   },
 ];
