@@ -2,7 +2,7 @@ import { useState, ChangeEvent, useMemo, useEffect, useRef, useCallback } from '
 import { Save, RefreshCcw, Image as ImageIcon, Plus, Trash2, Settings, DollarSign, Loader2 } from 'lucide-react';
 import { RestaurantConfig, Product, Category } from '../../types';
 import { useUploadImage } from '../../hooks/useUploadImage';
-import { fetchBcvRate } from '../../services/bcvRate';
+import { fetchBcvRate, getRateSource, saveRateSource } from '../../services/bcvRate';
 import { Pagination } from '../ui/Pagination';
 
 interface SettingsPageProps {
@@ -105,19 +105,22 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
 
   useEffect(() => { setFeaturedPage(1); }, [featuredCategory]);
 
-  // Auto-fetch BCV rate on mount
+  // Auto-fetch BCV rate on mount (only if source is 'bcv')
   useEffect(() => {
-    (async () => {
-      setIsFetchingRate(true);
-      try {
-        const rate = await fetchBcvRate();
-        if (rate !== null) {
-          setData(prev => ({ ...prev, exchangeRate: rate }));
-          setRateSource('bcv');
-        }
-      } catch {}
-      setIsFetchingRate(false);
-    })();
+    const source = getRateSource();
+    setRateSource(source);
+    if (source === 'bcv') {
+      (async () => {
+        setIsFetchingRate(true);
+        try {
+          const rate = await fetchBcvRate();
+          if (rate !== null) {
+            setData(prev => ({ ...prev, exchangeRate: rate }));
+          }
+        } catch {}
+        setIsFetchingRate(false);
+      })();
+    }
   }, []);
 
   const toggleFeaturedProduct = (id: string) => {
@@ -295,9 +298,6 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
               <div className="flex items-center justify-between ml-2">
                 <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500">Tasa de Cambio (BS/USD)</label>
                 <div className="flex items-center gap-2">
-                  {rateSource === 'bcv' && (
-                    <span className="text-[8px] text-green-400 font-bold uppercase tracking-widest bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">BCV</span>
-                  )}
                   <button
                     type="button"
                     onClick={async () => {
@@ -307,19 +307,24 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
                         if (rate !== null) {
                           setData(prev => ({ ...prev, exchangeRate: rate }));
                           setRateSource('bcv');
+                          saveRateSource('bcv');
                         }
                       } catch {}
                       setIsFetchingRate(false);
                     }}
                     disabled={isFetchingRate}
-                    className="p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-all disabled:opacity-50"
-                    title="Actualizar tasa del BCV"
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+                      rateSource === 'bcv'
+                        ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                        : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300 border border-zinc-700'
+                    } disabled:opacity-50`}
                   >
                     {isFetchingRate ? (
-                      <Loader2 className="w-3 h-3 text-primary-vibrant animate-spin" />
+                      <Loader2 className="w-3 h-3 animate-spin" />
                     ) : (
-                      <RefreshCcw className="w-3 h-3 text-zinc-400" />
+                      <RefreshCcw className="w-3 h-3" />
                     )}
+                    {rateSource === 'bcv' ? 'BCV Activo' : 'Usar BCV'}
                   </button>
                 </div>
               </div>
@@ -330,9 +335,14 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
                 onChange={e => {
                   setData({...data, exchangeRate: parseFloat(e.target.value) || 1});
                   setRateSource('manual');
+                  saveRateSource('manual');
                 }}
               />
-              <p className="text-[9px] text-zinc-600 ml-2">Se actualiza automáticamente del BCV. Puedes editarla manualmente.</p>
+              <p className="text-[9px] text-zinc-600 ml-2">
+                {rateSource === 'bcv'
+                  ? 'Se actualiza automáticamente del BCV al abrir el carrito.'
+                  : 'Modo manual. La tasa no se actualizará automáticamente.'}
+              </p>
             </div>
           </div>
 

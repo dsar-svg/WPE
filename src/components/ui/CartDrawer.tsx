@@ -20,7 +20,7 @@ import { MapComponent } from './MapComponent';
 import { useLanguage } from '../../context/LanguageContext';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { useDistanceCalculation } from '../../hooks/useDistanceCalculation';
-import { fetchBcvRate } from '../../services/bcvRate';
+import { fetchBcvRate, getRateSource } from '../../services/bcvRate';
 import { OptimizedImage } from './OptimizedImage';
 
 interface CartDrawerProps {
@@ -100,9 +100,9 @@ export function CartDrawer({
     }
   }, [step, loadLastAddress]);
 
-  // ── Fetch BCV rate when cart opens ───────────────────────────────────
+  // ── Fetch BCV rate when cart opens (only if source is 'bcv') ─────────
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || getRateSource() !== 'bcv') return;
     (async () => {
       try {
         const rate = await fetchBcvRate();

@@ -1,5 +1,6 @@
 const BCV_API_URL = 'https://pydolarve.org/api/v1/dollar';
 const CACHE_KEY = 'bcv_rate_cache';
+const SOURCE_KEY = 'bcv_rate_source';
 
 interface BcvRateCache {
   rate: number;
@@ -27,6 +28,14 @@ function setCachedRate(rate: number): void {
     const cache: BcvRateCache = { rate, date: getToday() };
     localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
   } catch {}
+}
+
+export function getRateSource(): 'bcv' | 'manual' {
+  return (localStorage.getItem(SOURCE_KEY) as 'bcv' | 'manual') || 'manual';
+}
+
+export function saveRateSource(source: 'bcv' | 'manual'): void {
+  localStorage.setItem(SOURCE_KEY, source);
 }
 
 export async function fetchBcvRate(): Promise<number | null> {
