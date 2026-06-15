@@ -165,11 +165,7 @@ export function WelcomeScreen({ onSelectLocation, locations, config }: WelcomeSc
           )}
         </div>
 
-        <div className="mt-16 pb-8 text-center">
-          <Link to="/admin" className="text-[11px] text-zinc-600 font-bold uppercase tracking-[0.3em] hover:text-primary-vibrant transition-colors duration-300">
-            {t("welcome.admin")}
-          </Link>
-        </div>
+
       </div>
 
       {/* Closed Location Toast */}

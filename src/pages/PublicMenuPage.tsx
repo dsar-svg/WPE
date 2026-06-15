@@ -163,7 +163,7 @@ export function PublicMenuPage() {
           <div className="flex justify-center gap-3">
             <div className="w-16 h-1.5 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-full" />
           </div>
-          <p className="text-zinc-500 text-xs font-medium tracking-wider">{t('menu.title')} <BrandName className="text-zinc-500 text-xs" /></p>
+          <p className="text-xs font-medium tracking-wider"><BrandName className="text-xs" theme="dark" /></p>
           <div className="flex items-center gap-3 text-zinc-500 text-xs">
             <Link to="/legal" className="hover:text-white transition-colors">{t('legal.terms.title')}</Link>
             <span className="text-zinc-700">|</span>
