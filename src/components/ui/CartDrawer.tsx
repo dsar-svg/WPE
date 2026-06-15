@@ -31,6 +31,7 @@ interface CartDrawerProps {
   location: Location;
   updateQuantity: (id: string, qty: number) => void;
   updateNotes: (id: string, notes: string) => void;
+  removeFromCart: (id: string) => void;
   onCheckout: (data: CheckoutData) => void;
 }
 
@@ -44,6 +45,7 @@ export function CartDrawer({
   location,
   updateQuantity,
   updateNotes,
+  removeFromCart,
   onCheckout,
 }: CartDrawerProps) {
   const { config, updateConfig } = useRestaurant();
@@ -548,6 +550,14 @@ export function CartDrawer({
                                   <Plus className="w-4 h-4" />
                                 </motion.button>
                               </div>
+                              <motion.button
+                                whileTap={{ scale: 0.8 }}
+                                onClick={() => removeFromCart(item.id)}
+                                className="w-11 h-11 bg-white/5 hover:bg-red-500/10 rounded-lg flex items-center justify-center text-zinc-500 hover:text-red-400 transition-colors duration-200 border border-white/5 hover:border-red-500/20"
+                                aria-label={`Remove ${item.name}`}
+                              >
+                                <X className="w-4 h-4" />
+                              </motion.button>
                               <div className="flex-1 ml-3 relative">
                                 <textarea
                                   placeholder={t('cart.specialInstructions') + ' (ej: sin picante)'}
@@ -632,31 +642,6 @@ export function CartDrawer({
                         {/* Delivery fields */}
                         {deliveryType === 'Delivery' && (
                           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
-                            {/* Delivery fee card */}
-                            <motion.div
-                              initial={{ scale: 0.9, opacity: 0 }}
-                              animate={{ scale: 1, opacity: 1 }}
-                              className={`p-4 rounded-2xl border-2 ${
-                                isWithinRange ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <div className={`p-2 rounded-full ${isWithinRange ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                                    <Navigation className="w-4 h-4" />
-                                  </div>
-                                  <p className="text-sm font-bold text-white">Costo de delivery</p>
-                                </div>
-                                <p className="text-lg font-display text-secondary-vibrant tracking-wider">+${calculatedFee.toFixed(2)}</p>
-                              </div>
-                              {!isWithinRange && (
-                                <div className="flex items-center gap-2 p-2 bg-red-500/10 rounded-lg mt-2">
-                                  <AlertCircle className="w-4 h-4 text-red-400" />
-                                  <span className="text-xs font-medium text-red-300">Fuera de cobertura ({config.distancePricing?.maxDeliveryDistance || 20} km)</span>
-                                </div>
-                              )}
-                            </motion.div>
-
                             {/* Reference — above map so users know to add landmarks */}
                             <div className="space-y-1.5">
                               <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">

@@ -116,6 +116,7 @@ function MainView() {
               location={selectedLocation}
               updateQuantity={updateQuantity}
               updateNotes={updateNotes}
+              removeFromCart={removeFromCart}
               onCheckout={handleCheckout}
             />
           </Suspense>
