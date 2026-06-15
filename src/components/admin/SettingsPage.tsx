@@ -1,7 +1,8 @@
 import { useState, ChangeEvent, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Save, RefreshCcw, Image as ImageIcon, Plus, Trash2, Settings, DollarSign } from 'lucide-react';
+import { Save, RefreshCcw, Image as ImageIcon, Plus, Trash2, Settings, DollarSign, Loader2 } from 'lucide-react';
 import { RestaurantConfig, Product, Category } from '../../types';
 import { useUploadImage } from '../../hooks/useUploadImage';
+import { fetchBcvRate } from '../../services/bcvRate';
 import { Pagination } from '../ui/Pagination';
 
 interface SettingsPageProps {
@@ -44,6 +45,8 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
   const toastTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const ITEMS_PER_PAGE = 10;
   const uploadImage = useUploadImage();
+  const [isFetchingRate, setIsFetchingRate] = useState(false);
+  const [rateSource, setRateSource] = useState<'bcv' | 'manual'>('manual');
 
   // Cleanup all toast timers on unmount
   useEffect(() => {
@@ -101,6 +104,21 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
   };
 
   useEffect(() => { setFeaturedPage(1); }, [featuredCategory]);
+
+  // Auto-fetch BCV rate on mount
+  useEffect(() => {
+    (async () => {
+      setIsFetchingRate(true);
+      try {
+        const rate = await fetchBcvRate();
+        if (rate !== null) {
+          setData(prev => ({ ...prev, exchangeRate: rate }));
+          setRateSource('bcv');
+        }
+      } catch {}
+      setIsFetchingRate(false);
+    })();
+  }, []);
 
   const toggleFeaturedProduct = (id: string) => {
     setData(prev => {
@@ -274,13 +292,47 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Tasa de Cambio (BS/USD)</label>
+              <div className="flex items-center justify-between ml-2">
+                <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500">Tasa de Cambio (BS/USD)</label>
+                <div className="flex items-center gap-2">
+                  {rateSource === 'bcv' && (
+                    <span className="text-[8px] text-green-400 font-bold uppercase tracking-widest bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">BCV</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setIsFetchingRate(true);
+                      try {
+                        const rate = await fetchBcvRate();
+                        if (rate !== null) {
+                          setData(prev => ({ ...prev, exchangeRate: rate }));
+                          setRateSource('bcv');
+                        }
+                      } catch {}
+                      setIsFetchingRate(false);
+                    }}
+                    disabled={isFetchingRate}
+                    className="p-1.5 bg-zinc-800 hover:bg-zinc-700 rounded-lg transition-all disabled:opacity-50"
+                    title="Actualizar tasa del BCV"
+                  >
+                    {isFetchingRate ? (
+                      <Loader2 className="w-3 h-3 text-primary-vibrant animate-spin" />
+                    ) : (
+                      <RefreshCcw className="w-3 h-3 text-zinc-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
               <input
                 type="number" step="0.01"
                 className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
                 value={data.exchangeRate}
-                onChange={e => setData({...data, exchangeRate: parseFloat(e.target.value) || 1})}
+                onChange={e => {
+                  setData({...data, exchangeRate: parseFloat(e.target.value) || 1});
+                  setRateSource('manual');
+                }}
               />
+              <p className="text-[9px] text-zinc-600 ml-2">Se actualiza automáticamente del BCV. Puedes editarla manualmente.</p>
             </div>
           </div>
 
