@@ -60,15 +60,7 @@ const DEFAULT_CONFIG: RestaurantConfig = {
 };
 
 function computeIsOpen(row: any): boolean {
-  if (!row.is_open) return false;
-  if (!row.open_time || !row.close_time) return row.is_open;
-  const now = new Date();
-  const cur = now.getHours() * 60 + now.getMinutes();
-  const [oh, om] = row.open_time.split(':').map(Number);
-  const [ch, cm] = row.close_time.split(':').map(Number);
-  const open = oh * 60 + om;
-  const close = ch * 60 + cm;
-  return close < open ? cur >= open || cur < close : cur >= open && cur < close;
+  return !!row.is_open;
 }
 
 function rowToLocation(row: any): Location {
