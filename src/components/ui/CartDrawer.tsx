@@ -618,38 +618,30 @@ export function CartDrawer({
                         {/* Delivery fields */}
                         {deliveryType === 'Delivery' && (
                           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
-                            {/* Distance card */}
-                            {calculatedDistance !== null && (
-                              <motion.div
-                                initial={{ scale: 0.9, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                className={`p-4 rounded-2xl border-2 ${
-                                  isWithinRange ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'
-                                }`}
-                              >
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-full ${isWithinRange ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                                      <Navigation className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                      <p className="text-xs font-bold text-zinc-400">Distancia estimada</p>
-                                      <p className="text-sm font-bold text-white">{calculatedDistance} km</p>
-                                    </div>
+                            {/* Delivery fee card */}
+                            <motion.div
+                              initial={{ scale: 0.9, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              className={`p-4 rounded-2xl border-2 ${
+                                isWithinRange ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className={`p-2 rounded-full ${isWithinRange ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                    <Navigation className="w-4 h-4" />
                                   </div>
-                                  <div className="text-right">
-                                    <p className="text-xs font-medium text-zinc-500">Costo de envío</p>
-                                    <p className="text-lg font-display text-secondary-vibrant tracking-wider">+${calculatedFee.toFixed(2)}</p>
-                                  </div>
+                                  <p className="text-sm font-bold text-white">Costo de delivery</p>
                                 </div>
-                                {!isWithinRange && (
-                                  <div className="flex items-center gap-2 p-2 bg-red-500/10 rounded-lg mt-2">
-                                    <AlertCircle className="w-4 h-4 text-red-400" />
-                                    <span className="text-xs font-medium text-red-300">Fuera de cobertura ({config.distancePricing?.maxDeliveryDistance || 20} km)</span>
-                                  </div>
-                                )}
-                              </motion.div>
-                            )}
+                                <p className="text-lg font-display text-secondary-vibrant tracking-wider">+${calculatedFee.toFixed(2)}</p>
+                              </div>
+                              {!isWithinRange && (
+                                <div className="flex items-center gap-2 p-2 bg-red-500/10 rounded-lg mt-2">
+                                  <AlertCircle className="w-4 h-4 text-red-400" />
+                                  <span className="text-xs font-medium text-red-300">Fuera de cobertura ({config.distancePricing?.maxDeliveryDistance || 20} km)</span>
+                                </div>
+                              )}
+                            </motion.div>
 
                             {/* Reference — above map so users know to add landmarks */}
                             <div className="space-y-1.5">
@@ -893,12 +885,6 @@ export function CartDrawer({
                         <span>{t('cart.shipping')}</span>
                         <span className="text-secondary-vibrant">${calculatedFee.toFixed(2)}</span>
                       </div>
-                      {calculatedDistance !== null && (
-                        <div className="flex justify-between items-center text-[9px] font-medium uppercase tracking-[0.2em] text-zinc-500">
-                          <span>Distancia estimada</span>
-                          <span className="text-zinc-300 font-bold">{calculatedDistance} km</span>
-                        </div>
-                      )}
                     </>
                   )}
 
