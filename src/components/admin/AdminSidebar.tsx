@@ -4,6 +4,7 @@ import {
   LogOut, ChevronRight, User
 } from 'lucide-react';
 import { RestaurantConfig } from '../../types';
+import { BrandName } from '../ui/BrandName';
 
 export type AdminPageTab = 'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos';
 
@@ -58,7 +59,7 @@ export function AdminSidebar({
             </div>
             <div className="min-w-0">
               <h1 className="text-sm font-black text-admin-text truncate">
-                {config.name || 'Panel Admin'}
+                {config.name ? <BrandName className="text-sm" /> : 'Panel Admin'}
               </h1>
               <p className="text-[9px] text-admin-text-muted uppercase tracking-widest font-bold">
                 Administración

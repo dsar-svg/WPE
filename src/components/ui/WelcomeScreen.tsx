@@ -5,6 +5,7 @@ import { Location } from "../../types";
 import { Link } from "react-router-dom";
 import { useLanguage } from "../../context/LanguageContext";
 import { OptimizedImage } from "./OptimizedImage";
+import { BrandName } from "./BrandName";
 
 interface WelcomeScreenProps {
   onSelectLocation: (loc: Location) => void;
@@ -86,8 +87,8 @@ export function WelcomeScreen({ onSelectLocation, locations, config }: WelcomeSc
             <span className="text-secondary-vibrant font-display text-sm tracking-[0.4em] uppercase mb-1 bg-secondary-vibrant/10 px-4 py-1.5 rounded-full border border-secondary-vibrant/20">
               {t("welcome.greeting")}
             </span>
-            <h1 className="font-display text-5xl md:text-6xl tracking-wider uppercase text-white leading-none mt-2">
-              {config.name}
+            <h1 className="text-5xl md:text-6xl tracking-wider uppercase text-white leading-none mt-2">
+              <BrandName className="text-5xl md:text-6xl uppercase" theme="dark" />
             </h1>
             <div className="flex gap-2 mt-3">
               <div className="w-12 h-2 bg-primary-vibrant rounded-full" />

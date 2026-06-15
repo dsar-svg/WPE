@@ -10,6 +10,7 @@ import { LocationModal } from '../components/ui/LocationModal';
 import { PWAInstallPrompt } from '../components/ui/PWAInstallPrompt';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
 import { SEO } from '../components/ui/SEO';
+import { BrandName } from '../components/ui/BrandName';
 import { Product, Location } from '../types';
 
 export function LandingPage() {
@@ -65,7 +66,7 @@ export function LandingPage() {
             setActiveSection(id);
           }
         },
-        { threshold: 0.3, rootMargin: '-80px 0px -50% 0px' }
+        { threshold: 0.2, rootMargin: '-100px 0px -40% 0px' }
       );
 
       observer.observe(element);
@@ -123,7 +124,7 @@ export function LandingPage() {
                 <Utensils className="w-5 h-5 text-primary-vibrant" />
               </div>
             )}
-            <span className="font-display text-2xl tracking-wider text-dark hidden sm:block">{config.name}</span>
+            <span className="text-2xl hidden sm:block"><BrandName theme="light" /></span>
           </div>
 
           <div className="hidden lg:flex items-center gap-8">
@@ -215,17 +216,8 @@ export function LandingPage() {
           </motion.div>
 
           <div className="space-y-6">
-            <h1 className="font-display text-6xl md:text-7xl lg:text-8xl leading-[0.9] tracking-wider uppercase text-white">
-              {config.name.split(' ').map((word, i) => {
-                const isLast = i === config.name.split(' ').length - 1;
-                const colorClass = word.toLowerCase() === 'panda' ? 'text-primary-vibrant' :
-                                   word.toLowerCase() === 'express' ? 'text-secondary-vibrant' : 'text-white';
-                return (
-                  <span key={i} className={colorClass}>
-                    {word}{!isLast && ' '}
-                  </span>
-                );
-              })}
+            <h1 className="text-6xl md:text-7xl lg:text-8xl leading-[0.9] tracking-wider uppercase text-white">
+              <BrandName className="text-6xl md:text-7xl lg:text-8xl uppercase" theme="dark" />
             </h1>
             <div className="flex items-center justify-center gap-4">
               <div className="w-12 h-0.5 bg-primary-vibrant rounded-full" />
@@ -465,7 +457,8 @@ export function LandingPage() {
       {/* Footer */}
       <footer className="py-8 bg-dark border-t border-zinc-800">
         <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-zinc-500 text-xs">&copy; {new Date().getFullYear()} {config.name}</p>
+          <p className="text-zinc-500 text-xs">&copy; {new Date().getFullYear()} <BrandName className="text-zinc-500 text-xs" /></p>
+          <p className="text-zinc-600 text-[10px]">Created By Dario Medina</p>
           <div className="flex items-center gap-4">
             <Link to="/legal" className="text-zinc-500 hover:text-white text-xs font-medium transition-colors">
               {t('legal.terms.title')}

@@ -10,6 +10,7 @@ import { PWAInstallPrompt } from '../components/ui/PWAInstallPrompt';
 import { Pagination } from '../components/ui/Pagination';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
 import { SEO } from '../components/ui/SEO';
+import { BrandName } from '../components/ui/BrandName';
 import { Product } from '../types';
 
 export function PublicMenuPage() {
@@ -158,16 +159,17 @@ export function PublicMenuPage() {
               <Utensils className="w-8 h-8 text-secondary-vibrant" />
             )}
           </div>
-          <h2 className="font-display text-3xl uppercase tracking-wider text-secondary-vibrant">{config.name}</h2>
+          <h2 className="text-3xl uppercase"><BrandName className="text-3xl uppercase text-secondary-vibrant" /></h2>
           <div className="flex justify-center gap-3">
             <div className="w-16 h-1.5 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-full" />
           </div>
-          <p className="text-zinc-500 text-xs font-medium tracking-wider">{t('menu.title')} {config.name}</p>
+          <p className="text-zinc-500 text-xs font-medium tracking-wider">{t('menu.title')} <BrandName className="text-zinc-500 text-xs" /></p>
           <div className="flex items-center gap-3 text-zinc-500 text-xs">
             <Link to="/legal" className="hover:text-white transition-colors">{t('legal.terms.title')}</Link>
             <span className="text-zinc-700">|</span>
             <Link to="/legal#privacidad" className="hover:text-white transition-colors">{t('legal.privacy.title')}</Link>
           </div>
+          <p className="text-zinc-600 text-[10px]">Created By Dario Medina</p>
         </div>
       </footer>
 
