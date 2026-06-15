@@ -505,6 +505,15 @@ export function CartDrawer({
                               <h3 className="font-bold text-sm text-white uppercase tracking-wider truncate">{item.name}</h3>
                               <p className="font-display text-secondary-vibrant text-sm tracking-wider">${(item.price * item.quantity).toFixed(2)}</p>
                             </div>
+                            {item.selectedChoices && Object.keys(item.selectedChoices).length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-1">
+                                {Object.entries(item.selectedChoices).map(([group, option]) => (
+                                  <span key={group} className="text-[9px] font-bold bg-white/5 text-zinc-400 px-2 py-0.5 rounded-md border border-white/5">
+                                    {group}: {option}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                             <div className="flex items-center justify-between mt-2">
                               <div className="flex items-center gap-1.5 bg-white/10 rounded-xl p-1 border border-white/10">
                                 <motion.button
@@ -898,7 +907,11 @@ export function CartDrawer({
                       <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary-vibrant">Resumen del Pedido</p>
                       {items.map((item) => (
                         <div key={item.id} className="flex justify-between items-center text-[11px] text-zinc-300">
-                          <span className="truncate flex-1">{item.quantity}x {item.name}</span>
+                          <span className="truncate flex-1">{item.quantity}x {item.name}
+                            {item.selectedChoices && Object.keys(item.selectedChoices).length > 0 && (
+                              <span className="text-zinc-500 font-normal"> ({Object.values(item.selectedChoices).join(', ')})</span>
+                            )}
+                          </span>
                           <span className="font-medium text-white">${(item.price * item.quantity).toFixed(2)}</span>
                         </div>
                       ))}

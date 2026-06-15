@@ -3,7 +3,7 @@ import { Product, CartItem } from '../types';
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product) => void;
+  addToCart: (product: Product, selectedChoices?: Record<string, string>) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   updateNotes: (productId: string, notes: string) => void;
@@ -13,18 +13,38 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | null>(null);
 
+function getItemKey(productId: string, selectedChoices?: Record<string, string>): string {
+  if (!selectedChoices || Object.keys(selectedChoices).length === 0) return productId;
+  const choiceStr = Object.entries(selectedChoices).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}:${v}`).join('|');
+  return `${productId}__${choiceStr}`;
+}
+
+function getChoicePriceAdjust(product: Product, selectedChoices?: Record<string, string>): number {
+  if (!selectedChoices || !product.choices) return 0;
+  let adjust = 0;
+  for (const choice of product.choices) {
+    const selected = selectedChoices[choice.name];
+    if (selected) {
+      const opt = choice.options.find(o => o.name === selected);
+      if (opt?.priceAdjust) adjust += opt.priceAdjust;
+    }
+  }
+  return adjust;
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  const addToCart = useCallback((product: Product) => {
+  const addToCart = useCallback((product: Product, selectedChoices?: Record<string, string>) => {
     setItems((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
+      const key = getItemKey(product.id, selectedChoices);
+      const existing = prev.find((item) => getItemKey(item.id, item.selectedChoices) === key);
       if (existing) {
         return prev.map((item) =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          getItemKey(item.id, item.selectedChoices) === key ? { ...item, quantity: item.quantity + 1 } : item
         );
       }
-      return [...prev, { ...product, quantity: 1, notes: '' }];
+      return [...prev, { ...product, quantity: 1, notes: '', selectedChoices }];
     });
   }, []);
 
@@ -52,7 +72,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems([]);
   }, []);
 
-  const total = useMemo(() => items.reduce((sum, item) => sum + item.price * item.quantity, 0), [items]);
+  const total = useMemo(() => items.reduce((sum, item) => {
+    const priceAdjust = getChoicePriceAdjust(item, item.selectedChoices);
+    return sum + (item.price + priceAdjust) * item.quantity;
+  }, 0), [items]);
 
   const value = useMemo(() => ({
     items,

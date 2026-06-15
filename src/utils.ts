@@ -37,7 +37,10 @@ export function generateWhatsAppLink(
   message += `*PRODUCTOS:*\n`;
 
   items.forEach((item) => {
-    message += `• ${item.quantity}x ${item.name} ($${(item.price * item.quantity).toFixed(2)})\n`;
+    const choicesText = item.selectedChoices && Object.keys(item.selectedChoices).length > 0
+      ? ` - ${Object.values(item.selectedChoices).join(', ')}`
+      : '';
+    message += `• ${item.quantity}x ${item.name}${choicesText} ($${(item.price * item.quantity).toFixed(2)})\n`;
     if (item.notes) {
       message += `  _Nota: ${item.notes}_\n`;
     }

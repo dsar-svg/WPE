@@ -38,6 +38,17 @@ export interface Location {
   discontinuedProductIds?: string[];
 }
 
+export interface ProductChoiceOption {
+  name: string;
+  priceAdjust?: number;
+}
+
+export interface ProductChoice {
+  name: string;
+  required: boolean;
+  options: ProductChoiceOption[];
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -47,11 +58,13 @@ export interface Product {
   image: string;
   inStock: boolean;
   order: number;
+  choices?: ProductChoice[];
 }
 
 export interface CartItem extends Product {
   quantity: number;
   notes?: string;
+  selectedChoices?: Record<string, string>;
 }
 
 export interface Category {
@@ -89,6 +102,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
   notes?: string;
+  selectedChoices?: Record<string, string>;
 }
 
 export interface Order {

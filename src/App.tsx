@@ -66,6 +66,7 @@ function MainView() {
           price: item.price,
           quantity: item.quantity,
           notes: item.notes,
+          selectedChoices: item.selectedChoices,
         })),
         subtotal: total,
         delivery_fee: deliveryFee,

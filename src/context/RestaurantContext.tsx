@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useMemo, ReactNode, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
-import { Location, Product, RestaurantConfig, Category, Order } from '../types';
+import { Location, Product, RestaurantConfig, Category, Order, ProductChoice } from '../types';
 
 interface RestaurantContextType {
   locations: Location[];
@@ -98,6 +98,7 @@ function rowToProduct(row: any): Product {
     image: row.image,
     inStock: row.in_stock,
     order: row.sort_order,
+    choices: row.choices || [],
   };
 }
 
@@ -367,6 +368,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
       if (prod.image !== undefined) dbRow.image = prod.image;
       if (prod.inStock !== undefined) dbRow.in_stock = prod.inStock;
       if (prod.order !== undefined) dbRow.sort_order = prod.order;
+      if (prod.choices !== undefined) dbRow.choices = prod.choices;
       const id = prod._id || prod.id;
       if (id && typeof id === 'string' && (id.startsWith('prod-') || id.startsWith('new-'))) {
         await supabase.from('menu_items').insert(dbRow);

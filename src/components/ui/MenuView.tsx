@@ -8,7 +8,7 @@ import { Pagination } from "./Pagination";
 import { OptimizedImage } from "./OptimizedImage";
 
 interface MenuViewProps {
-  onAddToCart: (p: Product) => void;
+  onAddToCart: (p: Product, selectedChoices?: Record<string, string>) => void;
   cartCount: number;
   total: number;
   menuItems: Product[];
@@ -30,6 +30,8 @@ const ProductCard = memo(function ProductCard({
   onSelect: () => void;
   onAddToCart: (e: React.MouseEvent) => void;
 }) {
+  const hasChoices = item.choices && item.choices.length > 0;
+
   return (
     <div
       onClick={onSelect}
@@ -67,11 +69,13 @@ const ProductCard = memo(function ProductCard({
           <span className="font-display text-xl tracking-wider text-secondary-vibrant">${item.price.toFixed(2)}</span>
           {item.inStock && (
             <button
-              onClick={onAddToCart}
+              onClick={hasChoices ? (e) => { e.stopPropagation(); onSelect(); } : onAddToCart}
               className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-secondary-vibrant ${
                 isAdded
                   ? "bg-green-500 text-white shadow-green-500/30"
-                  : "bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-primary-vibrant/30 hover:shadow-primary-vibrant/50 hover:scale-105 active:scale-95"
+                  : hasChoices
+                    ? "bg-white/10 text-white hover:bg-white/15 border border-white/10"
+                    : "bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-primary-vibrant/30 hover:shadow-primary-vibrant/50 hover:scale-105 active:scale-95"
               }`}
             >
               {isAdded ? (
@@ -97,8 +101,8 @@ export function MenuView({
   const [addedItem, setAddedItem] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 12;
 
-  const handleAddToCart = useCallback((product: Product) => {
-    onAddToCart(product);
+  const handleAddToCart = useCallback((product: Product, selectedChoices?: Record<string, string>) => {
+    onAddToCart(product, selectedChoices);
     setAddedItem(product.id);
     setTimeout(() => setAddedItem(null), 1500);
   }, [onAddToCart]);
@@ -196,7 +200,7 @@ export function MenuView({
       <AnimatePresence>
         {selectedProduct && (
           <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)}
-            onAddToCart={(p) => { onAddToCart(p); setSelectedProduct(null); }} showAddToCart={false} />
+            onAddToCart={(p, sc) => { onAddToCart(p, sc); setSelectedProduct(null); }} showAddToCart={false} />
         )}
       </AnimatePresence>
 
