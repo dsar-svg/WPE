@@ -81,6 +81,7 @@ export function CartDrawer({
   const [addressStatus, setAddressStatus] = useState<AddressStatus>('idle');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [mapCenterKey, setMapCenterKey] = useState(0);
+  const [termsAccepted, setTermsAccepted] = useState(true);
 
   // Keep ref in sync with state for use inside effects
   useEffect(() => { addressStatusRef.current = addressStatus; }, [addressStatus]);
@@ -417,6 +418,7 @@ export function CartDrawer({
     if (!cedulaOk) setFormErrors(prev => ({ ...prev, cedula: 'Mínimo 7 dígitos' }));
     const addressOk = deliveryType === 'Pick-up' || validateField('address', formData.address);
     if (!nameOk || !phoneOk || !cedulaOk || !addressOk) return;
+    if (!termsAccepted) return;
     if (deliveryType === 'Delivery') {
       if (!deliveryCoordinates) {
         setAddressError('Selecciona tu ubicación en el mapa');
@@ -983,11 +985,16 @@ export function CartDrawer({
                   </motion.button>
                 ) : (
                   <>
-                  <p className="text-[10px] text-zinc-500 text-center mb-3">
-                    <Link to="/legal" className="underline hover:text-white transition-colors">{t('legal.terms.title')}</Link>
-                    {' '}&{' '}
-                    <Link to="/legal#privacidad" className="underline hover:text-white transition-colors">{t('legal.privacy.title')}</Link>
-                  </p>
+                  <label className="flex items-center gap-2 justify-center cursor-pointer mb-3">
+                    <input type="checkbox" checked={termsAccepted} onChange={e => setTermsAccepted(e.target.checked)}
+                      className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-primary-vibrant focus:ring-primary-vibrant/50 accent-primary-vibrant" />
+                    <span className="text-[10px] text-zinc-500">
+                      Acepto los{' '}
+                      <Link to="/legal" className="underline hover:text-white transition-colors">{t('legal.terms.title')}</Link>
+                      {' '}&{' '}
+                      <Link to="/legal#privacidad" className="underline hover:text-white transition-colors">{t('legal.privacy.title')}</Link>
+                    </span>
+                  </label>
                   <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     <motion.button
                       whileTap={{ scale: 0.95 }}

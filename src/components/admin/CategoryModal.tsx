@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { motion } from 'motion/react';
-import { X, Plus, Edit2, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { X, Plus, Edit2, Trash2, AlertTriangle } from 'lucide-react';
 import { Category } from '../../types';
 
 interface CategoryModalProps {
@@ -15,6 +15,7 @@ export function CategoryModal({ categories, onClose, onSave, onDelete }: Categor
   const [editingName, setEditingName] = useState('');
   const [newName, setNewName] = useState('');
   const [, setIsSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const handleSave = async (cat: Category) => {
     try {
@@ -115,11 +116,7 @@ export function CategoryModal({ categories, onClose, onSave, onDelete }: Categor
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm('¿Estás seguro de eliminar esta categoría? Los productos seguirán existiendo pero no se verán en el menú hasta que les cambies la categoría.')) {
-                        onDelete(cat.id);
-                      }
-                    }}
+                    onClick={() => setConfirmDelete(cat.id)}
                     className="p-2 text-zinc-500 hover:text-primary-vibrant hover:bg-primary-vibrant/10 rounded-lg transition-all"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -130,6 +127,35 @@ export function CategoryModal({ categories, onClose, onSave, onDelete }: Categor
           </div>
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {confirmDelete && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/80" onClick={() => setConfirmDelete(null)} />
+            <motion.div initial={{ scale: 0.9, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.9, y: 20, opacity: 0 }}
+              className="relative w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-6 text-center">
+              <div className="w-16 h-16 bg-primary-vibrant/10 rounded-2xl flex items-center justify-center mx-auto">
+                <AlertTriangle className="w-8 h-8 text-primary-vibrant" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-black text-white">Eliminar Categoría</h3>
+                <p className="text-zinc-400 text-sm">Los productos seguirán existiendo pero no se verán en el menú hasta que les cambies la categoría.</p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirmDelete(null)}
+                  className="flex-1 py-3 rounded-2xl bg-zinc-800 text-zinc-300 font-bold text-sm hover:bg-zinc-700 transition-colors">
+                  Cancelar
+                </button>
+                <button onClick={() => { onDelete(confirmDelete); setConfirmDelete(null); }}
+                  className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-colors">
+                  Eliminar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

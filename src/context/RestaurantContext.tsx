@@ -31,6 +31,7 @@ interface RestaurantContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  createLocationAdmin: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
 }
 
 const RestaurantContext = createContext<RestaurantContextType | undefined>(undefined);
@@ -293,6 +294,30 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
+  const createLocationAdmin = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        return { success: false, message: error.message };
+      }
+      if (data.user) {
+        const { error: adminError } = await supabase.from('admins').insert({
+          email: email,
+          user_id: data.user.id,
+        });
+        if (adminError) {
+          console.error('Error inserting admin:', adminError);
+          return { success: false, message: 'Usuario creado pero no se pudo registrar como admin. Créalo manualmente en Supabase.' };
+        }
+      }
+      return { success: true, message: data.user?.identities?.length === 0
+        ? 'Este email ya tiene una cuenta. El admin puede iniciar sesión con su contraseña.'
+        : 'Admin creado. Si confirmación de email está activa, el admin debe confirmar su correo antes de iniciar sesión.' };
+    } catch (error: any) {
+      return { success: false, message: error.message || 'Error al crear admin' };
+    }
+  };
+
   const signOut = async () => { await supabase.auth.signOut(); };
 
   const invalidate = useCallback((key: string[]) => queryClient.invalidateQueries({ queryKey: key }), [queryClient]);
@@ -432,8 +457,8 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     selectedLocation, setSelectedLocation,
     updateLocation, updateProduct, updateConfig, updateCategory,
     deleteLocation, deleteProduct, deleteCategory,
-    createOrder, deleteOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut,
-  }), [locations, menuItems, categories, config, orders, isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, selectedLocation, setSelectedLocation, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, createOrder, deleteOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut]);
+    createOrder, deleteOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut, createLocationAdmin,
+  }), [locations, menuItems, categories, config, orders, isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, selectedLocation, setSelectedLocation, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, createOrder, deleteOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut, createLocationAdmin]);
 
   return (
     <RestaurantContext.Provider value={value}>

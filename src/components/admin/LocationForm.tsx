@@ -1,6 +1,6 @@
 import { useState, ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Save, RefreshCcw, Info, Clock, AlertCircle, Image as ImageIcon, MessageCircle } from 'lucide-react';
+import { X, Save, RefreshCcw, Info, Clock, AlertCircle, Image as ImageIcon, MessageCircle, Copy, Check } from 'lucide-react';
 import { Location } from '../../types';
 import { useUploadImage } from '../../hooks/useUploadImage';
 import { validateImageSize } from '../../lib/uploadImage';
@@ -10,9 +10,17 @@ interface LocationFormProps {
   isSuperAdmin: boolean;
   onClose: () => void;
   onSave: (l: Location) => void;
+  createLocationAdmin?: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
 }
 
 const dayOptions = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+const generatePassword = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let pass = '';
+  for (let i = 0; i < 10; i++) pass += chars.charAt(Math.floor(Math.random() * chars.length));
+  return pass;
+};
 
 const parseSchedule = (schedule: string) => {
   const parts = schedule.split(' a ');
@@ -34,7 +42,7 @@ const to24h = (hour: string, minute: string, ampm: string) => {
   return `${String(h).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 };
 
-export function LocationForm({ location, isSuperAdmin, onClose, onSave }: LocationFormProps) {
+export function LocationForm({ location, isSuperAdmin, onClose, onSave, createLocationAdmin }: LocationFormProps) {
   const [data, setData] = useState<Location>({
     id: location?.id || `loc-${Date.now()}`,
     name: location?.name || '',
@@ -48,13 +56,15 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
     latitude: location?.latitude || undefined,
     longitude: location?.longitude || undefined,
     adminEmail: location?.adminEmail || '',
-    adminPassword: location?.adminPassword || '',
+    adminPassword: location?.adminPassword || (location ? '' : generatePassword()),
     discontinuedProductIds: location?.discontinuedProductIds || []
   });
   const [activeFormTab, setActiveFormTab] = useState<'info' | 'horario'>('info');
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [adminResult, setAdminResult] = useState<{ success: boolean; message: string; password?: string } | null>(null);
+  const [copied, setCopied] = useState(false);
   const uploadImage = useUploadImage();
 
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -84,8 +94,18 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
     try {
       setIsSaving(true);
       setError(null);
+      setAdminResult(null);
       await onSave(data);
-      onClose();
+
+      if (!location && data.adminEmail && createLocationAdmin) {
+        const pwd = data.adminPassword || generatePassword();
+        setData(prev => ({ ...prev, adminPassword: pwd }));
+        const result = await createLocationAdmin(data.adminEmail, pwd);
+        setAdminResult({ ...result, password: pwd });
+        if (!result.success) {
+          setError(result.message);
+        }
+      }
     } catch (err: any) {
       console.error("Save error:", err);
       setError(err instanceof Error ? err.message : "Error al guardar");
@@ -141,6 +161,26 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
             <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-3 text-red-500 text-xs font-bold">
               <AlertCircle className="w-4 h-4" />
               {error}
+            </div>
+          )}
+          {adminResult?.success && adminResult.password && (
+            <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-2xl space-y-3">
+              <p className="text-green-400 text-xs font-bold flex items-center gap-2">
+                <Check className="w-4 h-4" /> {adminResult.message}
+              </p>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-zinc-900 border border-zinc-700 px-4 py-2.5 rounded-xl font-mono text-sm text-white">
+                  {adminResult.password}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { navigator.clipboard.writeText(adminResult.password!); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                  className="p-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors"
+                >
+                  {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-zinc-400" />}
+                </button>
+              </div>
+              <p className="text-[9px] text-zinc-500">Comparte esta contraseña con el administrador de sede. No se volverá a mostrar.</p>
             </div>
           )}
 
@@ -437,7 +477,7 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave }: Locati
             className="w-full bg-white text-black py-5 rounded-[20px] font-black flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-transform shadow-xl shadow-white/5 disabled:opacity-50"
           >
             {isSaving ? <RefreshCcw className="w-6 h-6 animate-spin" /> : <Save className="w-6 h-6" />}
-            {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+            {isSaving ? 'Guardando...' : (location ? 'Guardar Cambios' : 'Crear Sede y Admin')}
           </button>
         </div>
       </motion.div>
