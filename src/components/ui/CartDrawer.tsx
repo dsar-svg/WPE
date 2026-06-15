@@ -67,7 +67,7 @@ export function CartDrawer({
   // ── State ─────────────────────────────────────────────────────────────
   const [step, setStep] = useState<'cart' | 'checkout'>('cart');
   const [deliveryType] = useState<DeliveryType>('Delivery');
-  const [formData, setFormData] = useState({ name: '', phone: '', address: '', reference: '', notes: '' });
+  const [formData, setFormData] = useState({ name: '', phone: '', cedula: '', address: '', reference: '', notes: '' });
   const [deliveryCoordinates, setDeliveryCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
   const [calculatedFee, setCalculatedFee] = useState<number>(0);
@@ -75,7 +75,7 @@ export function CartDrawer({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
-  const [formErrors, setFormErrors] = useState({ name: '', phone: '', address: '' });
+  const [formErrors, setFormErrors] = useState({ name: '', phone: '', cedula: '', address: '' });
   const [locationSelected, setLocationSelected] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [addressStatus, setAddressStatus] = useState<AddressStatus>('idle');
@@ -413,8 +413,10 @@ export function CartDrawer({
     e.preventDefault();
     const nameOk = validateField('name', formData.name);
     const phoneOk = validateField('phone', formData.phone);
+    const cedulaOk = formData.cedula.length >= 7;
+    if (!cedulaOk) setFormErrors(prev => ({ ...prev, cedula: 'Mínimo 7 dígitos' }));
     const addressOk = deliveryType === 'Pick-up' || validateField('address', formData.address);
-    if (!nameOk || !phoneOk || !addressOk) return;
+    if (!nameOk || !phoneOk || !cedulaOk || !addressOk) return;
     if (deliveryType === 'Delivery' && !isWithinRange) {
       setAddressError(t('cart.error.addressOutOfRange'));
       return;
@@ -633,6 +635,41 @@ export function CartDrawer({
                           {formErrors.phone && (
                             <span id="phone-error" className="absolute -bottom-5 left-0 text-[10px] text-red-400" role="alert">
                               {formErrors.phone}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Cédula */}
+                        <div className="relative">
+                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-xs font-bold">
+                            V-
+                          </div>
+                          <input
+                            required
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            maxLength={8}
+                            placeholder="Cédula de identidad"
+                            aria-describedby={formErrors.cedula ? 'cedula-error' : undefined}
+                            aria-invalid={formErrors.cedula ? 'true' : 'false'}
+                            className={`w-full pl-12 pr-4 py-4 bg-dark-surface border-2 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500 ${
+                              formErrors.cedula ? 'border-red-500/50' : 'border-white/10'
+                            }`}
+                            value={formData.cedula}
+                            onChange={(e) => {
+                              const filtered = e.target.value.replace(/[^0-9]/g, '').slice(0, 8);
+                              setFormData({ ...formData, cedula: filtered });
+                              if (filtered.length < 7) {
+                                setFormErrors(prev => ({ ...prev, cedula: 'Mínimo 7 dígitos' }));
+                              } else {
+                                setFormErrors(prev => ({ ...prev, cedula: '' }));
+                              }
+                            }}
+                          />
+                          {formErrors.cedula && (
+                            <span id="cedula-error" className="absolute -bottom-5 left-0 text-[10px] text-red-400" role="alert">
+                              {formErrors.cedula}
                             </span>
                           )}
                         </div>

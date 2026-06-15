@@ -19,6 +19,7 @@ export function generateWhatsAppLink(
   let message = `*NUEVO PEDIDO - W PANDA EXPRESS*\n`;
   message += `----------------------------------\n`;
   message += `*Cliente:* ${checkout.name}\n`;
+  message += `*Cédula:* V-${checkout.cedula}\n`;
   message += `*Teléfono:* ${checkout.phone}\n`;
   message += `*Tipo:* Delivery\n`;
 

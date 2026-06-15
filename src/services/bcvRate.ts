@@ -1,4 +1,3 @@
-const BCV_API_URL = 'https://pydolarve.org/api/v1/dollar';
 const CACHE_KEY = 'bcv_rate_cache';
 const SOURCE_KEY = 'bcv_rate_source';
 
@@ -38,25 +37,52 @@ export function saveRateSource(source: 'bcv' | 'manual'): void {
   localStorage.setItem(SOURCE_KEY, source);
 }
 
+const API_SOURCES = [
+  {
+    name: 'pydolarve',
+    url: 'https://pydolarve.org/api/v1/dollar',
+    parse: (data: any) => data?.rates?.price ?? data?.price ?? data?.dollar?.price ?? null,
+  },
+  {
+    name: 've-dolarapi',
+    url: 'https://ve.dolarapi.com/v1/dolares',
+    parse: (data: any) => {
+      if (Array.isArray(data)) {
+        const usd = data.find((d: any) => d.fuente === 'BCV' || d.nombre === 'Oficial');
+        return usd?.precio ?? usd?.price ?? null;
+      }
+      return data?.precio ?? data?.price ?? null;
+    },
+  },
+  {
+    name: 'dolarapi',
+    url: 'https://dolarapi.com/v1/dolares',
+    parse: (data: any) => {
+      if (Array.isArray(data)) {
+        const usd = data.find((d: any) => d.fuente === 'BCV' || d.nombre === 'Oficial');
+        return usd?.precio ?? usd?.price ?? null;
+      }
+      return data?.precio ?? data?.price ?? null;
+    },
+  },
+];
+
 export async function fetchBcvRate(): Promise<number | null> {
   const cached = getCachedRate();
   if (cached !== null) return cached;
 
-  try {
-    const res = await fetch(BCV_API_URL);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-
-    const rate = data?.rates?.price
-      ?? data?.price
-      ?? data?.dollar?.price
-      ?? null;
-
-    if (typeof rate === 'number' && rate > 0) {
-      setCachedRate(rate);
-      return rate;
-    }
-  } catch {}
+  for (const source of API_SOURCES) {
+    try {
+      const res = await fetch(source.url, { signal: AbortSignal.timeout(5000) });
+      if (!res.ok) continue;
+      const data = await res.json();
+      const rate = source.parse(data);
+      if (typeof rate === 'number' && rate > 0) {
+        setCachedRate(rate);
+        return rate;
+      }
+    } catch {}
+  }
 
   return null;
 }

@@ -82,6 +82,7 @@ export type OrderStatus = 'exitoso' | 'cancelado';
 export interface CheckoutData {
   name: string;
   phone: string;
+  cedula?: string;
   address?: string;
   reference?: string;
   deliveryType?: DeliveryType;

@@ -86,38 +86,42 @@ export function ChoiceSelectorModal({ product, onClose, onConfirm }: ChoiceSelec
 
         {/* Options */}
         <div className="px-6 space-y-3">
-          {choices.map((choice) => {
+          {choices.map((choice, index) => {
             const isSelected = selected.includes(choice.name);
             const price = getChoicePrice(choice);
 
             return (
-              <button
-                key={choice.name}
-                onClick={() => toggleChoice(choice.name)}
-                className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all duration-200 ${
-                  isSelected
-                    ? 'bg-gradient-to-r from-primary-vibrant/20 to-secondary-vibrant/20 border-primary-vibrant/50 shadow-lg shadow-primary-vibrant/10'
-                    : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+              <div key={choice.name}>
+                <button
+                  onClick={() => toggleChoice(choice.name)}
+                  className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all duration-200 ${
                     isSelected
-                      ? 'bg-primary-vibrant border-primary-vibrant'
-                      : 'border-zinc-600'
-                  }`}>
-                    {isSelected && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
+                      ? 'bg-gradient-to-r from-primary-vibrant/20 to-secondary-vibrant/20 border-primary-vibrant/50 shadow-lg shadow-primary-vibrant/10'
+                      : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                      isSelected
+                        ? 'bg-primary-vibrant border-primary-vibrant'
+                        : 'border-zinc-600'
+                    }`}>
+                      {isSelected && <Check className="w-4 h-4 text-white" strokeWidth={3} />}
+                    </div>
+                    <span className={`font-bold text-sm ${isSelected ? 'text-white' : 'text-zinc-300'}`}>
+                      {choice.name}
+                    </span>
                   </div>
-                  <span className={`font-bold text-sm ${isSelected ? 'text-white' : 'text-zinc-300'}`}>
-                    {choice.name}
-                  </span>
-                </div>
-                {price !== 0 && (
-                  <span className="text-xs font-bold text-secondary-vibrant">
-                    {price > 0 ? `+$${price.toFixed(2)}` : `-$${Math.abs(price).toFixed(2)}`}
-                  </span>
+                  {price !== 0 && (
+                    <span className="text-xs font-bold text-secondary-vibrant">
+                      {price > 0 ? `+$${price.toFixed(2)}` : `-$${Math.abs(price).toFixed(2)}`}
+                    </span>
+                  )}
+                </button>
+                {isSingleSelect && index < choices.length - 1 && (
+                  <p className="text-center text-[11px] font-bold uppercase tracking-[0.3em] text-zinc-600 py-1">o</p>
                 )}
-              </button>
+              </div>
             );
           })}
         </div>
