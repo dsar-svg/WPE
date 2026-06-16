@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useAnimation } from 'motion/react';
-import { ArrowRight, Star, Utensils, ClipboardList, MapPin, Instagram, Facebook, Share2, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, Star, Utensils, ClipboardList, MapPin, Instagram, Facebook, Share2, Menu, X, ChevronLeft, ChevronRight, Plus, Check, HandPlatter } from 'lucide-react';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useLanguage } from '../context/LanguageContext';
 import { LanguageToggle } from '../components/ui/LanguageToggle';
@@ -279,37 +279,67 @@ export function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredItems.map((item, i) => (
-              <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1, duration: 0.5 }} viewport={{ once: true }}
-                onClick={() => {
-                  if (item.choices && item.choices.length > 0) {
-                    setChoiceProduct(item);
-                  } else {
-                    setSelectedProduct(item);
-                  }
-                }}
-                className="group cursor-pointer bg-dark-card rounded-2xl overflow-hidden border-2 border-white/10 hover:border-secondary-vibrant/40 hover:shadow-xl hover:shadow-secondary-vibrant/10 transition-all duration-300">
-                <div className="relative h-64 overflow-hidden">
-                  <OptimizedImage
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-full p-2"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-dark-card via-transparent to-transparent opacity-80" />
-                  <div className="absolute top-3 right-3 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white font-display text-lg tracking-wider px-3 py-1 rounded-lg shadow-lg">
-                    ${item.price.toFixed(2)}
+            {featuredItems.map((item, i) => {
+              const hasChoices = item.choices && item.choices.length > 0;
+              return (
+                <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1, duration: 0.5 }} viewport={{ once: true }}
+                  className="group bg-dark-card rounded-2xl overflow-hidden border-2 border-white/10 hover:border-secondary-vibrant/40 hover:shadow-xl hover:shadow-secondary-vibrant/10 transition-all duration-300">
+                  <div onClick={() => {
+                    if (hasChoices) {
+                      setChoiceProduct(item);
+                    } else {
+                      setSelectedProduct(item);
+                    }
+                  }} className="cursor-pointer">
+                    <div className="relative h-64 overflow-hidden">
+                      <OptimizedImage
+                        src={item.image}
+                        alt={item.name}
+                        className="w-full h-full p-2"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-dark-card via-transparent to-transparent opacity-80" />
+                      {!item.inStock && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <span className="bg-red-500/20 text-red-400 text-[11px] font-bold px-4 py-1.5 rounded-full uppercase tracking-wider border border-red-500/30">Agotado</span>
+                        </div>
+                      )}
+                      <div className="absolute top-3 right-3 bg-secondary-vibrant text-dark font-display text-lg tracking-wider px-3 py-1 rounded-lg shadow-lg font-bold">
+                        ${item.price.toFixed(2)}
+                      </div>
+                    </div>
+                    <div className="p-5 space-y-3">
+                      <h3 className="font-display text-xl uppercase tracking-wider text-white group-hover:text-secondary-vibrant transition-colors line-clamp-1">{item.name}</h3>
+                      <p className="text-zinc-400 text-sm leading-relaxed line-clamp-2">{item.description}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="p-5 space-y-3">
-                  <div className="flex items-start justify-between">
-                    <h3 className="font-display text-xl uppercase tracking-wider text-white group-hover:text-secondary-vibrant transition-colors">{item.name}</h3>
+                  <div className="px-5 pb-5">
+                    <div className="flex items-center justify-between pt-3 border-t-2 border-primary-vibrant/20">
+                      <span className="font-display text-xl tracking-wider text-secondary-vibrant">${item.price.toFixed(2)}</span>
+                      {item.inStock && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (hasChoices) {
+                              setChoiceProduct(item);
+                            } else {
+                              navigate('/pedir', { state: { preAddProduct: item } });
+                            }
+                          }}
+                          className={`w-11 h-11 rounded-xl flex items-center justify-center shadow-lg transition-all duration-200 ${
+                            hasChoices
+                              ? "bg-white/10 text-white hover:bg-white/15 border border-white/10"
+                              : "bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-primary-vibrant/30 hover:shadow-primary-vibrant/50 hover:scale-105 active:scale-95"
+                          }`}
+                        >
+                          {hasChoices ? <HandPlatter className="w-5 h-5" /> : <Plus className="w-5 h-5" strokeWidth={3} />}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-zinc-400 text-sm leading-relaxed line-clamp-2">{item.description}</p>
-                  <div className="w-8 h-1 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-full group-hover:w-16 transition-all duration-300" />
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>
