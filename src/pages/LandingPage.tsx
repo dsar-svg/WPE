@@ -190,14 +190,6 @@ export function LandingPage() {
       <section id="main-content" className="relative min-h-[90vh] flex items-center justify-center bg-dark text-white overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-dark via-dark to-primary-vibrant/30" />
         
-        {/* Decorative background gradient */}
-        <div className="absolute inset-0 overflow-hidden opacity-20">
-          <div className="absolute top-10 left-10 w-48 h-48 md:w-64 md:h-64 rounded-2xl rotate-[-5deg] bg-gradient-to-br from-primary-vibrant/30 to-transparent" />
-          <div className="absolute top-20 right-20 w-40 h-40 md:w-56 md:h-56 rounded-2xl rotate-[8deg] bg-gradient-to-br from-secondary-vibrant/30 to-transparent" />
-          <div className="absolute bottom-20 left-1/4 w-44 h-44 md:w-60 md:h-60 rounded-2xl rotate-[3deg] bg-gradient-to-br from-primary-vibrant/20 to-transparent" />
-          <div className="absolute bottom-32 right-1/4 w-36 h-36 md:w-48 md:h-48 rounded-2xl rotate-[-7deg] bg-gradient-to-br from-secondary-vibrant/20 to-transparent" />
-        </div>
-        
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary-vibrant/20 rounded-full blur-[40px] -mr-48 -mt-48" />
         <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-secondary-vibrant/15 rounded-full blur-[40px] -ml-48 -mb-48" />
 
