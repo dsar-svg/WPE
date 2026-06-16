@@ -6,6 +6,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { useLanguage } from '../context/LanguageContext';
 import { LanguageToggle } from '../components/ui/LanguageToggle';
 import { ProductModal } from '../components/ui/ProductModal';
+import { ChoiceSelectorModal } from '../components/ui/ChoiceSelectorModal';
 import { LocationModal } from '../components/ui/LocationModal';
 import { PWAInstallPrompt } from '../components/ui/PWAInstallPrompt';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
@@ -20,6 +21,7 @@ export function LandingPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [locationIndex, setLocationIndex] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [choiceProduct, setChoiceProduct] = useState<Product | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [isMarqueePaused, setIsMarqueePaused] = useState(false);
   const [activeSection, setActiveSection] = useState('about');
@@ -280,7 +282,13 @@ export function LandingPage() {
             {featuredItems.map((item, i) => (
               <motion.div key={item.id} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1, duration: 0.5 }} viewport={{ once: true }}
-                onClick={() => setSelectedProduct(item)}
+                onClick={() => {
+                  if (item.choices && item.choices.length > 0) {
+                    setChoiceProduct(item);
+                  } else {
+                    setSelectedProduct(item);
+                  }
+                }}
                 className="group cursor-pointer bg-dark-card rounded-2xl overflow-hidden border-2 border-white/10 hover:border-secondary-vibrant/40 hover:shadow-xl hover:shadow-secondary-vibrant/10 transition-all duration-300">
                 <div className="relative h-64 overflow-hidden">
                   <OptimizedImage
@@ -475,6 +483,18 @@ export function LandingPage() {
       <AnimatePresence>
         {selectedProduct && (
           <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} showAddToCart={false} />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {choiceProduct && (
+          <ChoiceSelectorModal
+            product={choiceProduct}
+            onClose={() => setChoiceProduct(null)}
+            onConfirm={(selectedChoices) => {
+              navigate('/pedir', { state: { preAddProduct: choiceProduct, preSelectedChoices: selectedChoices } });
+              setChoiceProduct(null);
+            }}
+          />
         )}
       </AnimatePresence>
       <AnimatePresence>
