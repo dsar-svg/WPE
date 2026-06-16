@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { AnimatePresence } from 'motion/react';
 import { Utensils, ArrowLeft, HandPlatter, Tag } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useLanguage } from '../context/LanguageContext';
 import { LanguageToggle } from '../components/ui/LanguageToggle';
 import { ProductModal } from '../components/ui/ProductModal';
+import { ChoiceSelectorModal } from '../components/ui/ChoiceSelectorModal';
 import { PWAInstallPrompt } from '../components/ui/PWAInstallPrompt';
 import { Pagination } from '../components/ui/Pagination';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
@@ -16,8 +17,10 @@ import { Product } from '../types';
 export function PublicMenuPage() {
   const { menuItems, categories, config, isLoading } = useRestaurant();
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState(categories[0]?.name || '');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [choiceProduct, setChoiceProduct] = useState<Product | null>(null);
   const [page, setPage] = useState(1);
   const ITEMS_PER_PAGE = 12;
 
@@ -110,7 +113,13 @@ export function PublicMenuPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {paginatedItems.map((item) => (
               <div key={item.id}
-                onClick={() => setSelectedProduct(item)}
+                onClick={() => {
+                  if (item.choices && item.choices.length > 0) {
+                    setChoiceProduct(item);
+                  } else {
+                    setSelectedProduct(item);
+                  }
+                }}
                 className="bg-dark-card rounded-2xl overflow-hidden border-2 border-secondary-vibrant/20 hover:border-secondary-vibrant/50 shadow-sm hover:shadow-xl hover:shadow-secondary-vibrant/10 transition-all duration-200 group cursor-pointer">
                 <div className="relative h-64 overflow-hidden">
                   <OptimizedImage
@@ -176,6 +185,18 @@ export function PublicMenuPage() {
       <AnimatePresence>
         {selectedProduct && (
           <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} showAddToCart={false} />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {choiceProduct && (
+          <ChoiceSelectorModal
+            product={choiceProduct}
+            onClose={() => setChoiceProduct(null)}
+            onConfirm={(selectedChoices) => {
+              navigate('/pedir', { state: { preAddProduct: choiceProduct, preSelectedChoices: selectedChoices } });
+              setChoiceProduct(null);
+            }}
+          />
         )}
       </AnimatePresence>
       <PWAInstallPrompt />

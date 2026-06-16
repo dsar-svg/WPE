@@ -36,7 +36,7 @@ function MainView() {
     const state = routeStateRef.current as any;
     if (selectedLocation && state?.preAddProduct) {
       const product = menuItems.find(p => p.id === state.preAddProduct.id);
-      if (product) addToCart(product);
+      if (product) addToCart(product, state.preSelectedChoices);
       window.history.replaceState({}, document.title);
     }
   }, [selectedLocation, menuItems, addToCart]);
