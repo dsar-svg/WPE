@@ -141,10 +141,17 @@ export function PublicMenuPage() {
                     }`}>
                       {item.inStock ? activeCategory : t('menu.outOfStock')}
                     </span>
-                    <Link to="/pedir" state={{ preAddProduct: item }} onClick={(e) => e.stopPropagation()}
+                    <button onClick={(e) => {
+                        e.stopPropagation();
+                        if (item.choices && item.choices.length > 0) {
+                          setChoiceProduct(item);
+                        } else {
+                          navigate('/pedir', { state: { preAddProduct: item } });
+                        }
+                      }}
                       className="w-11 h-11 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-xl flex items-center justify-center text-white hover:shadow-lg hover:shadow-primary-vibrant/30 transition-all duration-200">
                       <HandPlatter className="w-5 h-5" />
-                    </Link>
+                    </button>
                   </div>
                 </div>
               </div>
