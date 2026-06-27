@@ -52,6 +52,7 @@ export interface Product {
   image: string;
   inStock: boolean;
   order: number;
+  code?: string;
   choices?: ProductChoice[];
   maxSelections?: number;
 }

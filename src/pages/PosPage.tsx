@@ -330,7 +330,11 @@ export function PosPage() {
     if (activeCategory !== 'Todas') items = items.filter(p => p.category === activeCategory);
     if (search.trim()) {
       const q = search.toLowerCase();
-      items = items.filter(p => p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
+      items = items.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        (p.code && p.code.toLowerCase().includes(q))
+      );
     }
     return items;
   }, [menuItems, activeCategory, search]);
@@ -472,8 +476,11 @@ export function PosPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
               {filteredProducts.map(product => (
                 <button key={product.id} onClick={() => addToCart(product)}
-                  className="bg-dark-card border border-zinc-800 hover:border-primary-vibrant/50 rounded-2xl p-3 text-left transition-all active:scale-95 hover:shadow-lg hover:shadow-primary-vibrant/5"
+                  className="bg-dark-card border border-zinc-800 hover:border-primary-vibrant/50 rounded-2xl p-3 text-left transition-all active:scale-95 hover:shadow-lg hover:shadow-primary-vibrant/5 relative"
                 >
+                  {product.code && (
+                    <span className="absolute top-2 right-2 bg-zinc-800 text-zinc-500 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">{product.code}</span>
+                  )}
                   <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">{product.category}</div>
                   <div className="font-bold text-sm text-white leading-tight line-clamp-2 mb-2 min-h-[2.5em]">{product.name}</div>
                   <div className="text-primary-vibrant font-black text-lg">${product.price.toFixed(2)}</div>

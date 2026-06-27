@@ -26,7 +26,13 @@ CREATE POLICY IF NOT EXISTS "Anyone can read admins (POS)"
   TO anon, authenticated
   USING (true);
 
--- 5. Example: crear cajera de prueba (ejecutar solo si no existe)
+-- 5. Add product code for POS quick-search
+ALTER TABLE public.menu_items
+  ADD COLUMN IF NOT EXISTS code TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_menu_items_code ON public.menu_items(code);
+
+-- 6. Example: crear cajera de prueba (ejecutar solo si no existe)
 -- INSERT INTO public.admins (email, name, role, pin, location_id)
 -- VALUES ('cajera1@wallacepanda.com', 'María García', 'cashier', '1234', (SELECT id FROM public.locations LIMIT 1))
 -- ON CONFLICT (email) DO NOTHING;

@@ -100,6 +100,7 @@ function rowToProduct(row: any): Product {
     image: row.image,
     inStock: row.in_stock,
     order: row.sort_order,
+    code: row.code || '',
     choices: row.choices || [],
     maxSelections: row.max_selections ?? 0,
   };
@@ -394,6 +395,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
       if (prod.image !== undefined) dbRow.image = prod.image;
       if (prod.inStock !== undefined) dbRow.in_stock = prod.inStock;
       if (prod.order !== undefined) dbRow.sort_order = prod.order;
+      if (prod.code !== undefined) dbRow.code = prod.code;
       if (prod.choices !== undefined) dbRow.choices = prod.choices;
       if (prod.maxSelections !== undefined) dbRow.max_selections = prod.maxSelections;
       const id = prod._id || prod.id;
