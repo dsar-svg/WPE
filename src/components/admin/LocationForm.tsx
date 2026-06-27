@@ -99,11 +99,15 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave, createLo
       await onSave(data);
 
       if (data.adminEmail && createLocationAdmin) {
-        const pwd = data.adminPassword || generatePassword();
-        const result = await createLocationAdmin(data.adminEmail, pwd);
-        setAdminResult({ ...result, password: pwd });
-        if (!result.success) {
-          setError(result.message);
+        const isNewEmail = !location || location.adminEmail !== data.adminEmail;
+        if (isNewEmail) {
+          const pwd = data.adminPassword || generatePassword();
+          const result = await createLocationAdmin(data.adminEmail, pwd);
+          setAdminResult({ ...result, password: pwd });
+          if (!result.success) {
+            setError(result.message);
+            return;
+          }
         }
       }
     } catch (err: any) {
