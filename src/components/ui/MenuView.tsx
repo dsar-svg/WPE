@@ -151,28 +151,21 @@ export function MenuView({
         </div>
       </div>
 
-      {/* Sticky Categories */}
-      <div className="sticky top-0 bg-dark z-30 border-b border-white/10">
-        <div className="max-w-7xl mx-auto relative">
-          <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-dark/95 to-transparent z-10 pointer-events-none" />
-          <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-dark/95 to-transparent z-10 pointer-events-none" />
-          <div className="flex items-center gap-3 p-5 overflow-x-auto no-scrollbar scroll-smooth">
-            {categories.map((cat) => (
-              <button key={cat.id} onClick={() => setActiveCategory(cat.name)}
-                className={`px-8 py-4 rounded-full text-[11px] font-bold uppercase tracking-[0.25em] transition-all duration-200 whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-primary-vibrant ${
-                  activeCategory === cat.name
-                    ? "bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-xl shadow-primary-vibrant/30"
-                    : "bg-white/5 text-zinc-500 hover:bg-white/10 hover:text-white border border-white/10"
-                }`}>
-                {cat.name}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Product List */}
-      <div className="px-5 py-8 max-w-7xl mx-auto w-full flex-1 bg-gradient-to-b from-transparent via-primary-vibrant/[0.03] to-transparent">
+      {/* Content: Sidebar + Grid */}
+      <div className="max-w-7xl mx-auto flex min-h-[60vh]">
+        <aside className="sticky top-0 self-start max-h-screen w-48 shrink-0 bg-dark z-30 border-r border-white/10 overflow-y-auto p-4 space-y-1 pt-5">
+          {categories.map((cat) => (
+            <button key={cat.id} onClick={() => setActiveCategory(cat.name)}
+              className={`w-full px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-[0.25em] text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-vibrant ${
+                activeCategory === cat.name
+                  ? "bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-xl shadow-primary-vibrant/30"
+                  : "text-zinc-500 hover:bg-white/5 hover:text-white"
+              }`}>
+              {cat.name}
+            </button>
+          ))}
+        </aside>
+        <div className="flex-1 min-w-0 px-5 py-8 bg-gradient-to-b from-transparent via-primary-vibrant/[0.03] to-transparent">
         {filteredItems.length === 0 ? (
           <div className="py-20 text-center space-y-4">
             <div className="w-20 h-20 bg-primary-vibrant/10 rounded-xl flex items-center justify-center mx-auto border border-primary-vibrant/20">
@@ -202,6 +195,7 @@ export function MenuView({
           <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
           </>
         )}
+      </div>
       </div>
 
       {/* Product Modal (no choices) */}
