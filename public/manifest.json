@@ -2,13 +2,19 @@
   "name": "Wallace Panda Express",
   "short_name": "Wallace Panda",
   "description": "Menú Digital y Pedidos Multi-Sede",
-  "start_url": "/?utm_source=pwa",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#000000",
   "theme_color": "#d92323",
   "icons": [
+    {
+      "src": "/icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
     {
       "src": "/logo.png",
       "sizes": "192x192",
