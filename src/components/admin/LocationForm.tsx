@@ -64,6 +64,7 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave, createLo
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [adminResult, setAdminResult] = useState<{ success: boolean; message: string; password?: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -96,7 +97,9 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave, createLo
     try {
       setIsSaving(true);
       setError(null);
+      setSuccess(null);
       setAdminResult(null);
+
       await onSave(data);
 
       if (data.adminEmail && createLocationAdmin) {
@@ -111,6 +114,9 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave, createLo
           }
         }
       }
+
+      setSuccess(location ? 'Sede actualizada correctamente' : 'Sede creada correctamente');
+      setTimeout(() => onClose(), 1500);
     } catch (err: any) {
       console.error("Save error:", err);
       setError(err instanceof Error ? err.message : "Error al guardar");
@@ -168,24 +174,34 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave, createLo
               {error}
             </div>
           )}
-          {adminResult?.success && adminResult.password && (
+          {success && (
+            <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-2xl flex items-center gap-3 text-green-400 text-xs font-bold">
+              <Check className="w-4 h-4" />
+              {success}
+            </div>
+          )}
+          {adminResult?.success && (
             <div className="bg-green-500/10 border border-green-500/20 p-4 rounded-2xl space-y-3">
               <p className="text-green-400 text-xs font-bold flex items-center gap-2">
                 <Check className="w-4 h-4" /> {adminResult.message}
               </p>
-              <div className="flex items-center gap-2">
-                <div className="flex-1 bg-zinc-900 border border-zinc-700 px-4 py-2.5 rounded-xl font-mono text-sm text-white">
-                  {adminResult.password}
+              {adminResult.password && (
+                <>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 bg-zinc-900 border border-zinc-700 px-4 py-2.5 rounded-xl font-mono text-sm text-white">
+                    {adminResult.password}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { navigator.clipboard.writeText(adminResult.password!); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                    className="p-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors"
+                  >
+                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-zinc-400" />}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => { navigator.clipboard.writeText(adminResult.password!); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                  className="p-2.5 bg-zinc-800 hover:bg-zinc-700 rounded-xl transition-colors"
-                >
-                  {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-zinc-400" />}
-                </button>
-              </div>
-              <p className="text-[9px] text-zinc-500">Comparte esta contraseña con el administrador de sede. No se volverá a mostrar.</p>
+                <p className="text-[9px] text-zinc-500">Comparte esta contraseña con el administrador de sede. No se volverá a mostrar.</p>
+                </>
+              )}
             </div>
           )}
 
