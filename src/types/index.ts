@@ -101,6 +101,15 @@ export interface OrderItem {
   selectedChoices?: string[];
 }
 
+export interface Cashier {
+  id: string;
+  name: string;
+  email: string;
+  employee_id?: string;
+  location_id?: string;
+  pin?: string;
+}
+
 export interface Order {
   id: string;
   location_id: string;
@@ -115,5 +124,17 @@ export interface Order {
   total: number;
   notes: string;
   status: OrderStatus;
+  payment_method?: PaymentMethod;
+  change_amount?: number;
+  cashier_id?: string;
   created_at: string;
+}
+
+export type PaymentMethod = 'Efectivo' | 'Tarjeta' | 'Transferencia' | 'QR' | 'Otro';
+
+export interface POSCartItem {
+  product: Product;
+  quantity: number;
+  notes?: string;
+  selectedChoices?: string[];
 }

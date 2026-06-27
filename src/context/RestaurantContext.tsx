@@ -124,6 +124,9 @@ function rowToOrder(row: any): Order {
     total: row.total,
     notes: row.notes || '',
     status: (row.status === 'cancelado' ? 'cancelado' : 'exitoso') as Order['status'],
+    payment_method: row.payment_method,
+    change_amount: row.change_amount ?? 0,
+    cashier_id: row.cashier_id,
     created_at: row.created_at,
   };
 }
@@ -428,6 +431,9 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
         delivery_coordinates: order.delivery_coordinates || null, items: order.items,
         subtotal: order.subtotal, delivery_fee: order.delivery_fee, total: order.total,
         notes: order.notes || '',
+        payment_method: order.payment_method || 'Efectivo',
+        change_amount: order.change_amount ?? 0,
+        cashier_id: order.cashier_id || null,
       });
       if (error) throw error;
       invalidate(['orders']);
