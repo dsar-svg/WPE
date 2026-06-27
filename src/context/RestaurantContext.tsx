@@ -231,7 +231,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
         const currentAdmin = (freshAdmins || []).find((a: any) => a.email === userEmail);
         const isSuper = currentAdmin?.role === 'super_admin';
         const locId = currentAdmin?.role === 'location_admin' ? currentAdmin.location_id : null;
-        console.log('[Auth Debug]', { userEmail, role: currentAdmin?.role, isSuper, locId, freshAdmins });
+
         setIsSuperAdmin(isSuper);
         setIsLocalAdmin(currentAdmin?.role === 'location_admin');
         setIsAdmin(!!currentAdmin);
@@ -281,7 +281,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
     const { data: freshAdmins } = await supabase.from('admins').select('email, role, location_id');
     const currentAdmin = (freshAdmins || []).find((a: any) => a.email === email);
-    console.log('[Auth Debug signIn]', { email, role: currentAdmin?.role, freshAdmins });
+
     if (!currentAdmin) { await supabase.auth.signOut(); throw new Error('no_admin'); }
   };
 
