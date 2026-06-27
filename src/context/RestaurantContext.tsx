@@ -226,18 +226,21 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (userEmail) {
-      const currentAdmin = adminRecords.find((a: any) => a.email === userEmail);
-      const isSuper = currentAdmin?.role === 'super_admin';
-      const locId = currentAdmin?.role === 'location_admin' ? currentAdmin.location_id : null;
-      console.log('[Auth Debug]', { userEmail, role: currentAdmin?.role, isSuper, locId, adminRecords });
-      setIsSuperAdmin(isSuper);
-      setIsLocalAdmin(currentAdmin?.role === 'location_admin');
-      setIsAdmin(!!currentAdmin);
-      setManagedLocationId(locId);
+      (async () => {
+        const { data: freshAdmins } = await supabase.from('admins').select('email, role, location_id');
+        const currentAdmin = (freshAdmins || []).find((a: any) => a.email === userEmail);
+        const isSuper = currentAdmin?.role === 'super_admin';
+        const locId = currentAdmin?.role === 'location_admin' ? currentAdmin.location_id : null;
+        console.log('[Auth Debug]', { userEmail, role: currentAdmin?.role, isSuper, locId, freshAdmins });
+        setIsSuperAdmin(isSuper);
+        setIsLocalAdmin(currentAdmin?.role === 'location_admin');
+        setIsAdmin(!!currentAdmin);
+        setManagedLocationId(locId);
+      })();
     } else {
       setIsAdmin(false); setIsSuperAdmin(false); setIsLocalAdmin(false); setManagedLocationId(null);
     }
-  }, [userEmail, adminRecords]);
+  }, [userEmail]);
 
   const ordersQuery = useQuery({
     queryKey: ['orders'],
@@ -276,8 +279,9 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    const currentAdmin = adminRecords.find((a: any) => a.email === email);
-    console.log('[Auth Debug signIn]', { email, role: currentAdmin?.role, adminRecords });
+    const { data: freshAdmins } = await supabase.from('admins').select('email, role, location_id');
+    const currentAdmin = (freshAdmins || []).find((a: any) => a.email === email);
+    console.log('[Auth Debug signIn]', { email, role: currentAdmin?.role, freshAdmins });
     if (!currentAdmin) { await supabase.auth.signOut(); throw new Error('no_admin'); }
   };
 
