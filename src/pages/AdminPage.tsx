@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { LocationForm } from '../components/admin/LocationForm';
 import { ProductForm } from '../components/admin/ProductForm';
 import { CategoryModal } from '../components/admin/CategoryModal';
+import { CashierModal } from '../components/admin/CashierModal';
 import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { SettingsPage } from '../components/admin/SettingsPage';
 import { OrdersPage } from '../components/admin/OrdersPage';
@@ -17,11 +18,13 @@ const formatTime12h = (time: string) => { if (!time) return ''; const [hours, mi
 const h = parseInt(hours);
 const ampm = h >= 12 ? 'PM' : 'AM'; const h12 = h % 12 || 12; return `${h12}:${minutes} ${ampm}`;};
 export function AdminPage() { const { locations, menuItems, categories, config, isAdmin, isLoading, isSuperAdmin, managedLocationId, userEmail, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, orders, signIn, signOut, createLocationAdmin } = useRestaurant(); const isSedesHidden = !isSuperAdmin;
-const [activeTab, setActiveTab] = useState<'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos'>('dashboard');
+const [activeTab, setActiveTab] = useState<'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras'>('dashboard');
 const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
 const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
-useEffect(() => { if (isSedesHidden && activeTab === 'sedes') setActiveTab('dashboard'); }, [isSedesHidden, activeTab]);
+useEffect(() => {
+  if (isSedesHidden && (activeTab === 'sedes' || activeTab === 'cajeras')) setActiveTab('dashboard');
+}, [isSedesHidden, activeTab]);
 const [authError, setAuthError] = useState<string | null>(null);
 const [email, setEmail] = useState('');
 const [password, setPassword] = useState('');
@@ -38,6 +41,7 @@ const [editingProd, setEditingProd] = useState<Product | null>(null);
 const [isAddingLoc, setIsAddingLoc] = useState(false);
 const [isAddingProd, setIsAddingProd] = useState(false);
 const [isManageCatsOpen, setIsManageCatsOpen] = useState(false);
+const [isManageCashiersOpen, setIsManageCashiersOpen] = useState(false);
 const [activeProductCategory, setActiveProductCategory] = useState('Todos');
 const [productPage, setProductPage] = useState(1);
 useEffect(() => { setProductPage(1); }, [activeProductCategory]);
@@ -349,6 +353,24 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
           <OrdersPage />
         )}
 
+        {activeTab === 'cajeras' && (
+          <div>
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h2 className="text-2xl font-black">Cajeras</h2>
+                <p className="text-admin-text-muted text-sm">Personal con acceso al sistema POS</p>
+              </div>
+              {isSuperAdmin && (
+                <button onClick={() => setIsManageCashiersOpen(true)}
+                  className="bg-primary-vibrant hover:scale-105 active:scale-95 transition-transform text-white px-6 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-primary-vibrant/20"
+                >
+                  <Plus className="w-4 h-4" /> Gestionar Cajeras
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'dashboard' && (
           <DashboardView
             orders={orders}
@@ -385,6 +407,9 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
           onSave={updateCategory}
           onDelete={deleteCategory}
         />
+      )}
+      {isManageCashiersOpen && (
+        <CashierModal onClose={() => setIsManageCashiersOpen(false)} />
       )}
     </AnimatePresence>
   </div>

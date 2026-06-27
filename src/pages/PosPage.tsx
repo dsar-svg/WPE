@@ -1,9 +1,10 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, Printer, DollarSign, CreditCard, Smartphone, Banknote, QrCode, ChevronDown, ArrowLeft, LogOut, User } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, Printer, DollarSign, CreditCard, Smartphone, Banknote, QrCode, LogOut, User } from 'lucide-react';
 import { useRestaurant } from '../context/RestaurantContext';
 import { Product, Cashier, POSCartItem, PaymentMethod } from '../types';
 import { supabase } from '../lib/supabase';
+import { OptimizedImage } from '../components/ui/OptimizedImage';
 
 // ==============================
 // PIN Login
@@ -476,14 +477,18 @@ export function PosPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
               {filteredProducts.map(product => (
                 <button key={product.id} onClick={() => addToCart(product)}
-                  className="bg-dark-card border border-zinc-800 hover:border-primary-vibrant/50 rounded-2xl p-3 text-left transition-all active:scale-95 hover:shadow-lg hover:shadow-primary-vibrant/5 relative"
+                  className="bg-dark-card border border-zinc-800 hover:border-primary-vibrant/50 rounded-2xl p-2 text-left transition-all active:scale-95 hover:shadow-lg hover:shadow-primary-vibrant/5 relative"
                 >
                   {product.code && (
-                    <span className="absolute top-2 right-2 bg-zinc-800 text-zinc-500 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded">{product.code}</span>
+                    <span className="absolute top-1 right-1 bg-zinc-800 text-zinc-500 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded z-10">{product.code}</span>
                   )}
-                  <div className="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1">{product.category}</div>
-                  <div className="font-bold text-sm text-white leading-tight line-clamp-2 mb-2 min-h-[2.5em]">{product.name}</div>
-                  <div className="text-primary-vibrant font-black text-lg">${product.price.toFixed(2)}</div>
+                  <div className="aspect-square bg-zinc-900 rounded-xl overflow-hidden mb-2">
+                    <OptimizedImage src={product.image} alt={product.name} className="w-full h-full p-1" />
+                  </div>
+                  <div className="px-1 space-y-1">
+                    <div className="font-bold text-xs text-white leading-tight line-clamp-2 min-h-[2em]">{product.name}</div>
+                    <div className="text-primary-vibrant font-black text-base">${product.price.toFixed(2)}</div>
+                  </div>
                 </button>
               ))}
               {filteredProducts.length === 0 && (
