@@ -151,9 +151,25 @@ export function MenuView({
         </div>
       </div>
 
+      {/* Categories - mobile horizontal */}
+      <div className="sticky top-0 bg-dark z-30 border-b border-white/10 lg:hidden">
+        <div className="max-w-7xl mx-auto flex items-center gap-3 p-4 overflow-x-auto no-scrollbar scroll-smooth">
+          {categories.map((cat) => (
+            <button key={cat.id} onClick={() => setActiveCategory(cat.name)}
+              className={`px-6 py-3 rounded-full text-[11px] font-bold uppercase tracking-[0.25em] whitespace-nowrap transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-vibrant ${
+                activeCategory === cat.name
+                  ? "bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-xl shadow-primary-vibrant/30"
+                  : "bg-white/5 text-zinc-500 hover:bg-white/10 hover:text-white border border-white/10"
+              }`}>
+              {cat.name}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Content: Sidebar + Grid */}
       <div className="max-w-7xl mx-auto flex min-h-[60vh]">
-        <aside className="sticky top-0 h-screen w-56 shrink-0 bg-dark z-30 border-r border-white/10 overflow-y-auto p-5 space-y-1.5 pt-5">
+        <aside className="sticky top-0 h-screen w-56 shrink-0 bg-dark z-30 border-r border-white/10 overflow-y-auto p-5 space-y-1.5 pt-5 max-lg:hidden">
           {categories.map((cat) => (
             <button key={cat.id} onClick={() => setActiveCategory(cat.name)}
               className={`w-full px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-[0.25em] text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-vibrant ${
