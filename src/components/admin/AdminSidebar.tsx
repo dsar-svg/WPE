@@ -40,7 +40,7 @@ export function AdminSidebar({
   isOpen = false,
 }: AdminSidebarProps) {
   const visibleNavItems = useMemo(
-    () => isSuperAdmin ? navItems : navItems.filter(item => item.id !== 'sedes'),
+    () => isSuperAdmin ? navItems : navItems.filter(item => item.id !== 'sedes' && item.id !== 'ajustes'),
     [isSuperAdmin]
   );
   return (

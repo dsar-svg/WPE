@@ -225,11 +225,13 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
                     <Tag className="w-3 h-3" /> Categorías
                   </button>
                 )}
+                {isSuperAdmin && (
                 <button onClick={() => setIsAddingProd(true)}
                   className="bg-primary-vibrant hover:scale-105 active:scale-95 transition-transform text-white px-4 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-lg shadow-primary-vibrant/20"
                 >
                   <Plus className="w-3 h-3" /> Nuevo
                 </button>
+                )}
               </div>
             </div>
             <div className="flex gap-2 p-1.5 bg-admin-surface border border-admin-border rounded-2xl overflow-x-auto no-scrollbar">
@@ -309,9 +311,11 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
                               )}
                             </div>
                             <div className="flex gap-2">
+                              {isSuperAdmin && (
                               <button onClick={() => setEditingProd(item)} className="p-2 hover:bg-admin-border rounded-xl text-admin-muted">
                                 <Edit2 className="w-4 h-4" />
                               </button>
+                              )}
                               {isSuperAdmin && (
                                 <button onClick={() => deleteProduct(item.id)} className="p-2 hover:bg-red-500/10 text-red-500/30 hover:text-red-500 rounded-xl transition-all">
                                   <Trash2 className="w-4 h-4" />
