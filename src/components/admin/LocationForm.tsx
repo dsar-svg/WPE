@@ -10,7 +10,7 @@ interface LocationFormProps {
   isSuperAdmin: boolean;
   onClose: () => void;
   onSave: (l: Location) => void;
-  createLocationAdmin?: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
+  createLocationAdmin?: (email: string, password: string, role?: string, locationId?: string) => Promise<{ success: boolean; message: string }>;
 }
 
 const dayOptions = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -106,7 +106,7 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave, createLo
         const isNewEmail = !location || location.adminEmail !== data.adminEmail;
         if (isNewEmail) {
           const pwd = data.adminPassword || generatePassword();
-          const result = await createLocationAdmin(data.adminEmail, pwd);
+          const result = await createLocationAdmin(data.adminEmail, pwd, 'location_admin', data.id.startsWith('loc-') ? undefined : data.id);
           setAdminResult({ ...result, password: pwd });
           if (!result.success) {
             setError(result.message);

@@ -31,7 +31,7 @@ interface RestaurantContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  createLocationAdmin: (email: string, password: string) => Promise<{ success: boolean; message: string }>;
+  createLocationAdmin: (email: string, password: string, role?: string, locationId?: string) => Promise<{ success: boolean; message: string }>;
 }
 
 const RestaurantContext = createContext<RestaurantContextType | undefined>(undefined);
@@ -196,8 +196,8 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   const adminsQuery = useQuery({
     queryKey: ['admins'],
     queryFn: async () => {
-      const { data } = await supabase.from('admins').select('email');
-      return new Set((data || []).map(a => a.email));
+      const { data } = await supabase.from('admins').select('email, role, location_id');
+      return data || [];
     },
     staleTime: 3600000,
   });
@@ -207,7 +207,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   const menuItemRows = menuQuery.data || [];
   const categoryRows = catQuery.data || [];
   const configRow = configQuery.data || null;
-  const adminEmails = adminsQuery.data || new Set<string>();
+  const adminRecords = adminsQuery.data || [];
 
   const locations = useMemo(() => locationRows.map(rowToLocation), [locationRows]);
   const menuItems = useMemo(() => menuItemRows.map(rowToProduct), [menuItemRows]);
@@ -224,21 +224,20 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   const [isLocalAdmin, setIsLocalAdmin] = useState(false);
   const [managedLocationId, setManagedLocationId] = useState<string | null>(null);
 
-  const SUPER_ADMIN_EMAIL = 'dariomedina2619@gmail.com';
-
   useEffect(() => {
     if (userEmail) {
-      const isSuper = userEmail === SUPER_ADMIN_EMAIL;
-      const localLoc = locations.find(l => l.adminEmail === userEmail);
-      console.log('[Auth Debug]', { userEmail, SUPER_ADMIN_EMAIL, isSuper, localLoc: localLoc?.name, localLocEmail: localLoc?.adminEmail, totalLocations: locations.length });
+      const currentAdmin = adminRecords.find((a: any) => a.email === userEmail);
+      const isSuper = currentAdmin?.role === 'super_admin';
+      const locId = currentAdmin?.role === 'location_admin' ? currentAdmin.location_id : null;
+      console.log('[Auth Debug]', { userEmail, role: currentAdmin?.role, isSuper, locId, adminRecords });
       setIsSuperAdmin(isSuper);
-      setIsLocalAdmin(!!localLoc);
-      setIsAdmin(isSuper || !!localLoc);
-      setManagedLocationId(localLoc?.id || null);
+      setIsLocalAdmin(currentAdmin?.role === 'location_admin');
+      setIsAdmin(!!currentAdmin);
+      setManagedLocationId(locId);
     } else {
       setIsAdmin(false); setIsSuperAdmin(false); setIsLocalAdmin(false); setManagedLocationId(null);
     }
-  }, [userEmail, locations, adminEmails]);
+  }, [userEmail, adminRecords]);
 
   const ordersQuery = useQuery({
     queryKey: ['orders'],
@@ -277,10 +276,9 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    const isSuper = email === SUPER_ADMIN_EMAIL;
-    const localLoc = locations.find(l => l.adminEmail === email);
-    console.log('[Auth Debug signIn]', { email, SUPER_ADMIN_EMAIL, isSuper, localLoc: localLoc?.name, localLocEmail: localLoc?.adminEmail, totalLocations: locations.length });
-    if (!isSuper && !localLoc) { await supabase.auth.signOut(); throw new Error('no_admin'); }
+    const currentAdmin = adminRecords.find((a: any) => a.email === email);
+    console.log('[Auth Debug signIn]', { email, role: currentAdmin?.role, adminRecords });
+    if (!currentAdmin) { await supabase.auth.signOut(); throw new Error('no_admin'); }
   };
 
   const signUp = async (email: string, password: string) => {
@@ -288,7 +286,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
-  const createLocationAdmin = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
+  const createLocationAdmin = async (email: string, password: string, role: string = 'location_admin', locationId?: string): Promise<{ success: boolean; message: string }> => {
     try {
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) {
@@ -296,8 +294,10 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
       }
       if (data.user) {
         const { error: adminError } = await supabase.from('admins').insert({
-          email: email,
+          email,
           user_id: data.user.id,
+          role,
+          location_id: locationId || null,
         });
         if (adminError) {
           console.error('Error inserting admin:', adminError);
