@@ -85,7 +85,7 @@ export function PublicMenuPage() {
 
       {/* Content: Sidebar + Grid */}
       <div className="max-w-7xl mx-auto flex min-h-[60vh]">
-        <aside className="sticky top-0 self-start max-h-screen w-48 shrink-0 bg-dark/95 backdrop-blur-2xl z-30 border-r border-white/10 overflow-y-auto p-4 space-y-1 pt-6">
+        <aside className="sticky top-0 self-start max-h-screen w-56 shrink-0 bg-dark/95 backdrop-blur-2xl z-30 border-r border-white/10 overflow-y-auto p-4 space-y-1 pt-6">
           {categories.map((cat) => (
             <button key={cat.id} onClick={() => setActiveCategory(cat.name)}
               className={`w-full px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-[0.25em] text-left transition-all duration-200 ${
