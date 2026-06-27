@@ -54,12 +54,28 @@ export function PublicMenuPage() {
   }
 
   return (
-    <div className="min-h-screen bg-dark font-body selection:bg-primary-vibrant text-white">
+    <div className="min-h-screen bg-dark font-body selection:bg-primary-vibrant text-white flex">
       <SEO
         title="Menú - Platos y Precios"
         description="Explora el menú completo de Wallace Panda Express. Arroz chino, pollo agridulce, wonton, egg rolls, sopa y más. Precios accesibles y delivery rápido."
         canonical="/menu"
       />
+
+      {/* Desktop sidebar - sticky */}
+      <aside className="sticky top-0 h-screen w-56 bg-dark/95 backdrop-blur-2xl z-30 border-r border-white/10 overflow-y-auto p-5 space-y-1.5 pt-6 max-lg:hidden flex-shrink-0">
+        {categories.map((cat) => (
+          <button key={cat.id} onClick={() => setActiveCategory(cat.name)}
+            className={`w-full px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-[0.25em] text-left transition-all duration-200 ${
+              activeCategory === cat.name
+                ? 'bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-xl shadow-primary-vibrant/30'
+                : 'text-zinc-400 hover:bg-white/5 hover:text-white'
+            }`}>
+            {cat.name}
+          </button>
+        ))}
+      </aside>
+
+      <div className="flex-1 flex flex-col min-w-0">
       {/* Header */}
       <header className="bg-dark p-10 md:p-16 text-white relative overflow-hidden border-b-2 border-primary-vibrant/20">
         <div className="absolute top-0 right-0 w-80 h-80 bg-primary-vibrant/15 rounded-full blur-[40px] -mr-40 -mt-40" />
@@ -111,20 +127,7 @@ export function PublicMenuPage() {
         ))}
       </aside>
 
-      {/* Desktop sidebar - fixed */}
-      <aside className="fixed left-0 top-0 h-screen w-56 bg-dark/95 backdrop-blur-2xl z-30 border-r border-white/10 overflow-y-auto p-5 space-y-1.5 pt-6 max-lg:hidden">
-        {categories.map((cat) => (
-          <button key={cat.id} onClick={() => setActiveCategory(cat.name)}
-            className={`w-full px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-[0.25em] text-left transition-all duration-200 ${
-              activeCategory === cat.name
-                ? 'bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-xl shadow-primary-vibrant/30'
-                : 'text-zinc-400 hover:bg-white/5 hover:text-white'
-            }`}>
-            {cat.name}
-          </button>
-        ))}
-      </aside>
-      <main className="max-w-7xl mx-auto lg:pl-56 px-6 py-16 min-h-[60vh] bg-gradient-to-br from-primary-vibrant/[0.05] via-dark to-secondary-vibrant/[0.03]">
+      <main className="max-w-7xl mx-auto px-6 py-16 min-h-[60vh] bg-gradient-to-br from-primary-vibrant/[0.05] via-dark to-secondary-vibrant/[0.03]">
         {filteredItems.length === 0 ? (
           <div className="py-24 text-center space-y-6">
             <div className="w-24 h-24 bg-white/5 rounded-2xl flex items-center justify-center mx-auto border border-white/10">
@@ -231,6 +234,7 @@ export function PublicMenuPage() {
         )}
       </AnimatePresence>
       <PWAInstallPrompt />
+    </div>
     </div>
   );
 }

@@ -31,7 +31,7 @@ BEGIN
   cat := 'Chopsuey';
   SELECT COALESCE(MAX(sort_order), -1) + 1 INTO next_order FROM public.menu_items WHERE category = cat;
   INSERT INTO public.menu_items (name, description, price, category, sort_order)
-  SELECT v.name, v.descrr, v.price, cat, next_order + v.ord
+  SELECT v.name, v.descr, v.price, cat, next_order + v.ord
   FROM (VALUES
     (0, 'Chopsuey (Pollo, Jamón) 950g-1kg', 'Chopsuey de pollo y jamón', 7.99),
     (1, 'Chopsuey (Camarones, Jamón) 950g-1kg', 'Chopsuey de camarones y jamón', 8.99),

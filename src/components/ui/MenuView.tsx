@@ -129,7 +129,22 @@ export function MenuView({
   }, [filteredItems, page]);
 
   return (
-    <div className="min-h-screen bg-dark-card pb-32 flex flex-col font-body overflow-x-hidden">
+    <div className="min-h-screen bg-dark-card pb-32 flex font-body overflow-x-hidden">
+      {/* Desktop sidebar - sticky */}
+      <aside className="sticky top-0 h-screen w-56 bg-dark z-30 border-r border-white/10 overflow-y-auto p-5 space-y-1.5 pt-5 max-lg:hidden flex-shrink-0">
+        {categories.map((cat) => (
+          <button key={cat.id} onClick={() => setActiveCategory(cat.name)}
+            className={`w-full px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-[0.25em] text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-vibrant ${
+              activeCategory === cat.name
+                ? "bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-xl shadow-primary-vibrant/30"
+                : "text-zinc-500 hover:bg-white/5 hover:text-white"
+            }`}>
+            {cat.name}
+          </button>
+        ))}
+      </aside>
+
+      <div className="flex-1 flex flex-col min-w-0">
       {/* Header */}
       <div className="bg-dark p-8 md:p-14 text-white relative overflow-hidden border-b-2 border-secondary-vibrant/30">
         <div className="absolute top-0 right-0 w-72 h-72 bg-primary-vibrant/25 rounded-full blur-[40px] -mr-36 -mt-36" />
@@ -179,20 +194,7 @@ export function MenuView({
         ))}
       </aside>
 
-      {/* Desktop sidebar - fixed */}
-      <aside className="fixed left-0 top-0 h-screen w-56 bg-dark z-30 border-r border-white/10 overflow-y-auto p-5 space-y-1.5 pt-5 max-lg:hidden">
-        {categories.map((cat) => (
-          <button key={cat.id} onClick={() => setActiveCategory(cat.name)}
-            className={`w-full px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-[0.25em] text-left transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-vibrant ${
-              activeCategory === cat.name
-                ? "bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-xl shadow-primary-vibrant/30"
-                : "text-zinc-500 hover:bg-white/5 hover:text-white"
-            }`}>
-            {cat.name}
-          </button>
-        ))}
-      </aside>
-      <div className="max-w-7xl mx-auto lg:pl-56 px-5 py-8 min-h-[60vh] bg-gradient-to-b from-transparent via-primary-vibrant/[0.03] to-transparent">
+      <div className="max-w-7xl mx-auto px-5 py-8 min-h-[60vh] bg-gradient-to-b from-transparent via-primary-vibrant/[0.03] to-transparent">
         {filteredItems.length === 0 ? (
           <div className="py-20 text-center space-y-4">
             <div className="w-20 h-20 bg-primary-vibrant/10 rounded-xl flex items-center justify-center mx-auto border border-primary-vibrant/20">
@@ -275,6 +277,7 @@ export function MenuView({
           </div>
         </motion.button>
       )}
+    </div>
     </div>
   );
 }
