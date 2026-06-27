@@ -61,8 +61,8 @@ export function PublicMenuPage() {
         canonical="/menu"
       />
 
-      {/* Desktop sidebar - sticky */}
-      <aside className="sticky top-0 h-screen w-56 bg-dark/95 backdrop-blur-2xl z-30 border-r border-white/10 overflow-y-auto p-5 space-y-1.5 pt-6 max-lg:hidden flex-shrink-0">
+      {/* Desktop sidebar */}
+      <aside className="w-56 bg-dark/95 backdrop-blur-2xl z-30 border-r border-white/10 overflow-y-auto p-5 space-y-1.5 pt-6 max-lg:hidden flex-shrink-0">
         {categories.map((cat) => (
           <button key={cat.id} onClick={() => setActiveCategory(cat.name)}
             className={`w-full px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-[0.25em] text-left transition-all duration-200 ${
