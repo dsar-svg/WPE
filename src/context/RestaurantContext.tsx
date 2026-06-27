@@ -85,6 +85,7 @@ function rowToLocation(row: any): Location {
     latitude: row.latitude,
     longitude: row.longitude,
     adminEmail: row.admin_email,
+    adminPassword: row.admin_password || '',
     discontinuedProductIds: row.discontinued_product_ids || [],
   };
 }
@@ -368,6 +369,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     if (loc.latitude !== undefined) dbRow.latitude = loc.latitude;
     if (loc.longitude !== undefined) dbRow.longitude = loc.longitude;
     if (loc.adminEmail !== undefined) dbRow.admin_email = loc.adminEmail;
+    if (loc.adminPassword !== undefined) dbRow.admin_password = loc.adminPassword;
     if (loc.discontinuedProductIds !== undefined) dbRow.discontinued_product_ids = loc.discontinuedProductIds;
     const id = loc._id || loc.id;
     if (id && typeof id === 'string' && (id.startsWith('loc-') || id.startsWith('new-'))) {
