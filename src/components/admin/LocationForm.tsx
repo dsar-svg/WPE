@@ -1,6 +1,6 @@
 import { useState, ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Save, RefreshCcw, Info, Clock, AlertCircle, Image as ImageIcon, MessageCircle, Copy, Check } from 'lucide-react';
+import { X, Save, RefreshCcw, Info, Clock, AlertCircle, Image as ImageIcon, MessageCircle, Copy, Check, Eye, EyeOff } from 'lucide-react';
 import { Location } from '../../types';
 import { useUploadImage } from '../../hooks/useUploadImage';
 import { validateImageSize } from '../../lib/uploadImage';
@@ -66,6 +66,7 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave, createLo
   const [error, setError] = useState<string | null>(null);
   const [adminResult, setAdminResult] = useState<{ success: boolean; message: string; password?: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const uploadImage = useUploadImage();
 
   const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -349,14 +350,20 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave, createLo
                       <label htmlFor="location-admin-password" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">
                         Contraseña de Acceso
                       </label>
-                      <input
-                        id="location-admin-password"
-                        type="text"
-                        className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
-                        placeholder="Contraseña"
-                        value={data.adminPassword || ''}
-                        onChange={e => setData({...data, adminPassword: e.target.value})}
-                      />
+                      <div className="relative">
+                        <input
+                          id="location-admin-password"
+                          type={showPassword ? 'text' : 'password'}
+                          className="w-full bg-zinc-950 border border-zinc-800 p-4 pr-12 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
+                          placeholder="Contraseña"
+                          value={data.adminPassword || ''}
+                          onChange={e => setData({...data, adminPassword: e.target.value})}
+                        />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 transition-colors">
+                          {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
                       <p className="text-[9px] text-zinc-600 ml-2">
                         Se recomienda usar una contraseña segura.
                       </p>
