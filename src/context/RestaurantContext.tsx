@@ -230,6 +230,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     if (userEmail) {
       const isSuper = userEmail === SUPER_ADMIN_EMAIL;
       const localLoc = locations.find(l => l.adminEmail === userEmail);
+      console.log('[Auth Debug]', { userEmail, SUPER_ADMIN_EMAIL, isSuper, localLoc: localLoc?.name, localLocEmail: localLoc?.adminEmail, totalLocations: locations.length });
       setIsSuperAdmin(isSuper);
       setIsLocalAdmin(!!localLoc);
       setIsAdmin(isSuper || !!localLoc);
@@ -278,6 +279,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
     const isSuper = email === SUPER_ADMIN_EMAIL;
     const localLoc = locations.find(l => l.adminEmail === email);
+    console.log('[Auth Debug signIn]', { email, SUPER_ADMIN_EMAIL, isSuper, localLoc: localLoc?.name, localLocEmail: localLoc?.adminEmail, totalLocations: locations.length });
     if (!isSuper && !localLoc) { await supabase.auth.signOut(); throw new Error('no_admin'); }
   };
 
