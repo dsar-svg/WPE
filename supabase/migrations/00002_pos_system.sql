@@ -15,13 +15,15 @@ ALTER TABLE public.orders
   ADD COLUMN IF NOT EXISTS cashier_id UUID REFERENCES public.admins(id) ON DELETE SET NULL;
 
 -- 3. Allow anon INSERT for orders (cashiers without Supabase Auth)
-CREATE POLICY IF NOT EXISTS "Anyone can insert orders (POS)"
+DROP POLICY IF EXISTS "Anyone can insert orders (POS)" ON public.orders;
+CREATE POLICY "Anyone can insert orders (POS)"
   ON public.orders FOR INSERT
   TO anon, authenticated
   WITH CHECK (true);
 
 -- 4. Allow anon SELECT for admins (PIN login)
-CREATE POLICY IF NOT EXISTS "Anyone can read admins (POS)"
+DROP POLICY IF EXISTS "Anyone can read admins (POS)" ON public.admins;
+CREATE POLICY "Anyone can read admins (POS)"
   ON public.admins FOR SELECT
   TO anon, authenticated
   USING (true);
