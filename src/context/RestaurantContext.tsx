@@ -304,6 +304,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
           return { success: false, message: 'Usuario creado pero no se pudo registrar como admin. Créalo manualmente en Supabase.' };
         }
       }
+      invalidate(['admins']);
       return { success: true, message: data.user?.identities?.length === 0
         ? 'Este email ya tiene una cuenta. El admin puede iniciar sesión con su contraseña.'
         : 'Admin creado. Si confirmación de email está activa, el admin debe confirmar su correo antes de iniciar sesión.' };
