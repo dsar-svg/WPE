@@ -224,9 +224,11 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   const [isLocalAdmin, setIsLocalAdmin] = useState(false);
   const [managedLocationId, setManagedLocationId] = useState<string | null>(null);
 
+  const SUPER_ADMIN_EMAIL = 'dariomedina2619@gmail.com';
+
   useEffect(() => {
     if (userEmail) {
-      const isSuper = adminEmails.has(userEmail);
+      const isSuper = userEmail === SUPER_ADMIN_EMAIL;
       const localLoc = locations.find(l => l.adminEmail === userEmail);
       setIsSuperAdmin(isSuper);
       setIsLocalAdmin(!!localLoc);
@@ -274,18 +276,8 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    let isSuper = adminEmails.has(email);
+    const isSuper = email === SUPER_ADMIN_EMAIL;
     const localLoc = locations.find(l => l.adminEmail === email);
-    if (!isSuper && !localLoc) {
-      const fresh = await queryClient.fetchQuery({
-        queryKey: ['admins'],
-        queryFn: async () => {
-          const { data } = await supabase.from('admins').select('email');
-          return new Set((data || []).map(a => a.email));
-        },
-      });
-      isSuper = fresh.has(email);
-    }
     if (!isSuper && !localLoc) { await supabase.auth.signOut(); throw new Error('no_admin'); }
   };
 
