@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Plus, Edit2, Trash2, AlertTriangle, ChevronUp, ChevronDown } from 'lucide-react';
+import { X, Plus, Edit2, Trash2, AlertTriangle, GripVertical } from 'lucide-react';
 import { Category } from '../../types';
 
 interface CategoryModalProps {
@@ -16,6 +16,8 @@ export function CategoryModal({ categories, onClose, onSave, onDelete }: Categor
   const [newName, setNewName] = useState('');
   const [, setIsSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const handleSave = async (cat: Category) => {
     try {
@@ -49,20 +51,39 @@ export function CategoryModal({ categories, onClose, onSave, onDelete }: Categor
     }
   };
 
-  const moveUp = async (index: number) => {
-    if (index === 0 || categories.length < 2) return;
-    const prev = categories[index - 1];
-    const curr = categories[index];
-    await onSave({ ...prev, order: curr.order });
-    await onSave({ ...curr, order: prev.order });
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.effectAllowed = 'move';
+    setDragIndex(index);
   };
 
-  const moveDown = async (index: number) => {
-    if (index === categories.length - 1 || categories.length < 2) return;
-    const next = categories[index + 1];
-    const curr = categories[index];
-    await onSave({ ...curr, order: next.order });
-    await onSave({ ...next, order: curr.order });
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDrop = async (index: number) => {
+    if (dragIndex === null || dragIndex === index) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const reordered = [...categories];
+    const [moved] = reordered.splice(dragIndex, 1);
+    reordered.splice(index, 0, moved);
+
+    for (let i = 0; i < reordered.length; i++) {
+      await onSave({ ...reordered[i], order: i });
+    }
+
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
   };
 
   return (
@@ -107,22 +128,18 @@ export function CategoryModal({ categories, onClose, onSave, onDelete }: Categor
             {categories.map((cat, index) => (
               <div
                 key={cat.id}
-                className="bg-zinc-950 border border-zinc-900 p-4 rounded-2xl flex items-center justify-between group"
+                draggable
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDrop={() => handleDrop(index)}
+                onDragEnd={handleDragEnd}
+                className={`bg-zinc-950 border p-4 rounded-2xl flex items-center justify-between group transition-all ${
+                  dragOverIndex === index ? 'border-primary-vibrant scale-[1.02]' : 'border-zinc-900'
+                } ${dragIndex === index ? 'opacity-50' : ''}`}
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="flex flex-col gap-0.5">
-                    <button onClick={() => moveUp(index)}
-                      disabled={index === 0}
-                      className="p-0.5 text-zinc-600 hover:text-white hover:bg-zinc-800 rounded transition-all disabled:opacity-20 disabled:cursor-not-allowed"
-                    >
-                      <ChevronUp className="w-3.5 h-3.5" />
-                    </button>
-                    <button onClick={() => moveDown(index)}
-                      disabled={index === categories.length - 1}
-                      className="p-0.5 text-zinc-600 hover:text-white hover:bg-zinc-800 rounded transition-all disabled:opacity-20 disabled:cursor-not-allowed"
-                    >
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
+                  <div className="cursor-grab active:cursor-grabbing text-zinc-600 hover:text-zinc-400 transition-colors flex-shrink-0">
+                    <GripVertical className="w-4 h-4" />
                   </div>
                   {editingId === cat.id ? (
                     <input
