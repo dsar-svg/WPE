@@ -111,21 +111,20 @@ export function PublicMenuPage() {
         ))}
       </aside>
 
-      {/* Content: Sidebar (desktop) + Grid */}
-      <div className="max-w-7xl mx-auto flex min-h-[60vh]">
-        <aside className="sticky top-0 h-screen w-56 shrink-0 bg-dark/95 backdrop-blur-2xl z-30 border-r border-white/10 overflow-y-auto p-5 space-y-1.5 pt-6 max-lg:hidden">
-          {categories.map((cat) => (
-            <button key={cat.id} onClick={() => setActiveCategory(cat.name)}
-              className={`w-full px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-[0.25em] text-left transition-all duration-200 ${
-                activeCategory === cat.name
-                  ? 'bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-xl shadow-primary-vibrant/30'
-                  : 'text-zinc-400 hover:bg-white/5 hover:text-white'
-              }`}>
-              {cat.name}
-            </button>
-          ))}
-        </aside>
-        <main className="flex-1 min-w-0 px-6 py-16 bg-gradient-to-br from-primary-vibrant/[0.05] via-dark to-secondary-vibrant/[0.03]">
+      {/* Desktop sidebar - fixed */}
+      <aside className="fixed left-0 top-0 h-screen w-56 bg-dark/95 backdrop-blur-2xl z-30 border-r border-white/10 overflow-y-auto p-5 space-y-1.5 pt-6 max-lg:hidden">
+        {categories.map((cat) => (
+          <button key={cat.id} onClick={() => setActiveCategory(cat.name)}
+            className={`w-full px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-[0.25em] text-left transition-all duration-200 ${
+              activeCategory === cat.name
+                ? 'bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-xl shadow-primary-vibrant/30'
+                : 'text-zinc-400 hover:bg-white/5 hover:text-white'
+            }`}>
+            {cat.name}
+          </button>
+        ))}
+      </aside>
+      <main className="max-w-7xl mx-auto lg:pl-56 px-6 py-16 min-h-[60vh] bg-gradient-to-br from-primary-vibrant/[0.05] via-dark to-secondary-vibrant/[0.03]">
         {filteredItems.length === 0 ? (
           <div className="py-24 text-center space-y-6">
             <div className="w-24 h-24 bg-white/5 rounded-2xl flex items-center justify-center mx-auto border border-white/10">
@@ -186,7 +185,6 @@ export function PublicMenuPage() {
           </>
         )}
       </main>
-      </div>
 
       {/* Footer */}
       <footer className="py-20 bg-dark text-white text-center relative overflow-hidden border-t-2 border-primary-vibrant/30">
