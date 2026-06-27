@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Plus, Edit2, Trash2, AlertTriangle } from 'lucide-react';
+import { X, Plus, Edit2, Trash2, AlertTriangle, ChevronUp, ChevronDown } from 'lucide-react';
 import { Category } from '../../types';
 
 interface CategoryModalProps {
@@ -49,6 +49,22 @@ export function CategoryModal({ categories, onClose, onSave, onDelete }: Categor
     }
   };
 
+  const moveUp = async (index: number) => {
+    if (index === 0 || categories.length < 2) return;
+    const prev = categories[index - 1];
+    const curr = categories[index];
+    await onSave({ ...prev, order: curr.order });
+    await onSave({ ...curr, order: prev.order });
+  };
+
+  const moveDown = async (index: number) => {
+    if (index === categories.length - 1 || categories.length < 2) return;
+    const next = categories[index + 1];
+    const curr = categories[index];
+    await onSave({ ...curr, order: next.order });
+    await onSave({ ...next, order: curr.order });
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <motion.div
@@ -88,27 +104,43 @@ export function CategoryModal({ categories, onClose, onSave, onDelete }: Categor
           </div>
 
           <div className="space-y-2 max-h-[40vh] overflow-y-auto no-scrollbar pr-2">
-            {categories.map((cat) => (
+            {categories.map((cat, index) => (
               <div
                 key={cat.id}
                 className="bg-zinc-950 border border-zinc-900 p-4 rounded-2xl flex items-center justify-between group"
               >
-                {editingId === cat.id ? (
-                  <input
-                    autoFocus
-                    className="flex-1 bg-zinc-900 border border-zinc-800 p-2 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
-                    value={editingName}
-                    onChange={e => setEditingName(e.target.value)}
-                    onBlur={() => commitEdit(cat)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') commitEdit(cat);
-                      if (e.key === 'Escape') setEditingId(null);
-                    }}
-                  />
-                ) : (
-                  <span className="font-bold text-zinc-300">{cat.name}</span>
-                )}
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="flex flex-col gap-0.5">
+                    <button onClick={() => moveUp(index)}
+                      disabled={index === 0}
+                      className="p-0.5 text-zinc-600 hover:text-white hover:bg-zinc-800 rounded transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                    >
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => moveDown(index)}
+                      disabled={index === categories.length - 1}
+                      className="p-0.5 text-zinc-600 hover:text-white hover:bg-zinc-800 rounded transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  {editingId === cat.id ? (
+                    <input
+                      autoFocus
+                      className="flex-1 bg-zinc-900 border border-zinc-800 p-2 rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
+                      value={editingName}
+                      onChange={e => setEditingName(e.target.value)}
+                      onBlur={() => commitEdit(cat)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') commitEdit(cat);
+                        if (e.key === 'Escape') setEditingId(null);
+                      }}
+                    />
+                  ) : (
+                    <span className="font-bold text-zinc-300 truncate">{cat.name}</span>
+                  )}
+                </div>
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                   <button
                     onClick={() => startEditing(cat)}
                     className="p-2 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-all"
