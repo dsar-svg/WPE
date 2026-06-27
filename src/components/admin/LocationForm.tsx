@@ -98,9 +98,8 @@ export function LocationForm({ location, isSuperAdmin, onClose, onSave, createLo
       setAdminResult(null);
       await onSave(data);
 
-      if (!location && data.adminEmail && createLocationAdmin) {
+      if (data.adminEmail && createLocationAdmin) {
         const pwd = data.adminPassword || generatePassword();
-        setData(prev => ({ ...prev, adminPassword: pwd }));
         const result = await createLocationAdmin(data.adminEmail, pwd);
         setAdminResult({ ...result, password: pwd });
         if (!result.success) {

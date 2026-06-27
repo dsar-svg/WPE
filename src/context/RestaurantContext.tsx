@@ -355,31 +355,29 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   }, [invalidate]);
 
   const updateLocation = useCallback(async (loc: any) => {
-    try {
-      const dbRow: Record<string, any> = {};
-      if (loc.name !== undefined) dbRow.name = loc.name;
-      if (loc.whatsapp !== undefined) dbRow.whatsapp = loc.whatsapp;
-      if (loc.schedule !== undefined) dbRow.schedule = loc.schedule;
-      if (loc.address !== undefined) dbRow.address = loc.address;
-      if (loc.image !== undefined) dbRow.image = loc.image;
-      if (loc.openTime !== undefined) dbRow.open_time = loc.openTime;
-      if (loc.closeTime !== undefined) dbRow.close_time = loc.closeTime;
-      if (loc.isActive !== undefined) dbRow.is_open = loc.isActive;
-      else if (loc.isOpen !== undefined) dbRow.is_open = loc.isOpen;
-      if (loc.latitude !== undefined) dbRow.latitude = loc.latitude;
-      if (loc.longitude !== undefined) dbRow.longitude = loc.longitude;
-      if (loc.adminEmail !== undefined) dbRow.admin_email = loc.adminEmail;
-      if (loc.discontinuedProductIds !== undefined) dbRow.discontinued_product_ids = loc.discontinuedProductIds;
-      const id = loc._id || loc.id;
-      if (id && typeof id === 'string' && (id.startsWith('loc-') || id.startsWith('new-'))) {
-        await supabase.from('locations').insert(dbRow);
-      } else if (id) {
-        await supabase.from('locations').update(dbRow).eq('id', id);
-      } else {
-        await supabase.from('locations').insert(dbRow);
-      }
-      invalidate(['locations']);
-    } catch (error) { console.error('Error updating location:', error); }
+    const dbRow: Record<string, any> = {};
+    if (loc.name !== undefined) dbRow.name = loc.name;
+    if (loc.whatsapp !== undefined) dbRow.whatsapp = loc.whatsapp;
+    if (loc.schedule !== undefined) dbRow.schedule = loc.schedule;
+    if (loc.address !== undefined) dbRow.address = loc.address;
+    if (loc.image !== undefined) dbRow.image = loc.image;
+    if (loc.openTime !== undefined) dbRow.open_time = loc.openTime;
+    if (loc.closeTime !== undefined) dbRow.close_time = loc.closeTime;
+    if (loc.isActive !== undefined) dbRow.is_open = loc.isActive;
+    else if (loc.isOpen !== undefined) dbRow.is_open = loc.isOpen;
+    if (loc.latitude !== undefined) dbRow.latitude = loc.latitude;
+    if (loc.longitude !== undefined) dbRow.longitude = loc.longitude;
+    if (loc.adminEmail !== undefined) dbRow.admin_email = loc.adminEmail;
+    if (loc.discontinuedProductIds !== undefined) dbRow.discontinued_product_ids = loc.discontinuedProductIds;
+    const id = loc._id || loc.id;
+    if (id && typeof id === 'string' && (id.startsWith('loc-') || id.startsWith('new-'))) {
+      await supabase.from('locations').insert(dbRow);
+    } else if (id) {
+      await supabase.from('locations').update(dbRow).eq('id', id);
+    } else {
+      await supabase.from('locations').insert(dbRow);
+    }
+    invalidate(['locations']);
   }, [invalidate]);
 
   const updateProduct = useCallback(async (prod: any) => {
