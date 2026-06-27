@@ -3,9 +3,12 @@
 -- Ejecutar en SQL Editor de Supabase
 -- ============================================================
 
--- 1. Renombrar "Entradas" → "Entrada" para unificar con el Excel
-UPDATE public.categories SET name = 'Entrada' WHERE name = 'Entradas';
+-- 1. Unificar "Entradas" → "Entrada" (crear categoría nueva, re-apuntar platos, borrar la vieja)
+INSERT INTO public.categories (name, sort_order)
+  SELECT 'Entrada', sort_order FROM public.categories WHERE name = 'Entradas'
+  ON CONFLICT (name) DO NOTHING;
 UPDATE public.menu_items SET category = 'Entrada' WHERE category = 'Entradas';
+DELETE FROM public.categories WHERE name = 'Entradas';
 
 -- 2. Crear categorías nuevas (las que no existen ya)
 INSERT INTO public.categories (name, sort_order) VALUES
