@@ -76,6 +76,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
   delivery_fee NUMERIC(10,2) NOT NULL DEFAULT 0,
   total NUMERIC(10,2) NOT NULL DEFAULT 0,
   notes TEXT DEFAULT '',
+  payment_screenshot JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

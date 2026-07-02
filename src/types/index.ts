@@ -52,6 +52,7 @@ export interface Product {
   image: string;
   inStock: boolean;
   order: number;
+  code?: string;
   choices?: ProductChoice[];
   maxSelections?: number;
 }
@@ -90,6 +91,7 @@ export interface CheckoutData {
   calculatedDistance?: number;
   calculatedDeliveryFee?: number;
   notes: string;
+  paymentScreenshot?: PaymentScreenshot;
 }
 
 export interface OrderItem {
@@ -115,5 +117,24 @@ export interface Order {
   total: number;
   notes: string;
   status: OrderStatus;
+  payment_method?: PaymentMethod;
+  change_amount?: number;
+  cashier_id?: string;
   created_at: string;
+}
+
+export type PaymentMethod = 'Efectivo' | 'Tarjeta' | 'Transferencia' | 'QR' | 'Otro';
+
+export interface POSCartItem {
+  product: Product;
+  quantity: number;
+  notes?: string;
+  selectedChoices?: string[];
+}
+
+export interface PaymentScreenshot {
+  filename: string;
+  previewUrl: string;
+  uploaded: boolean;
+  path?: string;
 }
