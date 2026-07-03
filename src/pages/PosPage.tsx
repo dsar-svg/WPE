@@ -128,7 +128,7 @@ function PaymentModal({
         className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-6"
       >
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-black text-white">Cobrar</h2>
+          <h2 className="text-xl font-black text-white">Cerrar Venta</h2>
           <button onClick={onClose} className="p-2 bg-zinc-800 rounded-full text-zinc-500 hover:text-white"><X /></button>
         </div>
 
@@ -189,7 +189,7 @@ function PaymentModal({
           className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
         >
           <DollarSign className="w-5 h-5" />
-          {method === 'Efectivo' ? `Cobrar $${total.toFixed(2)}` : `Cobrar con ${method}`}
+          {method === 'Efectivo' ? `Cerrar venta $${total.toFixed(2)}` : `Cerrar venta con ${method}`}
         </button>
       </motion.div>
     </motion.div>
@@ -605,6 +605,12 @@ export function PosPage() {
   } | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState('');
 
+  const isFormValid =
+    customerCedula.trim().length >= 6 &&
+    customerName.trim().length > 0 &&
+    customerPhone.startsWith('04') &&
+    customerPhone.replace(/\D/g, '').length >= 9;
+
   useEffect(() => {
     if (!selectedLocationId && locations.length > 0) {
       setSelectedLocationId(locations[0].id);
@@ -702,10 +708,7 @@ export function PosPage() {
       });
       if (error) throw error;
 
-      // Save customer for future auto-fill
-      if (customerCedula && customerCedula.length >= 6) {
-        saveCustomer({ cedula: customerCedula, name: customerName || 'Mostrador', phone: customerPhone || 'N/A' });
-      }
+      await saveCustomer({ cedula: customerCedula, name: customerName || 'Mostrador', phone: customerPhone || 'N/A' });
 
       setShowPayModal(false);
       setShowReceipt({ items: cart, total: cartTotal, paymentMethod: method, changeAmount, invoiceNumber });
@@ -843,14 +846,14 @@ export function PosPage() {
                 </div>
               )}
             </div>
-            <input value={customerName} onChange={e => setCustomerName(e.target.value)}
+            <input value={customerName} onChange={e => setCustomerName(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''))}
               placeholder="Cliente"
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
+              className={`w-full bg-zinc-900 border rounded-xl px-3 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant ${customerName.trim().length === 0 ? 'border-red-500/50' : 'border-zinc-800'}`}
             />
             <div className="flex gap-2">
-              <input value={customerPhone} onChange={e => setCustomerPhone(e.target.value)}
-                placeholder="Teléfono"
-                className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
+              <input value={customerPhone} onChange={e => setCustomerPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                placeholder="Teléfono 04XXXXXXXXX"
+                className={`flex-1 bg-zinc-900 border rounded-xl px-3 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant ${customerPhone.length > 0 && (!customerPhone.startsWith('04') || customerPhone.length < 9) ? 'border-red-500/50' : 'border-zinc-800'}`}
               />
               <select value={deliveryType} onChange={e => setDeliveryType(e.target.value as any)}
                 className="bg-zinc-900 border border-zinc-800 rounded-xl px-2 py-2 text-xs font-bold text-zinc-400 outline-none"
@@ -902,7 +905,7 @@ export function PosPage() {
               <span className="text-lg font-black text-white">Total:</span>
               <span className="text-2xl font-black text-primary-vibrant">${cartTotal.toFixed(2)}</span>
             </div>
-            <button onClick={() => setShowPayModal(true)} disabled={cart.length === 0}
+            <button onClick={() => setShowPayModal(true)} disabled={cart.length === 0 || !isFormValid}
               className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
             >
               <DollarSign className="w-5 h-5" /> Cobrar
@@ -913,8 +916,8 @@ export function PosPage() {
 
       {/* Mobile cart button */}
       {cartCount > 0 && (
-        <button onClick={() => setShowPayModal(true)}
-          className="lg:hidden fixed bottom-4 left-4 right-4 bg-primary-vibrant text-white p-4 rounded-2xl font-black shadow-2xl shadow-primary-vibrant/30 z-40 flex items-center justify-between active:scale-[0.98] transition-transform"
+        <button onClick={() => setShowPayModal(true)} disabled={!isFormValid}
+          className="lg:hidden fixed bottom-4 left-4 right-4 bg-primary-vibrant text-white p-4 rounded-2xl font-black shadow-2xl shadow-primary-vibrant/30 z-40 flex items-center justify-between active:scale-[0.98] transition-transform disabled:opacity-50"
         >
           <span className="flex items-center gap-2"><ShoppingCart className="w-5 h-5" /> {cartCount} items</span>
           <span className="text-lg">${cartTotal.toFixed(2)}</span>
