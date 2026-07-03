@@ -1,8 +1,8 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, Printer, DollarSign, CreditCard, Smartphone, Banknote, QrCode, LogOut, User } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, Printer, DollarSign, CreditCard, Smartphone, Banknote, QrCode, LogOut, User, IdCard, Calendar, History, Loader2 } from 'lucide-react';
 import { useRestaurant } from '../context/RestaurantContext';
-import { Product, Cashier, POSCartItem, PaymentMethod } from '../types';
+import { Product, Cashier, POSCartItem, PaymentMethod, Order } from '../types';
 import { supabase } from '../lib/supabase';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
 
@@ -20,8 +20,6 @@ function PosLogin({ onLogin }: { onLogin: (cashier: Cashier) => void }) {
       setError('');
     }
   };
-
-  const handleClear = () => setPin('');
 
   const handleDelete = () => setPin(p => p.slice(0, -1));
 
@@ -202,7 +200,7 @@ function PaymentModal({
 // Receipt
 // ==============================
 function ReceiptModal({
-  items, total, paymentMethod, changeAmount, cashierName, customerName, onClose, onNewSale,
+  items, total, paymentMethod, changeAmount, cashierName, customerName, customerCedula, invoiceNumber, config, locationName, onClose: _onClose, onNewSale,
 }: {
   items: POSCartItem[];
   total: number;
@@ -210,42 +208,64 @@ function ReceiptModal({
   changeAmount: number;
   cashierName: string;
   customerName: string;
+  customerCedula?: string;
+  invoiceNumber?: string;
+  config: { rif?: string; businessAddress?: string; businessPhone?: string; name?: string };
+  locationName: string;
   onClose: () => void;
   onNewSale: () => void;
 }) {
   const subtotal = items.reduce((s, i) => s + i.product.price * i.quantity, 0);
-  const date = new Date().toLocaleString('es-SV');
+  const date = new Date().toLocaleString('es-VE');
+  const taxRate = 0.16; // 16% IVA / ITBMS
+  const taxAmount = subtotal * taxRate;
+  const subtotalWithoutTax = subtotal / (1 + taxRate);
 
   const handlePrint = () => {
-    const w = window.open('', '', 'width=300,height=600');
+    const w = window.open('', '', 'width=380,height=700');
     if (!w) return;
     w.document.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Recibo</title>
+<html><head><meta charset="utf-8"><title>Factura</title>
 <style>
-body { font-family: monospace; font-size: 12px; width: 280px; margin: 0 auto; padding: 10px; }
-h2 { text-align: center; margin: 0; font-size: 16px; }
-p { text-align: center; margin: 2px 0; font-size: 11px; }
-table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-th, td { text-align: left; padding: 2px 4px; font-size: 11px; }
+body { font-family: 'Courier New', monospace; font-size: 11px; width: 290px; margin: 0 auto; padding: 8px; }
+h2 { text-align: center; margin: 0; font-size: 15px; text-transform: uppercase; }
+h3 { text-align: center; margin: 2px 0; font-size: 12px; }
+p { text-align: center; margin: 1px 0; font-size: 10px; }
+table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+th, td { text-align: left; padding: 2px 3px; font-size: 10px; }
 th { border-bottom: 1px dashed #000; }
 td.r { text-align: right; }
-.total td { border-top: 1px dashed #000; font-weight: bold; font-size: 13px; padding-top: 6px; }
-hr { border: none; border-top: 1px dashed #000; margin: 8px 0; }
-.footer { text-align: center; font-size: 10px; margin-top: 10px; }
+td.c { text-align: center; }
+.total td { border-top: 1px dashed #000; font-weight: bold; font-size: 12px; padding-top: 4px; }
+hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
+.footer { text-align: center; font-size: 9px; margin-top: 6px; }
+.left { text-align: left; }
 </style></head><body>
-<h2>Wallace Panda Express</h2>
+<h2>${config.name || 'Wallace Panda Express'}</h2>
+${config.rif ? `<p>RIF: ${config.rif}</p>` : ''}
+${config.businessAddress ? `<p>${config.businessAddress}</p>` : ''}
+${config.businessPhone ? `<p>Tel: ${config.businessPhone}</p>` : ''}
+<p>${locationName}</p>
+<hr>
+<p><strong>FACTURA</strong> ${invoiceNumber ? `N° ${invoiceNumber}` : ''}</p>
 <p>${date}</p>
-<p>Cajera: ${cashierName}</p>
-<p>Cliente: ${customerName}</p>
+<p>Cajero/a: ${cashierName}</p>
+<p>Cliente: ${customerName}${customerCedula ? ` — C.I: V-${customerCedula}` : ''}</p>
 <hr>
 <table>
-<tr><th>Item</th><th class="r">Cant</th><th class="r">Precio</th></tr>
-${items.map(i => `<tr><td>${i.product.name}</td><td class="r">${i.quantity}</td><td class="r">$${(i.product.price * i.quantity).toFixed(2)}</td></tr>`).join('')}
-<tr class="total"><td>TOTAL</td><td></td><td class="r">$${total.toFixed(2)}</td></tr>
+<tr><th>Item</th><th class="c">Cant</th><th class="r">Precio</th></tr>
+${items.map(i => `<tr><td>${i.product.name}</td><td class="c">${i.quantity}</td><td class="r">$${(i.product.price * i.quantity).toFixed(2)}</td></tr>`).join('')}
+</table>
+<hr>
+<table>
+<tr><td>Subtotal (sin IVA)</td><td class="r">$${subtotalWithoutTax.toFixed(2)}</td></tr>
+<tr><td>IVA 16%</td><td class="r">$${taxAmount.toFixed(2)}</td></tr>
+<tr><td>Subtotal</td><td class="r">$${subtotal.toFixed(2)}</td></tr>
+<tr class="total"><td>TOTAL</td><td class="r">$${total.toFixed(2)}</td></tr>
 </table>
 <hr>
 <p>Método de pago: ${paymentMethod}</p>
-${paymentMethod === 'Efectivo' ? `<p>Vuelto: $${changeAmount.toFixed(2)}</p>` : ''}
+${paymentMethod === 'Efectivo' ? `<p>Recibido: $${(total + changeAmount).toFixed(2)}</p><p>Vuelto: $${changeAmount.toFixed(2)}</p>` : ''}
 <hr>
 <p class="footer">¡Gracias por su compra!</p>
 <p class="footer">wallacepanda.com</p>
@@ -259,37 +279,73 @@ ${paymentMethod === 'Efectivo' ? `<p>Vuelto: $${changeAmount.toFixed(2)}</p>` : 
       className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80"
     >
       <motion.div initial={{ scale: 0.9, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }}
-        className="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-6 text-center"
+        className="w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4"
       >
-        <div className="w-16 h-16 bg-green-500/10 rounded-2xl flex items-center justify-center mx-auto">
-          <Check className="w-8 h-8 text-green-400" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-black text-white">Venta Exitosa</h2>
-          <p className="text-zinc-500 text-sm">${total.toFixed(2)} — ${paymentMethod}</p>
+        <div className="text-center">
+          <div className="w-14 h-14 bg-green-500/10 rounded-2xl flex items-center justify-center mx-auto mb-3">
+            <Check className="w-7 h-7 text-green-400" />
+          </div>
+          <h2 className="text-xl font-black text-white">Venta Exitosa</h2>
+          {invoiceNumber && (
+            <p className="text-[10px] text-primary-vibrant font-bold mt-1">Factura N° {invoiceNumber}</p>
+          )}
         </div>
 
-        <div className="bg-zinc-950 rounded-2xl p-4 space-y-2 text-left text-sm max-h-40 overflow-y-auto">
+        {/* Invoice details */}
+        <div className="bg-zinc-950 rounded-2xl p-3 space-y-1.5 text-[11px]">
+          {config.rif && (
+            <div className="flex justify-between text-zinc-500">
+              <span>RIF</span>
+              <span className="text-zinc-300 font-bold">{config.rif}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-zinc-500">
+            <span>Cliente</span>
+            <span className="text-zinc-300 font-bold">{customerName}{customerCedula ? ` V-${customerCedula}` : ''}</span>
+          </div>
+          <div className="flex justify-between text-zinc-500">
+            <span>Método</span>
+            <span className="text-zinc-300 font-bold">{paymentMethod}</span>
+          </div>
+          {paymentMethod === 'Efectivo' && changeAmount > 0 && (
+            <div className="flex justify-between text-zinc-500">
+              <span>Vuelto</span>
+              <span className="text-green-400 font-bold">${changeAmount.toFixed(2)}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Items */}
+        <div className="bg-zinc-950 rounded-2xl p-3 space-y-1.5 text-sm max-h-36 overflow-y-auto">
           {items.map(i => (
             <div key={i.product.id} className="flex justify-between text-zinc-400">
-              <span>{i.quantity}x {i.product.name}</span>
-              <span className="text-white font-bold">${(i.product.price * i.quantity).toFixed(2)}</span>
+              <span className="truncate flex-1">{i.quantity}x {i.product.name}</span>
+              <span className="text-white font-bold ml-2">${(i.product.price * i.quantity).toFixed(2)}</span>
             </div>
           ))}
-          <div className="border-t border-zinc-800 pt-2 flex justify-between text-white font-black text-lg">
+          <hr className="border-zinc-800" />
+          <div className="flex justify-between text-[11px] text-zinc-500">
+            <span>Subtotal</span>
+            <span>${subtotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-[11px] text-zinc-500">
+            <span>IVA 16%</span>
+            <span>${taxAmount.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-white font-black text-base border-t border-zinc-800 pt-1.5 mt-1.5">
             <span>Total</span>
             <span>${total.toFixed(2)}</span>
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <button onClick={handlePrint}
-            className="flex-1 bg-zinc-800 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-zinc-700 transition-all flex items-center justify-center gap-2"
+            className="flex-1 bg-zinc-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-700 transition-all flex items-center justify-center gap-2"
           >
-            <Printer className="w-5 h-5" /> Imprimir
+            <Printer className="w-4 h-4" /> Imprimir
           </button>
           <button onClick={onNewSale}
-            className="flex-1 bg-primary-vibrant text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all"
+            className="flex-1 bg-primary-vibrant text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all"
           >
             Nueva Venta
           </button>
@@ -300,23 +356,252 @@ ${paymentMethod === 'Efectivo' ? `<p>Vuelto: $${changeAmount.toFixed(2)}</p>` : 
 }
 
 // ==============================
+// Corte de Caja (Daily Closure)
+// ==============================
+function CorteDeCajaModal({
+  orders, locationId, locationName, onClose,
+}: {
+  orders: Order[];
+  locationId: string;
+  locationName: string;
+  onClose: () => void;
+}) {
+  const todayOrders = useMemo(() => {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return orders.filter(o =>
+      o.location_id === locationId &&
+      o.status !== 'cancelado' &&
+      new Date(o.created_at) >= startOfDay
+    );
+  }, [orders, locationId]);
+
+  const totalEfectivo = todayOrders.filter(o => o.payment_method === 'Efectivo').reduce((s, o) => s + o.total, 0);
+  const totalTarjeta = todayOrders.filter(o => o.payment_method === 'Tarjeta').reduce((s, o) => s + o.total, 0);
+  const totalTransferencia = todayOrders.filter(o => o.payment_method === 'Transferencia').reduce((s, o) => s + o.total, 0);
+  const totalQR = todayOrders.filter(o => o.payment_method === 'QR').reduce((s, o) => s + o.total, 0);
+  const granTotal = todayOrders.reduce((s, o) => s + o.total, 0);
+  const count = todayOrders.length;
+
+  const dateStr = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80"
+    >
+      <motion.div initial={{ scale: 0.9, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }}
+        className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-5 max-h-[90vh] overflow-y-auto"
+      >
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-black text-white">Corte de Caja</h2>
+          <button onClick={onClose} className="p-2 bg-zinc-800 rounded-xl text-zinc-500 hover:text-white"><X /></button>
+        </div>
+
+        <div className="text-center pb-2 border-b border-zinc-800">
+          <p className="text-lg font-black text-white">{locationName}</p>
+          <p className="text-xs text-zinc-500">{dateStr}</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-zinc-950 rounded-2xl p-4 text-center">
+            <ShoppingCart className="w-5 h-5 text-primary-vibrant mx-auto mb-1" />
+            <p className="text-2xl font-black text-white">{count}</p>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Pedidos</p>
+          </div>
+          <div className="bg-zinc-950 rounded-2xl p-4 text-center">
+            <DollarSign className="w-5 h-5 text-green-400 mx-auto mb-1" />
+            <p className="text-2xl font-black text-green-400">${granTotal.toFixed(2)}</p>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total</p>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Desglose por método</p>
+          {[
+            { method: 'Efectivo', total: totalEfectivo, icon: Banknote, color: 'text-green-400' },
+            { method: 'Tarjeta', total: totalTarjeta, icon: CreditCard, color: 'text-blue-400' },
+            { method: 'Transferencia', total: totalTransferencia, icon: Smartphone, color: 'text-purple-400' },
+            { method: 'QR', total: totalQR, icon: QrCode, color: 'text-orange-400' },
+          ].map(({ method, total: t, icon: Icon, color }) => (
+            <div key={method} className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl">
+              <div className="flex items-center gap-2">
+                <Icon className={`w-4 h-4 ${color}`} />
+                <span className="text-sm font-bold text-zinc-300">{method}</span>
+              </div>
+              <span className={`font-black ${color}`}>${t.toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+
+        {todayOrders.length > 0 && (
+          <div className="space-y-1.5 max-h-40 overflow-y-auto">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 sticky top-0 bg-zinc-900 pb-1">Últimos pedidos</p>
+            {todayOrders.slice(0, 10).map(o => (
+              <div key={o.id} className="flex items-center justify-between text-xs text-zinc-400 bg-zinc-950 p-2 rounded-lg">
+                <span className="truncate flex-1">{o.customer_name}</span>
+                <span className="text-zinc-600 mx-2">{o.payment_method}</span>
+                <span className="font-bold text-white">${o.total.toFixed(2)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button onClick={onClose}
+          className="w-full bg-zinc-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-700 transition-all"
+        >
+          Cerrar
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ==============================
+// Invoice History
+// ==============================
+function InvoiceHistoryModal({
+  orders, locationId, onClose,
+}: {
+  orders: Order[];
+  locationId: string;
+  onClose: () => void;
+}) {
+  const [searchCedula, setSearchCedula] = useState('');
+  const [searchName, setSearchName] = useState('');
+
+  const filtered = useMemo(() => {
+    let result = orders.filter(o => o.location_id === locationId && o.invoice_number);
+    if (searchCedula.trim()) {
+      result = result.filter(o => o.cedula?.includes(searchCedula.trim()));
+    }
+    if (searchName.trim()) {
+      const q = searchName.toLowerCase();
+      result = result.filter(o => o.customer_name.toLowerCase().includes(q));
+    }
+    return result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [orders, locationId, searchCedula, searchName]);
+
+  const formatDate = (d: string) => new Date(d).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+  const handleReprint = (order: Order) => {
+    const w = window.open('', '', 'width=380,height=700');
+    if (!w) return;
+    const items = order.items as Array<{ name: string; quantity: number; price: number }>;
+    w.document.write(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Factura</title>
+<style>
+body { font-family: 'Courier New', monospace; font-size: 11px; width: 290px; margin: 0 auto; padding: 8px; }
+h2 { text-align: center; margin: 0; font-size: 14px; }
+p { text-align: center; margin: 1px 0; font-size: 10px; }
+table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+th, td { text-align: left; padding: 2px 3px; font-size: 10px; }
+th { border-bottom: 1px dashed #000; }
+td.r { text-align: right; }
+td.c { text-align: center; }
+.total td { border-top: 1px dashed #000; font-weight: bold; font-size: 12px; }
+hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
+.footer { text-align: center; font-size: 9px; }
+</style></head><body>
+<h2>FACTURA ${order.invoice_number || ''}</h2>
+<p>${formatDate(order.created_at)}</p>
+<p>Cliente: ${order.customer_name}${order.cedula ? ` V-${order.cedula}` : ''}</p>
+<p>${order.delivery_type}${order.delivery_address ? ` — ${order.delivery_address}` : ''}</p>
+<hr>
+<table>
+<tr><th>Item</th><th class="c">Cant</th><th class="r">Precio</th></tr>
+${items.map(i => `<tr><td>${i.name}</td><td class="c">${i.quantity}</td><td class="r">$${(i.price * i.quantity).toFixed(2)}</td></tr>`).join('')}
+</table>
+<hr>
+<table>
+<tr><td>Subtotal</td><td class="r">$${order.subtotal.toFixed(2)}</td></tr>
+<tr><td>Delivery</td><td class="r">$${order.delivery_fee.toFixed(2)}</td></tr>
+<tr class="total"><td>TOTAL</td><td class="r">$${order.total.toFixed(2)}</td></tr>
+</table>
+<hr>
+<p>Método: ${order.payment_method || 'N/A'}</p>
+${order.change_amount && order.change_amount > 0 ? `<p>Vuelto: $${order.change_amount.toFixed(2)}</p>` : ''}
+<hr>
+<p class="footer">wallacepanda.com</p>
+<script>window.print();</script>
+</body></html>`);
+    w.document.close();
+  };
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80"
+    >
+      <motion.div initial={{ scale: 0.9, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }}
+        className="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4 max-h-[90vh] flex flex-col"
+      >
+        <div className="flex justify-between items-center flex-shrink-0">
+          <h2 className="text-xl font-black text-white">Historial de Facturas</h2>
+          <button onClick={onClose} className="p-2 bg-zinc-800 rounded-xl text-zinc-500 hover:text-white"><X /></button>
+        </div>
+
+        <div className="flex gap-2 flex-shrink-0">
+          <input value={searchCedula} onChange={e => setSearchCedula(e.target.value)}
+            placeholder="Cédula..."
+            className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
+          />
+          <input value={searchName} onChange={e => setSearchName(e.target.value)}
+            placeholder="Nombre..."
+            className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
+          />
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-1.5">
+          {filtered.length === 0 ? (
+            <div className="text-center py-12 text-zinc-600 text-sm">Sin facturas</div>
+          ) : (
+            filtered.map(o => (
+              <div key={o.id} className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl hover:bg-zinc-900 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-primary-vibrant">{o.invoice_number}</span>
+                    <span className="text-xs text-zinc-600">{formatDate(o.created_at)}</span>
+                  </div>
+                  <p className="text-sm font-bold text-white truncate">{o.customer_name}</p>
+                  <p className="text-[10px] text-zinc-500">${o.total.toFixed(2)} · {o.payment_method}</p>
+                </div>
+                <button onClick={() => handleReprint(o)}
+                  className="p-2 bg-zinc-800 rounded-xl text-zinc-500 hover:text-white hover:bg-zinc-700 transition-all flex-shrink-0"
+                  title="Reimprimir"
+                >
+                  <Printer className="w-4 h-4" />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ==============================
 // Main POS Page
 // ==============================
 export function PosPage() {
-  const { menuItems, categories, locations } = useRestaurant();
+  const { menuItems, categories, locations, config, orders, findCustomer, saveCustomer, generateInvoiceNumber } = useRestaurant();
   const [cashier, setCashier] = useState<Cashier | null>(null);
   const [activeCategory, setActiveCategory] = useState('Todas');
   const [cart, setCart] = useState<POSCartItem[]>([]);
   const [search, setSearch] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [customerCedula, setCustomerCedula] = useState('');
+  const [isLookingUpCustomer, setIsLookingUpCustomer] = useState(false);
   const [deliveryType, setDeliveryType] = useState<'Delivery' | 'Pick-up'>('Pick-up');
   const [showPayModal, setShowPayModal] = useState(false);
+  const [showCorteDeCaja, setShowCorteDeCaja] = useState(false);
+  const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
   const [showReceipt, setShowReceipt] = useState<{
     items: POSCartItem[];
     total: number;
     paymentMethod: PaymentMethod;
     changeAmount: number;
+    invoiceNumber: string;
   } | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState('');
 
@@ -325,6 +610,25 @@ export function PosPage() {
       setSelectedLocationId(locations[0].id);
     }
   }, [locations, selectedLocationId]);
+
+  // Lookup customer by cedula
+  const cedulaLookupRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (cedulaLookupRef.current) clearTimeout(cedulaLookupRef.current);
+    if (!customerCedula || customerCedula.length < 6) return;
+    setIsLookingUpCustomer(true);
+    cedulaLookupRef.current = setTimeout(async () => {
+      try {
+        const found = await findCustomer(customerCedula);
+        if (found) {
+          setCustomerName(found.name);
+          setCustomerPhone(found.phone);
+        }
+      } catch { /* cedula lookup failed silently */ }
+      setIsLookingUpCustomer(false);
+    }, 400);
+    return () => { if (cedulaLookupRef.current) clearTimeout(cedulaLookupRef.current); };
+  }, [customerCedula, findCustomer]);
 
   const filteredProducts = useMemo(() => {
     let items = menuItems.filter(p => p.inStock);
@@ -378,10 +682,13 @@ export function PosPage() {
     }));
 
     try {
+      const invoiceNumber = await generateInvoiceNumber(selectedLocationId);
+
       const { error } = await supabase.from('orders').insert({
         location_id: selectedLocationId,
         customer_name: customerName || 'Mostrador',
         customer_phone: customerPhone || 'N/A',
+        cedula: customerCedula || '',
         delivery_type: deliveryType,
         items: orderItems,
         subtotal: cartTotal,
@@ -391,21 +698,28 @@ export function PosPage() {
         payment_method: method,
         change_amount: changeAmount,
         cashier_id: cashier.id,
+        invoice_number: invoiceNumber,
       });
       if (error) throw error;
 
+      // Save customer for future auto-fill
+      if (customerCedula && customerCedula.length >= 6) {
+        saveCustomer({ cedula: customerCedula, name: customerName || 'Mostrador', phone: customerPhone || 'N/A' });
+      }
+
       setShowPayModal(false);
-      setShowReceipt({ items: cart, total: cartTotal, paymentMethod: method, changeAmount });
+      setShowReceipt({ items: cart, total: cartTotal, paymentMethod: method, changeAmount, invoiceNumber });
     } catch (err) {
       console.error('Error creating order:', err);
       alert('Error al procesar la venta');
     }
-  }, [cashier, selectedLocationId, cart, cartTotal, customerName, customerPhone, deliveryType]);
+  }, [cashier, selectedLocationId, cart, cartTotal, customerName, customerPhone, customerCedula, deliveryType, generateInvoiceNumber, saveCustomer]);
 
   const handleNewSale = () => {
     setCart([]);
     setCustomerName('');
     setCustomerPhone('');
+    setCustomerCedula('');
     setShowReceipt(null);
   };
 
@@ -429,8 +743,18 @@ export function PosPage() {
             {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
           </select>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-zinc-500 font-mono">{new Date().toLocaleTimeString('es-SV')}</span>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowCorteDeCaja(true)}
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 rounded-xl text-[10px] font-bold text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
+          >
+            <Calendar className="w-3.5 h-3.5" /> Corte
+          </button>
+          <button onClick={() => setShowInvoiceHistory(true)}
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 rounded-xl text-[10px] font-bold text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
+          >
+            <History className="w-3.5 h-3.5" /> Facturas
+          </button>
+          <span className="text-xs text-zinc-500 font-mono">{new Date().toLocaleTimeString('es-VE')}</span>
           <button onClick={() => setCashier(null)}
             className="p-2 bg-zinc-800 rounded-xl text-zinc-500 hover:text-white hover:bg-zinc-700 transition-all"
           >
@@ -505,6 +829,20 @@ export function PosPage() {
               <ShoppingCart className="w-5 h-5 text-primary-vibrant" />
               Venta
             </h2>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600">
+                <IdCard className="w-4 h-4" />
+              </div>
+              <input value={customerCedula} onChange={e => setCustomerCedula(e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
+                placeholder="Cédula (auto-busca)"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-10 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
+              />
+              {isLookingUpCustomer && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Loader2 className="w-4 h-4 text-primary-vibrant animate-spin" />
+                </div>
+              )}
+            </div>
             <input value={customerName} onChange={e => setCustomerName(e.target.value)}
               placeholder="Cliente"
               className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
@@ -598,10 +936,37 @@ export function PosPage() {
             total={showReceipt.total}
             paymentMethod={showReceipt.paymentMethod}
             changeAmount={showReceipt.changeAmount}
+            invoiceNumber={showReceipt.invoiceNumber}
             cashierName={cashier?.name || ''}
             customerName={customerName}
+            customerCedula={customerCedula || undefined}
+            config={{ rif: config.rif, businessAddress: config.businessAddress, businessPhone: config.businessPhone, name: config.name }}
+            locationName={locationName}
             onClose={() => setShowReceipt(null)}
             onNewSale={handleNewSale}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Corte de Caja modal */}
+      <AnimatePresence>
+        {showCorteDeCaja && (
+          <CorteDeCajaModal
+            orders={orders}
+            locationId={selectedLocationId}
+            locationName={locationName}
+            onClose={() => setShowCorteDeCaja(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Invoice History modal */}
+      <AnimatePresence>
+        {showInvoiceHistory && (
+          <InvoiceHistoryModal
+            orders={orders}
+            locationId={selectedLocationId}
+            onClose={() => setShowInvoiceHistory(false)}
           />
         )}
       </AnimatePresence>

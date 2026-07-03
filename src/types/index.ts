@@ -18,6 +18,9 @@ export interface RestaurantConfig {
     ranges: { maxDistance: number | null; fee: number; }[];
     maxDeliveryDistance: number;
   };
+  rif?: string;
+  businessAddress?: string;
+  businessPhone?: string;
 }
 
 export interface Location {
@@ -116,6 +119,7 @@ export interface Order {
   location_id: string;
   customer_name: string;
   customer_phone: string;
+  cedula?: string;
   delivery_type: DeliveryType;
   delivery_address?: string;
   delivery_coordinates?: { lat: number; lng: number };
@@ -128,10 +132,20 @@ export interface Order {
   payment_method?: PaymentMethod;
   change_amount?: number;
   cashier_id?: string;
+  invoice_number?: string;
   created_at: string;
 }
 
 export type PaymentMethod = 'Efectivo' | 'Tarjeta' | 'Transferencia' | 'QR' | 'Otro';
+
+export interface Customer {
+  cedula: string;
+  name: string;
+  phone: string;
+  address?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export interface POSCartItem {
   product: Product;

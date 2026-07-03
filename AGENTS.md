@@ -7,32 +7,24 @@ npm install          # install deps
 npm run dev          # vite dev server → http://localhost:5173
 npm run build        # tsc && vite build → dist/
 npm run preview      # vite preview (serve dist/)
-npm run lint         # eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0
+npm run lint         # eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 100
 ```
 
-No test suite configured. Validate via browser + lint. TestSprite MCP is wired in `opencode.jsonc`.
+No test suite. Validate via browser + lint. TestSprite MCP wired in `opencode.jsonc`.
 
-## Backend: Supabase
-
-This app uses **Supabase** for everything — database, auth, file storage.
-
-- **Schema**: `supabase/migrations/00000_full_schema.sql` — 6 tables (config, categories, menu_items, locations, orders, admins)
-- **Seed**: `supabase/seed.sql` — run after migration
-- **Auth**: Supabase Auth (email/password) via `@supabase/ssr`
-- **Client**: `src/lib/supabase.ts` — `createBrowserClient`
-- **Image upload**: `src/lib/uploadImage.ts` — compresses to WebP, uploads to Supabase Storage bucket `images`
-- **Admin roles**: `isSuperAdmin` (email === `dariomedina2619@gmail.com`) or `isLocalAdmin` (matches location's `adminEmail`)
-
-All data flows through `src/context/RestaurantContext.tsx` — the single provider wrapping the app.
-
-## Required env vars (`.env.local`, not committed)
+## Env vars (`.env.local`, not committed)
 
 ```
 VITE_SUPABASE_URL=https://<project>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon-key>
 ```
-
 Optional: `VITE_GRAPHOPPER_API_KEY` (road distance, falls back to OSRM → Haversine).
+
+## Backend: Supabase
+
+Database, auth, file storage. Client: `src/lib/supabase.ts` via `@supabase/ssr`. Image upload: `src/lib/uploadImage.ts` — compresses to WebP → Supabase Storage bucket `images`.
+
+Admin roles: `isSuperAdmin` (email === `dariomedina2619@gmail.com`) or `isLocalAdmin` (matches location's `adminEmail`). Admin checks are client-side via email — no granular RLS.
 
 ## Architecture
 
@@ -44,7 +36,8 @@ Optional: `VITE_GRAPHOPPER_API_KEY` (road distance, falls back to OSRM → Haver
 | Backend | Supabase (PostgreSQL + RLS) |
 | Auth | Supabase Auth (email/password) |
 | Maps | Leaflet + react-leaflet + Nominatim geocoding |
-| Storage | Supabase Storage (bucket: `images`) |
+| Data fetching | `@tanstack/react-query` (React Query v5) |
+| Meta/SEO | `react-helmet-async` |
 | Animations | `motion` (framer-motion v12) |
 | Icons | `lucide-react` |
 
@@ -53,55 +46,58 @@ Optional: `VITE_GRAPHOPPER_API_KEY` (road distance, falls back to OSRM → Haver
 | Path | Component | Notes |
 |------|-----------|-------|
 | `/` | `LandingPage` | Marketing/home |
-| `/menu` | `PublicMenuPage` | Full menu without location |
+| `/menu` | `PublicMenuPage` | Full menu, no location needed |
 | `/pedir` | `MainView` (inline) | Order flow, requires location selection |
-| `/admin` | `AdminPage` | CRUD + orders, requires auth |
+| `/admin` | `AdminPage` (lazy) | CRUD + orders, requires auth |
+| `/pos` | `PosPage` (lazy) | Point-of-sale, requires auth |
+| `/legal` | `LegalPage` | Legal info |
 
 Query param `?sede=<id>` or `?location=<id>` on `/pedir` auto-selects location.
 
 ## Key modules
 
-- **Cart**: `src/hooks/useCart.ts` — add, remove, update qty/notes, clear
-- **I18n**: `src/context/LanguageContext.tsx` — `es`/`en`/`zh`, translation function `t(key)`
-- **Checkout**: generates WhatsApp link via `generateWhatsAppLink()` in `src/utils.ts`
-- **Distance**: `src/services/DistanceService.ts` — 3-tier: GraphHopper → OSRM → Haversine
-- **Image upload**: `src/lib/uploadImage.ts` — compresses to WebP, uploads to Supabase Storage bucket `images`
-
-## Admin auth flow
-
-1. User enters email + password in `/admin`
-2. First visit: use "Registrarse" (sign up) to create account
-3. Session managed by Supabase Auth; `userEmail` derived from `session.user.email`
-4. Super admin: `dariomedina2619@gmail.com` — full access
-5. Location admin: email stored in location's `adminEmail` — limited to that location
+- **Cart**: `src/context/CartContext.tsx` — `CartProvider` + `useCart()` hook. Items keyed by product ID + sorted choices. Choice-aware pricing.
+- **I18n**: `src/context/LanguageContext.tsx` — `es`/`en`/`zh`, `t(key)` function, 777+ translation keys inline.
+- **Data**: `src/context/RestaurantContext.tsx` — single provider wrapping app, uses React Query for Supabase fetches. Exposes locations, menu items, categories, config, orders, auth functions.
+- **Checkout**: `src/utils.ts` — `generateWhatsAppLink()` → `wa.me` link.
+- **Distance**: `src/lib/DistanceService.ts` via `src/hooks/useDistanceCalculation.ts` — 3-tier: GraphHopper → OSRM → Haversine. Also handles address autocomplete & GPS geolocation.
+- **BCV rate**: `src/services/bcvRate.ts` — fetches Venezuelan bolívar exchange rate from `dolarapi.com`/`ve.dolarapi.com`, caches daily.
+- **Image upload**: `src/lib/uploadImage.ts` — validates size (5MB max), compresses to WebP 800px, uploads to `images` bucket.
 
 ## DB structure (`supabase/migrations/00000_full_schema.sql`)
 
-| Table | Columns | RLS |
-|-------|---------|-----|
-| `config` | Singleton (id=1), name, logo, colors, social, tax, delivery, distance | SELECT: public; UPSERT: authenticated |
+| Table | Key columns | RLS |
+|-------|-------------|-----|
+| `config` | id=1 (singleton), name, logo, colors, social, tax_rate, delivery_fee, exchange_rate, distance_pricing (JSONB) | SELECT: public; UPSERT: authenticated |
 | `categories` | id UUID, name UNIQUE, sort_order | SELECT: public; CRUD: authenticated |
-| `menu_items` | id UUID, name, price, category FK→categories(name), sort_order | SELECT: public; CRUD: authenticated |
-| `locations` | id UUID, name, address, coords, admin_email, schedule | SELECT: public; CRUD: authenticated |
-| `orders` | id UUID, location_id FK→locations, customer info, items JSONB, totals | SELECT: authenticated; INSERT: anon+auth |
+| `menu_items` | id UUID, name, description, price, category FK→categories(name), image, in_stock, sort_order | SELECT: public; CRUD: authenticated |
+| `locations` | id UUID, name, whatsapp, schedule, address, image, open_time, close_time, is_open, lat/lng, admin_email, discontinued_product_ids (TEXT[]) | SELECT: public; CRUD: authenticated |
+| `orders` | id UUID, location_id FK, customer_name/phone, delivery_type CHECK('Delivery','Pick-up'), delivery_address, delivery_coordinates (JSONB), items (JSONB), subtotal, delivery_fee, total, notes, status, created_at | INSERT: anon+auth; SELECT: authenticated |
 | `admins` | id UUID, email UNIQUE, user_id FK→auth.users | SELECT/INSERT: authenticated |
 
-RLS policies are permissive (auth-only for writes). No granular role-based RLS — admin checks are client-side via email.
+Realtime enabled on `orders` table.
+
+## Gotchas
+
+- `@/` path alias: in `vite.config.ts` resolves to `./src`, in `tsconfig.json` paths `@/*` → `./*` (root-relative). Behavior differs; rely on Vite's resolution at runtime.
+- `@supabase/ssr` is used even though this is a client-side SPA (no SSR). Works fine — `createBrowserClient` ignores SSR middleware.
+- `scripts/`, `docs/`, `dist/` directories are gitignored.
+- README mentions `GEMINI_API_KEY` (leftover from AI Studio template) — not used by this app. Ignore it.
+- Orders `status` column is TEXT with CHECK constraint (`'exitoso'` / `'cancelado'`), not an enum.
+- `PaymentMethod`, `change_amount`, `cashier_id` exist in TypeScript types but not in the DB schema — frontend-only for POS.
 
 ## Deployment
 
 - Frontend: `npm run build` → `dist/`, deploy anywhere (Vercel SPA config in `vercel.json`)
 - Backend: Supabase manages itself; run migrations via Supabase SQL Editor
+- Seed scripts: `supabase/seed.sql`, `supabase/seed_choices.sql`, `supabase/seed_images.sql`
 
 ## graphify
 
-This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
-
-When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
-
-Rules:
-- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
-- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
-- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
-- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
-- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+Knowledge graph at `graphify-out/`. Use for codebase questions first.
+- `graphify query "<question>"` when `graphify-out/graph.json` exists
+- `graphify path "<A>" "<B>"` for relationships
+- `graphify explain "<concept>"` for focused concepts
+- `graphify update .` after modifying code (AST-only, no API cost)
+- If `graphify-out/wiki/index.md` exists, use for broad navigation
+- Dirty graph files are expected after hooks — not a reason to skip

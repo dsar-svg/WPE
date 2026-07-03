@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useMemo, ReactNode, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
-import { Location, Product, RestaurantConfig, Category, Order, ProductChoice } from '../types';
+import { Location, Product, RestaurantConfig, Category, Order, ProductChoice, Customer } from '../types';
 
 interface RestaurantContextType {
   locations: Location[];
@@ -32,6 +32,9 @@ interface RestaurantContextType {
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   createLocationAdmin: (email: string, password: string, role?: string, locationId?: string) => Promise<{ success: boolean; message: string }>;
+  findCustomer: (cedula: string) => Promise<Customer | null>;
+  saveCustomer: (c: Customer) => Promise<void>;
+  generateInvoiceNumber: (locationId: string) => Promise<string>;
 }
 
 const RestaurantContext = createContext<RestaurantContextType | undefined>(undefined);
@@ -116,6 +119,7 @@ function rowToOrder(row: any): Order {
     location_id: row.location_id,
     customer_name: row.customer_name,
     customer_phone: row.customer_phone,
+    cedula: row.cedula || '',
     delivery_type: row.delivery_type as Order['delivery_type'],
     delivery_address: row.delivery_address,
     delivery_coordinates: row.delivery_coordinates,
@@ -128,6 +132,7 @@ function rowToOrder(row: any): Order {
     payment_method: row.payment_method,
     change_amount: row.change_amount ?? 0,
     cashier_id: row.cashier_id,
+    invoice_number: row.invoice_number || '',
     created_at: row.created_at,
   };
 }
@@ -154,6 +159,9 @@ function rowToConfig(row: any): RestaurantConfig {
     deliveryFee: row.delivery_fee,
     exchangeRate: row.exchange_rate,
     distancePricing: row.distance_pricing || DEFAULT_CONFIG.distancePricing,
+    rif: row.rif || '',
+    businessAddress: row.business_address || '',
+    businessPhone: row.business_phone || '',
   };
 }
 
@@ -336,6 +344,9 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     if (newConfig.deliveryFee !== undefined) dbRow.delivery_fee = newConfig.deliveryFee;
     if (newConfig.exchangeRate !== undefined) dbRow.exchange_rate = newConfig.exchangeRate;
     if (newConfig.distancePricing !== undefined) dbRow.distance_pricing = newConfig.distancePricing;
+    if (newConfig.rif !== undefined) dbRow.rif = newConfig.rif;
+    if (newConfig.businessAddress !== undefined) dbRow.business_address = newConfig.businessAddress;
+    if (newConfig.businessPhone !== undefined) dbRow.business_phone = newConfig.businessPhone;
     const { error } = await supabase.from('config').update(dbRow).eq('id', 1);
     if (error) throw error;
     invalidate(['config']);
@@ -429,6 +440,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     try {
       const { error } = await supabase.from('orders').insert({
         location_id: order.location_id, customer_name: order.customer_name, customer_phone: order.customer_phone,
+        cedula: order.cedula || '',
         delivery_type: order.delivery_type, delivery_address: order.delivery_address || null,
         delivery_coordinates: order.delivery_coordinates || null, items: order.items,
         subtotal: order.subtotal, delivery_fee: order.delivery_fee, total: order.total,
@@ -436,6 +448,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
         payment_method: order.payment_method || 'Efectivo',
         change_amount: order.change_amount ?? 0,
         cashier_id: order.cashier_id || null,
+        invoice_number: order.invoice_number || '',
       });
       if (error) throw error;
       invalidate(['orders']);
@@ -454,6 +467,47 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
 
   const fetchOrders = useCallback(() => ordersQuery.refetch(), [ordersQuery]);
 
+  const findCustomer = useCallback(async (cedula: string): Promise<Customer | null> => {
+    if (!cedula || cedula.length < 6) return null;
+    try {
+      const { data } = await supabase.from('customers').select('*').eq('cedula', cedula).maybeSingle();
+      return data ? { cedula: data.cedula, name: data.name, phone: data.phone, address: data.address || '' } : null;
+    } catch { return null; }
+  }, []);
+
+  const saveCustomer = useCallback(async (c: Customer) => {
+    if (!c.cedula || c.cedula.length < 6) return;
+    try {
+      const { data: existing } = await supabase.from('customers').select('cedula').eq('cedula', c.cedula).maybeSingle();
+      if (existing) {
+        await supabase.from('customers').update({ name: c.name, phone: c.phone, address: c.address || '', updated_at: new Date().toISOString() }).eq('cedula', c.cedula);
+      } else {
+        await supabase.from('customers').insert({ cedula: c.cedula, name: c.name, phone: c.phone, address: c.address || '' });
+      }
+    } catch { /* failed to save customer */ }
+  }, []);
+
+  const generateInvoiceNumber = useCallback(async (locationId: string): Promise<string> => {
+    try {
+      const today = new Date();
+      const datePart = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+
+      const { data: counter } = await supabase.from('invoice_counters').select('*').eq('location_id', locationId).maybeSingle();
+      let nextNum = 1;
+
+      if (counter) {
+        nextNum = counter.last_number + 1;
+        await supabase.from('invoice_counters').update({ last_number: nextNum }).eq('location_id', locationId);
+      } else {
+        await supabase.from('invoice_counters').insert({ location_id: locationId, prefix: 'FAC-', last_number: 1 });
+      }
+
+      return `FAC-${datePart}-${String(nextNum).padStart(4, '0')}`;
+    } catch {
+      return `FAC-${Date.now()}`;
+    }
+  }, []);
+
   const isLoading = !sessionReady || !dataFetched;
 
   const value = useMemo(() => ({
@@ -463,7 +517,8 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     updateLocation, updateProduct, updateConfig, updateCategory,
     deleteLocation, deleteProduct, deleteCategory,
     createOrder, deleteOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut, createLocationAdmin,
-  }), [locations, menuItems, categories, config, orders, isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, selectedLocation, setSelectedLocation, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, createOrder, deleteOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut, createLocationAdmin]);
+    findCustomer, saveCustomer, generateInvoiceNumber,
+  }), [locations, menuItems, categories, config, orders, isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, selectedLocation, setSelectedLocation, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, createOrder, deleteOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut, createLocationAdmin, findCustomer, saveCustomer, generateInvoiceNumber]);
 
   return (
     <RestaurantContext.Provider value={value}>
