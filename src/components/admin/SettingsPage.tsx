@@ -268,6 +268,45 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
         <div className="space-y-8">
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-6">
             <div className="flex justify-between items-center">
+              <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500">Información Fiscal</label>
+              <span className="text-[8px] text-zinc-600">Datos para facturación</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">RIF</label>
+                <input
+                  type="text"
+                  className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold text-xs focus:ring-2 focus:ring-primary-vibrant outline-none"
+                  value={data.rif || ''}
+                  onChange={e => setData({...data, rif: e.target.value})}
+                  placeholder="J-12345678-9"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Teléfono del Negocio</label>
+                <input
+                  type="text"
+                  className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold text-xs focus:ring-2 focus:ring-primary-vibrant outline-none"
+                  value={data.businessPhone || ''}
+                  onChange={e => setData({...data, businessPhone: e.target.value})}
+                  placeholder="+58 412-1234567"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Dirección Fiscal</label>
+              <input
+                type="text"
+                className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold text-xs focus:ring-2 focus:ring-primary-vibrant outline-none"
+                value={data.businessAddress || ''}
+                onChange={e => setData({...data, businessAddress: e.target.value})}
+                placeholder="Dirección del establecimiento"
+              />
+            </div>
+          </div>
+
+          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-6">
+            <div className="flex justify-between items-center">
               <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500">Impuestos y Delivery</label>
               <span className="text-[8px] text-zinc-600">Configuración global</span>
             </div>

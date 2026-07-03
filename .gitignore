@@ -3,11 +3,11 @@ coverage/
 .DS_Store
 *.log
 .env*
-!.env.example
 .claude/settings.local.json
 
-testsprite_tests\tmp\config.json
+testsprite_tests/
 dist/
 docs/
 scripts/
-VISUAL_CHANGES.md
+.impeccable/
+graphify-out/

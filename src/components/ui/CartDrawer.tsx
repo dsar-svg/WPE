@@ -48,7 +48,7 @@ export function CartDrawer({
   removeFromCart,
   onCheckout,
 }: CartDrawerProps) {
-  const { config, updateConfig } = useRestaurant();
+  const { config, updateConfig, findCustomer } = useRestaurant();
   const { t, language } = useLanguage();
   const {
     searchAddress,
@@ -78,6 +78,7 @@ export function CartDrawer({
   const [formErrors, setFormErrors] = useState({ name: '', phone: '', cedula: '', address: '' });
   const [locationSelected, setLocationSelected] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
+  const [isLookingUpCustomer, setIsLookingUpCustomer] = useState(false);
   const [addressStatus, setAddressStatus] = useState<AddressStatus>('idle');
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [mapCenterKey, setMapCenterKey] = useState(0);
@@ -114,8 +115,8 @@ export function CartDrawer({
         if (rate !== null && rate !== config.exchangeRate) {
           await updateConfig({ exchangeRate: rate });
         }
-      } catch {}
-    })();
+        } catch { /* BCV rate fetch failed */ }
+      })();
   }, [isOpen, updateConfig, config.exchangeRate]);
 
   // ── Auto GPS geolocation when checkout opens (once) ──────────────────
@@ -145,6 +146,25 @@ export function CartDrawer({
     })();
     return () => { aborted = true; };
   }, [step, deliveryCoordinates, autoGeolocate, reverseGeocodeAddress, saveLastAddress]);
+
+  // ── Customer lookup by cédula ────────────────────────────────────────
+  const cedulaTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (cedulaTimerRef.current) clearTimeout(cedulaTimerRef.current);
+    const cedula = formData.cedula;
+    if (!cedula || cedula.length < 6) return;
+    setIsLookingUpCustomer(true);
+    cedulaTimerRef.current = setTimeout(async () => {
+      try {
+        const found = await findCustomer(cedula);
+        if (found) {
+          setFormData(p => ({ ...p, name: found.name, phone: found.phone }));
+        }
+      } catch { /* customer lookup failed */ }
+      setIsLookingUpCustomer(false);
+    }, 400);
+    return () => { if (cedulaTimerRef.current) clearTimeout(cedulaTimerRef.current); };
+  }, [formData.cedula, findCustomer]);
 
   // ── Address input debounce → autocomplete ────────────────────────────
   const handleAddressChange = useCallback(
@@ -668,10 +688,10 @@ export function CartDrawer({
                             inputMode="numeric"
                             pattern="[0-9]*"
                             maxLength={8}
-                            placeholder="Cédula de identidad"
+                            placeholder="Cédula de identidad (auto-buscar)"
                             aria-describedby={formErrors.cedula ? 'cedula-error' : undefined}
                             aria-invalid={formErrors.cedula ? 'true' : 'false'}
-                            className={`w-full pl-12 pr-4 py-4 bg-dark-surface border-2 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500 ${
+                            className={`w-full pl-12 pr-12 py-4 bg-dark-surface border-2 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500 ${
                               formErrors.cedula ? 'border-red-500/50' : 'border-white/10'
                             }`}
                             value={formData.cedula}
@@ -685,6 +705,11 @@ export function CartDrawer({
                               }
                             }}
                           />
+                          {isLookingUpCustomer && (
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                              <Loader2 className="w-4 h-4 text-primary-vibrant animate-spin" />
+                            </div>
+                          )}
                           {formErrors.cedula && (
                             <span id="cedula-error" className="absolute -bottom-5 left-0 text-[10px] text-red-400" role="alert">
                               {formErrors.cedula}

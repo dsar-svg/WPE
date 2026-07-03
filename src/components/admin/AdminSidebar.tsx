@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import {
   LayoutDashboard, MapPin, Utensils, Settings, ShoppingBag,
-  LogOut, ChevronRight, User
+  LogOut, ChevronRight, User, Users
 } from 'lucide-react';
 import { RestaurantConfig } from '../../types';
 import { BrandName } from '../ui/BrandName';
 
-export type AdminPageTab = 'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos';
+export type AdminPageTab = 'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras';
 
 interface AdminSidebarProps {
   activeTab: AdminPageTab;
@@ -27,6 +27,7 @@ const navItems: { id: AdminPageTab; label: string; icon: React.ComponentType<{ c
   { id: 'sedes', label: 'Sedes', icon: MapPin },
   { id: 'productos', label: 'Productos', icon: Utensils },
   { id: 'pedidos', label: 'Pedidos', icon: ShoppingBag },
+  { id: 'cajeras', label: 'Cajeras', icon: Users },
   { id: 'ajustes', label: 'Ajustes', icon: Settings },
 ];
 
@@ -40,7 +41,7 @@ export function AdminSidebar({
   isOpen = false,
 }: AdminSidebarProps) {
   const visibleNavItems = useMemo(
-    () => isSuperAdmin ? navItems : navItems.filter(item => item.id !== 'sedes' && item.id !== 'ajustes'),
+    () => isSuperAdmin ? navItems : navItems.filter(item => item.id !== 'sedes' && item.id !== 'ajustes' && item.id !== 'cajeras'),
     [isSuperAdmin]
   );
   return (

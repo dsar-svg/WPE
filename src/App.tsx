@@ -15,6 +15,7 @@ import { CartProvider } from "./context/CartContext";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
+const PosPage = lazy(() => import("./pages/PosPage"));
 const CartDrawer = lazy(() => import("./components/ui/CartDrawer").then(m => ({ default: m.CartDrawer })));
 
 function LoadingSpinner() {
@@ -139,6 +140,7 @@ export default function App() {
                   <Route path="/menu" element={<PublicMenuPage />} />
                   <Route path="/pedir" element={<MainView />} />
                   <Route path="/admin" element={<AdminPage />} />
+                  <Route path="/pos" element={<PosPage />} />
                   <Route path="/legal" element={<LegalPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
