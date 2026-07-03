@@ -609,7 +609,7 @@ export function PosPage() {
     customerCedula.trim().length >= 6 &&
     customerName.trim().length > 0 &&
     customerPhone.startsWith('04') &&
-    customerPhone.replace(/\D/g, '').length >= 9;
+    customerPhone.replace(/\D/g, '').length >= 7;
 
   useEffect(() => {
     if (!selectedLocationId && locations.length > 0) {
@@ -852,8 +852,8 @@ export function PosPage() {
             />
             <div className="flex gap-2">
               <input value={customerPhone} onChange={e => setCustomerPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
-                placeholder="Teléfono 04XXXXXXXXX"
-                className={`flex-1 bg-zinc-900 border rounded-xl px-3 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant ${customerPhone.length > 0 && (!customerPhone.startsWith('04') || customerPhone.length < 9) ? 'border-red-500/50' : 'border-zinc-800'}`}
+                placeholder="Teléfono 04XXXXX"
+                className={`flex-1 bg-zinc-900 border rounded-xl px-3 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant ${customerPhone.length > 0 && (!customerPhone.startsWith('04') || customerPhone.length < 7) ? 'border-red-500/50' : 'border-zinc-800'}`}
               />
               <select value={deliveryType} onChange={e => setDeliveryType(e.target.value as any)}
                 className="bg-zinc-900 border border-zinc-800 rounded-xl px-2 py-2 text-xs font-bold text-zinc-400 outline-none"
