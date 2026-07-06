@@ -1,0 +1,722 @@
+[
+  {
+    "id": "TC001",
+    "title": "Select an open location to begin ordering",
+    "description": "Verifies that a customer can choose an available restaurant location and continue to the menu.",
+    "category": "Location Selection",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /pedir"
+      },
+      {
+        "type": "action",
+        "description": "Select an open location"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the menu browsing screen is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC002",
+    "title": "Open the admin dashboard after signing in",
+    "description": "This verifies that an admin can authenticate and reach the dashboard with summary counts.",
+    "category": "Admin Panel",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the admin dashboard is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify summary counts are visible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC003",
+    "title": "Open the ordering flow from the landing page",
+    "description": "Verifies that a customer can start ordering from the homepage CTA and reach the location selection step.",
+    "category": "Landing Page",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the call to action section"
+      },
+      {
+        "type": "action",
+        "description": "Click the call to action to start ordering"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the location selection screen is displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC004",
+    "title": "Open a product and add it to the cart",
+    "description": "Verifies that a customer can inspect a product’s details and add it to the cart from the menu.",
+    "category": "Menu Browsing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /pedir"
+      },
+      {
+        "type": "action",
+        "description": "Select an open location"
+      },
+      {
+        "type": "action",
+        "description": "Choose a category with available products"
+      },
+      {
+        "type": "action",
+        "description": "Open a product"
+      },
+      {
+        "type": "action",
+        "description": "Add the product to the cart"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the cart shows the added item"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC005",
+    "title": "Access the admin area without signing in",
+    "description": "This verifies that visiting the admin route without authentication shows the login screen instead of the protected dashboard.",
+    "category": "Admin Panel",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the login screen is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the admin dashboard is not displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC006",
+    "title": "Browse products in a category",
+    "description": "Verifies that a customer can filter the menu by category and see only the relevant products.",
+    "category": "Menu Browsing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /pedir"
+      },
+      {
+        "type": "action",
+        "description": "Select an open location"
+      },
+      {
+        "type": "action",
+        "description": "Choose a category"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the filtered products for that category are displayed"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC007",
+    "title": "Manage a location from creation to removal",
+    "description": "This verifies that an admin can create, edit, toggle, and delete a location from the management screen.",
+    "category": "Admin Panel",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Open the locations management area"
+      },
+      {
+        "type": "action",
+        "description": "Create a new location with valid details"
+      },
+      {
+        "type": "action",
+        "description": "Open the newly created location for editing"
+      },
+      {
+        "type": "action",
+        "description": "Update the location details"
+      },
+      {
+        "type": "action",
+        "description": "Toggle the location active state"
+      },
+      {
+        "type": "action",
+        "description": "Delete the location"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the location no longer appears in the locations list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the locations list remains accessible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC008",
+    "title": "Manage a product from creation to removal",
+    "description": "This verifies that an admin can create, edit, toggle availability, and delete a product from the product management screen.",
+    "category": "Admin Panel",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Open the products management area"
+      },
+      {
+        "type": "action",
+        "description": "Create a new product with valid details"
+      },
+      {
+        "type": "action",
+        "description": "Open the newly created product for editing"
+      },
+      {
+        "type": "action",
+        "description": "Update the product details"
+      },
+      {
+        "type": "action",
+        "description": "Toggle the product availability"
+      },
+      {
+        "type": "action",
+        "description": "Delete the product"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the product no longer appears in the products list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the products list remains accessible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC009",
+    "title": "Manage a category from creation to removal",
+    "description": "This verifies that an admin can create, edit, and delete a category from the category management screen.",
+    "category": "Admin Panel",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Open the categories management area"
+      },
+      {
+        "type": "action",
+        "description": "Create a new category with a valid name"
+      },
+      {
+        "type": "action",
+        "description": "Open the newly created category for editing"
+      },
+      {
+        "type": "action",
+        "description": "Update the category name"
+      },
+      {
+        "type": "action",
+        "description": "Delete the category"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the category no longer appears in the categories list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the categories list remains accessible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC010",
+    "title": "Save updated restaurant settings",
+    "description": "This verifies that an admin can update restaurant configuration fields and keep the saved changes visible in settings.",
+    "category": "Admin Panel",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Open the restaurant settings area"
+      },
+      {
+        "type": "action",
+        "description": "Update the restaurant name and pricing settings with valid values"
+      },
+      {
+        "type": "action",
+        "description": "Save the settings"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the updated settings are displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the settings page remains accessible"
+      }
+    ],
+    "priority": "High"
+  },
+  {
+    "id": "TC011",
+    "title": "Review submitted orders in the admin area",
+    "description": "This verifies that an authenticated admin can open the orders list and review submitted orders.",
+    "category": "Admin Panel",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Open the orders area"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the orders list is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify submitted orders are visible"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC012",
+    "title": "View a location’s details from the landing page",
+    "description": "Verifies that a customer can open a location card on the homepage and see its details.",
+    "category": "Landing Page",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the locations section"
+      },
+      {
+        "type": "action",
+        "description": "Select a location card"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the selected location details are displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC013",
+    "title": "Switch the interface to English",
+    "description": "Verifies that changing the language on a supported page updates the visible interface to English.",
+    "category": "Multi-language Support",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click the language toggle to switch to English"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the visible interface is displayed in English"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC014",
+    "title": "Switch the interface to Chinese",
+    "description": "Verifies that changing the language on a supported page updates the visible interface to Chinese.",
+    "category": "Multi-language Support",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click the language toggle to switch to Chinese"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the visible interface is displayed in Chinese"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC015",
+    "title": "Switch the interface back to Spanish",
+    "description": "Verifies that the language can be changed back to Spanish from another supported language.",
+    "category": "Multi-language Support",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click the language toggle to switch to English"
+      },
+      {
+        "type": "action",
+        "description": "Click the language toggle to switch to Spanish"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the visible interface is displayed in Spanish"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC016",
+    "title": "Switch the landing page language",
+    "description": "Verifies that changing the interface language on the homepage updates the visible page text immediately.",
+    "category": "Landing Page",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Switch the interface language"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the page text updates to the selected language"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC017",
+    "title": "Language setting remains available in the order flow",
+    "description": "Verifies that the language toggle is present in the ordering flow and updates the page text there as well.",
+    "category": "Multi-language Support",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /pedir"
+      },
+      {
+        "type": "action",
+        "description": "Click the language toggle to switch to English"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the visible interface is displayed in English"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC018",
+    "title": "See an empty category state",
+    "description": "Verifies that selecting a category with no available items shows an empty state instead of products.",
+    "category": "Menu Browsing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /pedir"
+      },
+      {
+        "type": "action",
+        "description": "Select an open location"
+      },
+      {
+        "type": "action",
+        "description": "Choose a category with no available items"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an empty category state is displayed"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC019",
+    "title": "Language setting remains available on the menu page",
+    "description": "Verifies that the language toggle is present on another supported route and updates the page text there as well.",
+    "category": "Multi-language Support",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /menu"
+      },
+      {
+        "type": "action",
+        "description": "Click the language toggle to switch to English"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the visible interface is displayed in English"
+      }
+    ],
+    "priority": "Medium"
+  },
+  {
+    "id": "TC020",
+    "title": "Keep unavailable products disabled",
+    "description": "Verifies that out-of-stock products are presented as unavailable and cannot be added to the cart.",
+    "category": "Menu Browsing",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /pedir"
+      },
+      {
+        "type": "action",
+        "description": "Select an open location"
+      },
+      {
+        "type": "action",
+        "description": "Browse the product grid"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify out-of-stock products are displayed as disabled"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC021",
+    "title": "Install the app from the prompt",
+    "description": "Verifies that choosing install from the app prompt leads to the app being added for home-screen use.",
+    "category": "PWA Support",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the install prompt to appear"
+      },
+      {
+        "type": "action",
+        "description": "Click the install action in the prompt"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the app is offered for installation"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC022",
+    "title": "Log out from the admin area",
+    "description": "This verifies that an admin can sign out and return to the login screen.",
+    "category": "Admin Panel",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the email field with {{LOGIN_USER}}"
+      },
+      {
+        "type": "action",
+        "description": "Fill in the password field with {{LOGIN_PASSWORD}}"
+      },
+      {
+        "type": "action",
+        "description": "Submit the sign-in form"
+      },
+      {
+        "type": "action",
+        "description": "Open the account menu"
+      },
+      {
+        "type": "action",
+        "description": "Sign out of the admin area"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the login screen is displayed"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the admin dashboard is not displayed"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC023",
+    "title": "PWA install prompt appears when available",
+    "description": "Verifies that the app surfaces an install prompt on a supported route when the browser makes installation available.",
+    "category": "PWA Support",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Wait for the install prompt to appear"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify an app installation prompt is visible"
+      }
+    ],
+    "priority": "Low"
+  },
+  {
+    "id": "TC024",
+    "title": "Prevent selecting a closed location",
+    "description": "Verifies that a closed restaurant location cannot be selected to start an order.",
+    "category": "Location Selection",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /pedir"
+      },
+      {
+        "type": "action",
+        "description": "Attempt to select a closed location"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the closed location remains unavailable for selection"
+      }
+    ],
+    "priority": "Low"
+  }
+]
