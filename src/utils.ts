@@ -22,6 +22,7 @@ export function generateWhatsAppLink(
   message += `*Cliente:* ${checkout.name}\n`;
   message += `*Cédula:* V-${checkout.cedula}\n`;
   message += `*Teléfono:* ${checkout.phone}\n`;
+  if (checkout.reference) message += `*Referencia:* ${checkout.reference}\n`;
   message += `----------------------------------\n`;
   message += `*PRODUCTOS:*\n`;
 
