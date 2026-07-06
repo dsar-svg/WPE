@@ -58,6 +58,7 @@ function MainView() {
         location_id: selectedLocation.id,
         customer_name: data.name,
         customer_phone: data.phone,
+        cedula: data.cedula || '',
         delivery_type: data.deliveryType || 'Delivery',
         delivery_address: data.address,
         delivery_coordinates: data.deliveryCoordinates,
