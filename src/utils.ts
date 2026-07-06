@@ -22,15 +22,6 @@ export function generateWhatsAppLink(
   message += `*Cliente:* ${checkout.name}\n`;
   message += `*Cédula:* V-${checkout.cedula}\n`;
   message += `*Teléfono:* ${checkout.phone}\n`;
-  message += `*Tipo:* Delivery\n`;
-
-  if (checkout.address) message += `*Dirección:* ${checkout.address}\n`;
-  if (checkout.reference) message += `*Referencia:* ${checkout.reference}\n`;
-  if (checkout.deliveryCoordinates) {
-    const { lat, lng } = checkout.deliveryCoordinates;
-    message += `*Ubicación:* https://www.google.com/maps?q=${lat},${lng}\n`;
-  }
-
   message += `----------------------------------\n`;
   message += `*PRODUCTOS:*\n`;
 
@@ -49,7 +40,7 @@ export function generateWhatsAppLink(
   message += `*Delivery:* $${deliveryFee.toFixed(2)}\n`;
   message += `*TOTAL:* $${totalUSD.toFixed(2)}\n`;
   message += `----------------------------------\n`;
-  message += `_Pedido realizado desde la App Web_`;
+  message += `_Pedido realizado desde la App_`;
 
   const encodedMessage = encodeURIComponent(message);
   return `https://wa.me/${location.whatsapp}?text=${encodedMessage}`;
