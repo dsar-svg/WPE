@@ -1,0 +1,13 @@
+node_modules/
+coverage/
+.DS_Store
+*.log
+.env*
+.claude/settings.local.json
+
+testsprite_tests/
+dist/
+docs/
+scripts/
+.impeccable/
+graphify-out/
