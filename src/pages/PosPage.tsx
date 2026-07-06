@@ -582,8 +582,33 @@ ${order.change_amount && order.change_amount > 0 ? `<p>Vuelto: $${order.change_a
 // ==============================
 // Main POS Page
 // ==============================
+function rowToOrder(row: any): Order {
+  return {
+    id: row.id,
+    location_id: row.location_id,
+    customer_name: row.customer_name,
+    customer_phone: row.customer_phone,
+    cedula: row.cedula || '',
+    delivery_type: row.delivery_type as Order['delivery_type'],
+    delivery_address: row.delivery_address,
+    delivery_coordinates: row.delivery_coordinates,
+    items: row.items,
+    subtotal: row.subtotal,
+    delivery_fee: row.delivery_fee,
+    total: row.total,
+    notes: row.notes || '',
+    status: (row.status === 'cancelado' ? 'cancelado' : row.status === 'pendiente' ? 'pendiente' : 'exitoso') as Order['status'],
+    payment_method: row.payment_method,
+    change_amount: row.change_amount ?? 0,
+    cashier_id: row.cashier_id,
+    invoice_number: row.invoice_number || '',
+    code: row.code || '',
+    created_at: row.created_at,
+  };
+}
+
 export function PosPage() {
-  const { menuItems, categories, locations, config, orders, findCustomer, saveCustomer, generateInvoiceNumber } = useRestaurant();
+  const { menuItems, categories, locations, config, findCustomer, saveCustomer, generateInvoiceNumber } = useRestaurant();
   const [cashier, setCashier] = useState<Cashier | null>(null);
   const [activeCategory, setActiveCategory] = useState('Todas');
   const [cart, setCart] = useState<POSCartItem[]>([]);
@@ -607,6 +632,24 @@ export function PosPage() {
   const [deliveryOrderCode, setDeliveryOrderCode] = useState('');
   const [loadedOrderId, setLoadedOrderId] = useState<string | null>(null);
   const [isLoadingOrder, setIsLoadingOrder] = useState(false);
+  const [posOrders, setPosOrders] = useState<Order[]>([]);
+
+  // Fetch orders directly (POS uses PIN login, not Supabase Auth)
+  useEffect(() => {
+    if (!cashier || !selectedLocationId) return;
+    const fetchOrders = async () => {
+      const { data } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('location_id', selectedLocationId)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (data) setPosOrders(data.map(rowToOrder));
+    };
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 30000);
+    return () => clearInterval(interval);
+  }, [cashier, selectedLocationId]);
 
   const isFormValid =
     customerCedula.trim().length >= 6 &&
@@ -1048,7 +1091,7 @@ export function PosPage() {
       <AnimatePresence>
         {showCorteDeCaja && (
           <CorteDeCajaModal
-            orders={orders}
+            orders={posOrders}
             locationId={selectedLocationId}
             locationName={locationName}
             onClose={() => setShowCorteDeCaja(false)}
@@ -1060,7 +1103,7 @@ export function PosPage() {
       <AnimatePresence>
         {showInvoiceHistory && (
           <InvoiceHistoryModal
-            orders={orders}
+            orders={posOrders}
             locationId={selectedLocationId}
             onClose={() => setShowInvoiceHistory(false)}
           />
