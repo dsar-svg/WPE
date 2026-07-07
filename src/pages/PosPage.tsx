@@ -219,7 +219,7 @@ function PaymentModal({
 // Receipt
 // ==============================
 function ReceiptModal({
-  items, total, paymentMethod, changeAmount, cashierName, customerName, customerCedula, invoiceNumber, config, locationName, onClose: _onClose, onNewSale,
+  items, total, paymentMethod, changeAmount, cashierName, customerName, customerCedula, invoiceNumber, config, locationName, deliveryType, deliveryFee, onClose: _onClose, onNewSale,
 }: {
   items: POSCartItem[];
   total: number;
@@ -231,6 +231,8 @@ function ReceiptModal({
   invoiceNumber?: string;
   config: { rif?: string; businessAddress?: string; businessPhone?: string; name?: string };
   locationName: string;
+  deliveryType: string;
+  deliveryFee: number;
   onClose: () => void;
   onNewSale: () => void;
 }) {
@@ -280,6 +282,7 @@ ${items.map(i => `<tr><td>${i.product.name}${i.selectedChoices && i.selectedChoi
 <tr><td>Subtotal (sin IVA)</td><td class="r">$${subtotalWithoutTax.toFixed(2)}</td></tr>
 <tr><td>IVA 16%</td><td class="r">$${taxAmount.toFixed(2)}</td></tr>
 <tr><td>Subtotal</td><td class="r">$${subtotal.toFixed(2)}</td></tr>
+${deliveryType === 'Delivery' ? `<tr><td>Envío</td><td class="r">$${deliveryFee.toFixed(2)}</td></tr>` : ''}
 <tr class="total"><td>TOTAL</td><td class="r">$${total.toFixed(2)}</td></tr>
 </table>
 <hr>
@@ -351,6 +354,12 @@ ${paymentMethod === 'Efectivo' ? `<p>Recibido: $${(total + changeAmount).toFixed
             <span>IVA 16%</span>
             <span>${taxAmount.toFixed(2)}</span>
           </div>
+          {deliveryType === 'Delivery' && (
+            <div className="flex justify-between text-[11px] text-zinc-500">
+              <span>Envío</span>
+              <span>${deliveryFee.toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-white font-black text-base border-t border-zinc-800 pt-1.5 mt-1.5">
             <span>Total</span>
             <span>${total.toFixed(2)}</span>
@@ -669,6 +678,8 @@ export function PosPage() {
     paymentMethod: PaymentMethod;
     changeAmount: number;
     invoiceNumber: string;
+    deliveryType: string;
+    deliveryFee: number;
   } | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState('');
   const [deliveryOrderCode, setDeliveryOrderCode] = useState('');
@@ -833,6 +844,9 @@ export function PosPage() {
     try {
       const invoiceNumber = await generateInvoiceNumber(selectedLocationId);
 
+      const deliveryFee = deliveryType === 'Delivery' ? (config.deliveryFee ?? 0) : 0;
+      const totalWithDelivery = cartTotal + deliveryFee;
+
       if (loadedOrderId) {
         const { error } = await supabase.from('orders').update({
           status: 'exitoso',
@@ -842,8 +856,8 @@ export function PosPage() {
           delivery_type: deliveryType,
           items: orderItems,
           subtotal: cartTotal,
-          delivery_fee: 0,
-          total: cartTotal,
+          delivery_fee: deliveryFee,
+          total: totalWithDelivery,
           notes: '',
           payment_method: method,
           change_amount: changeAmount,
@@ -861,8 +875,8 @@ export function PosPage() {
           status: 'exitoso',
           items: orderItems,
           subtotal: cartTotal,
-          delivery_fee: 0,
-          total: cartTotal,
+          delivery_fee: deliveryFee,
+          total: totalWithDelivery,
           notes: '',
           payment_method: method,
           change_amount: changeAmount,
@@ -875,7 +889,7 @@ export function PosPage() {
       await saveCustomer({ cedula: customerCedula, name: customerName || 'Mostrador', phone: customerPhone || 'N/A' });
 
       setShowPayModal(false);
-      setShowReceipt({ items: cart, total: cartTotal, paymentMethod: method, changeAmount, invoiceNumber });
+      setShowReceipt({ items: cart, total: totalWithDelivery, paymentMethod: method, changeAmount, invoiceNumber, deliveryType, deliveryFee });
     } catch (err) {
       console.error('Error creating order:', err);
       alert('Error al procesar la venta');
@@ -1146,6 +1160,8 @@ export function PosPage() {
             paymentMethod={showReceipt.paymentMethod}
             changeAmount={showReceipt.changeAmount}
             invoiceNumber={showReceipt.invoiceNumber}
+            deliveryType={showReceipt.deliveryType}
+            deliveryFee={showReceipt.deliveryFee}
             cashierName={cashier?.name || ''}
             customerName={customerName}
             customerCedula={customerCedula || undefined}
