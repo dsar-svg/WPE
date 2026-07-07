@@ -1,13 +1,10 @@
 const CACHE_KEY = 'bcv_rate_cache';
 const SOURCE_KEY = 'bcv_rate_source';
+const CACHE_TTL = 12 * 60 * 60 * 1000;
 
 interface BcvRateCache {
   rate: number;
-  date: string;
-}
-
-function getToday(): string {
-  return new Date().toISOString().split('T')[0];
+  timestamp: number;
 }
 
 function getCachedRate(): number | null {
@@ -15,7 +12,7 @@ function getCachedRate(): number | null {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
     const cache: BcvRateCache = JSON.parse(raw);
-    if (cache.date === getToday() && cache.rate > 0) {
+    if (Date.now() - cache.timestamp < CACHE_TTL && cache.rate > 0) {
       return cache.rate;
     }
   } catch {}
@@ -24,7 +21,7 @@ function getCachedRate(): number | null {
 
 function setCachedRate(rate: number): void {
   try {
-    const cache: BcvRateCache = { rate, date: getToday() };
+    const cache: BcvRateCache = { rate, timestamp: Date.now() };
     localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
   } catch {}
 }
