@@ -238,9 +238,6 @@ function ReceiptModal({
 }) {
   const subtotal = items.reduce((s, i) => s + i.product.price * i.quantity, 0);
   const date = new Date().toLocaleString('es-VE');
-  const taxRate = 0.16; // 16% IVA / ITBMS
-  const taxAmount = subtotal * taxRate;
-  const subtotalWithoutTax = subtotal / (1 + taxRate);
 
   const handlePrint = () => {
     const w = window.open('', '', 'width=380,height=700');
@@ -279,12 +276,8 @@ ${items.map(i => `<tr><td>${i.product.name}${i.selectedChoices && i.selectedChoi
 </table>
 <hr>
 <table>
-${deliveryType === 'Delivery' ? `
-<tr><td>Subtotal (sin IVA)</td><td class="r">$${subtotalWithoutTax.toFixed(2)}</td></tr>
-<tr><td>IVA 16%</td><td class="r">$${taxAmount.toFixed(2)}</td></tr>
 <tr><td>Subtotal</td><td class="r">$${subtotal.toFixed(2)}</td></tr>
-<tr><td>Envío</td><td class="r">$${deliveryFee.toFixed(2)}</td></tr>` : `
-<tr><td>Subtotal</td><td class="r">$${subtotal.toFixed(2)}</td></tr>`}
+${deliveryType === 'Delivery' ? `<tr><td>Envío</td><td class="r">$${deliveryFee.toFixed(2)}</td></tr>` : ''}
 <tr class="total"><td>TOTAL</td><td class="r">$${total.toFixed(2)}</td></tr>
 </table>
 <hr>
@@ -353,16 +346,10 @@ ${paymentMethod === 'Efectivo' ? `<p>Recibido: $${(total + changeAmount).toFixed
             <span>${subtotal.toFixed(2)}</span>
           </div>
           {deliveryType === 'Delivery' && (
-            <>
-            <div className="flex justify-between text-[11px] text-zinc-500">
-              <span>IVA 16%</span>
-              <span>${taxAmount.toFixed(2)}</span>
-            </div>
             <div className="flex justify-between text-[11px] text-zinc-500">
               <span>Envío</span>
               <span>${deliveryFee.toFixed(2)}</span>
             </div>
-            </>
           )}
           <div className="flex justify-between text-white font-black text-base border-t border-zinc-800 pt-1.5 mt-1.5">
             <span>Total</span>
@@ -561,12 +548,8 @@ ${items.map(i => `<tr><td>${i.name}</td><td class="c">${i.quantity}</td><td clas
 </table>
 <hr>
 <table>
-${isDelivery ? `
-<tr><td>Subtotal (sin IVA)</td><td class="r">$${(order.subtotal / 1.16).toFixed(2)}</td></tr>
-<tr><td>IVA 16%</td><td class="r">$${(order.subtotal - order.subtotal / 1.16).toFixed(2)}</td></tr>
 <tr><td>Subtotal</td><td class="r">$${order.subtotal.toFixed(2)}</td></tr>
-<tr><td>Envío</td><td class="r">$${order.delivery_fee.toFixed(2)}</td></tr>` : `
-<tr><td>Subtotal</td><td class="r">$${order.subtotal.toFixed(2)}</td></tr>`}
+${isDelivery ? `<tr><td>Envío</td><td class="r">$${order.delivery_fee.toFixed(2)}</td></tr>` : ''}
 <tr class="total"><td>TOTAL</td><td class="r">$${order.total.toFixed(2)}</td></tr>
 </table>
 <hr>
