@@ -4,16 +4,16 @@ import { Product, CartItem } from '../types';
 interface CartContextType {
   items: CartItem[];
   addToCart: (product: Product, selectedChoices?: string[]) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
-  updateNotes: (productId: string, notes: string) => void;
+  removeFromCart: (itemKey: string) => void;
+  updateQuantity: (itemKey: string, quantity: number) => void;
+  updateNotes: (itemKey: string, notes: string) => void;
   clearCart: () => void;
   total: number;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
 
-function getItemKey(productId: string, selectedChoices?: string[]): string {
+export function getItemKey(productId: string, selectedChoices?: string[]): string {
   if (!selectedChoices || selectedChoices.length === 0) return productId;
   const sorted = [...selectedChoices].sort().join('|');
   return `${productId}__${sorted}`;
@@ -46,22 +46,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const removeFromCart = useCallback((productId: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== productId));
+  const removeFromCart = useCallback((itemKey: string) => {
+    setItems((prev) => prev.filter((item) => getItemKey(item.id, item.selectedChoices) !== itemKey));
   }, []);
 
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
+  const updateQuantity = useCallback((itemKey: string, quantity: number) => {
     setItems((prev) =>
       prev.map((item) =>
-        item.id === productId ? { ...item, quantity: Math.max(0, quantity) } : item
+        getItemKey(item.id, item.selectedChoices) === itemKey ? { ...item, quantity: Math.max(0, quantity) } : item
       ).filter(item => item.quantity > 0)
     );
   }, []);
 
-  const updateNotes = useCallback((productId: string, notes: string) => {
+  const updateNotes = useCallback((itemKey: string, notes: string) => {
     setItems((prev) =>
       prev.map((item) =>
-        item.id === productId ? { ...item, notes } : item
+        getItemKey(item.id, item.selectedChoices) === itemKey ? { ...item, notes } : item
       )
     );
   }, []);

@@ -22,6 +22,7 @@ import { useRestaurant } from '../../context/RestaurantContext';
 import { useDistanceCalculation } from '../../hooks/useDistanceCalculation';
 import { fetchBcvRate, getRateSource } from '../../services/bcvRate';
 import { OptimizedImage } from './OptimizedImage';
+import { getItemKey } from '../../context/CartContext';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -29,9 +30,9 @@ interface CartDrawerProps {
   items: CartItem[];
   total: number;
   location: Location;
-  updateQuantity: (id: string, qty: number) => void;
-  updateNotes: (id: string, notes: string) => void;
-  removeFromCart: (id: string) => void;
+  updateQuantity: (itemKey: string, qty: number) => void;
+  updateNotes: (itemKey: string, notes: string) => void;
+  removeFromCart: (itemKey: string) => void;
   onCheckout: (data: CheckoutData) => void;
 }
 
@@ -546,11 +547,13 @@ export function CartDrawer({
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {items.map((item) => (
+                      {items.map((item) => {
+                        const itemKey = getItemKey(item.id, item.selectedChoices);
+                        return (
                         <motion.div
                           initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
-                          key={item.id}
+                          key={itemKey}
                           className="flex gap-3 bg-dark-card p-4 rounded-xl border border-white/10 group hover:border-primary-vibrant/20 transition-colors duration-300"
                         >
                           <div className="w-16 h-16 shrink-0 rounded-2xl overflow-hidden border border-white/10">
@@ -572,7 +575,7 @@ export function CartDrawer({
                               <div className="flex items-center gap-1.5 bg-white/10 rounded-xl p-1 border border-white/10">
                                 <motion.button
                                   whileTap={{ scale: 0.8 }}
-                                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                  onClick={() => updateQuantity(itemKey, item.quantity - 1)}
                                   className="w-11 h-11 bg-white/10 hover:bg-white/15 rounded-lg flex items-center justify-center text-zinc-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-vibrant focus:ring-offset-1 focus:ring-offset-dark"
                                   aria-label={`Decrease quantity of ${item.name}`}
                                 >
@@ -581,7 +584,7 @@ export function CartDrawer({
                                 <span className="w-7 text-center font-bold text-sm text-white">{item.quantity}</span>
                                 <motion.button
                                   whileTap={{ scale: 0.8 }}
-                                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                  onClick={() => updateQuantity(itemKey, item.quantity + 1)}
                                   className="w-11 h-11 bg-primary-vibrant text-white rounded-lg flex items-center justify-center shadow-lg shadow-primary-vibrant/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-1 focus:ring-offset-primary-vibrant"
                                   aria-label={`Increase quantity of ${item.name}`}
                                 >
@@ -590,7 +593,7 @@ export function CartDrawer({
                               </div>
                               <motion.button
                                 whileTap={{ scale: 0.8 }}
-                                onClick={() => removeFromCart(item.id)}
+                                onClick={() => removeFromCart(itemKey)}
                                 className="w-11 h-11 bg-white/5 hover:bg-red-500/10 rounded-lg flex items-center justify-center text-zinc-500 hover:text-red-400 transition-colors duration-200 border border-white/5 hover:border-red-500/20"
                                 aria-label={`Remove ${item.name}`}
                               >
@@ -601,7 +604,7 @@ export function CartDrawer({
                                   placeholder={t('cart.specialInstructions') + ' (ej: sin picante)'}
                                   aria-label={t('cart.specialInstructions')}
                                   value={item.notes}
-                                  onChange={(e) => updateNotes(item.id, e.target.value)}
+                                  onChange={(e) => updateNotes(itemKey, e.target.value)}
                                   className="w-full text-xs bg-white/5 border border-white/5 rounded-lg px-3 py-2 focus:border-primary-vibrant/50 outline-none transition-colors duration-200 resize-none min-h-[32px] text-zinc-300 placeholder:text-zinc-600"
                                   rows={1}
                                   maxLength={100}
@@ -611,7 +614,8 @@ export function CartDrawer({
                             </div>
                           </div>
                         </motion.div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </>
@@ -969,7 +973,7 @@ export function CartDrawer({
                     <div className="space-y-1.5 pb-3 border-b-2 border-primary-vibrant/20">
                       <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary-vibrant">Resumen del Pedido</p>
                       {items.map((item) => (
-                        <div key={item.id} className="flex justify-between items-center text-[11px] text-zinc-300">
+                        <div key={getItemKey(item.id, item.selectedChoices)} className="flex justify-between items-center text-[11px] text-zinc-300">
                           <span className="truncate flex-1">{item.quantity}x {item.name}
                             {item.selectedChoices && item.selectedChoices.length > 0 && (
                               <span className="text-zinc-500 font-normal"> — {item.selectedChoices.join(', ')}</span>
