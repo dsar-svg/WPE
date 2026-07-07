@@ -1010,8 +1010,8 @@ export function PosPage() {
         </div>
 
         {/* Right: Cart */}
-        <div className="w-80 bg-dark-card border-l border-zinc-800 flex flex-col flex-shrink-0 max-lg:hidden">
-          <div className="p-4 border-b border-zinc-800 space-y-2 flex-shrink-0">
+        <div className="w-[420px] bg-dark-card border-l border-zinc-800 flex flex-col flex-shrink-0 max-lg:hidden">
+          <div className="p-5 border-b border-zinc-800 space-y-3 flex-shrink-0">
             <h2 className="font-black text-lg flex items-center gap-2">
               <ShoppingCart className="w-5 h-5 text-primary-vibrant" />
               Venta
@@ -1022,7 +1022,7 @@ export function PosPage() {
               </div>
               <input value={customerCedula} onChange={e => setCustomerCedula(e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
                 placeholder="Cédula (auto-busca)"
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-10 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-10 py-3 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
               />
               {isLookingUpCustomer && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -1032,15 +1032,15 @@ export function PosPage() {
             </div>
             <input value={customerName} onChange={e => setCustomerName(e.target.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ''))}
               placeholder="Cliente"
-              className={`w-full bg-zinc-900 border rounded-xl px-3 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant ${customerName.trim().length === 0 ? 'border-red-500/50' : 'border-zinc-800'}`}
+              className={`w-full bg-zinc-900 border rounded-xl px-3 py-3 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant ${customerName.trim().length === 0 ? 'border-red-500/50' : 'border-zinc-800'}`}
             />
             <div className="flex gap-2">
               <input value={customerPhone} onChange={e => setCustomerPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
                 placeholder="Teléfono 04XXXXX"
-                className={`flex-1 bg-zinc-900 border rounded-xl px-3 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant ${customerPhone.length > 0 && (!customerPhone.startsWith('04') || customerPhone.length < 7) ? 'border-red-500/50' : 'border-zinc-800'}`}
+                className={`flex-1 bg-zinc-900 border rounded-xl px-3 py-3 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant ${customerPhone.length > 0 && (!customerPhone.startsWith('04') || customerPhone.length < 7) ? 'border-red-500/50' : 'border-zinc-800'}`}
               />
               <select value={deliveryType} onChange={e => { setDeliveryType(e.target.value as any); if (e.target.value !== 'Delivery') { setDeliveryOrderCode(''); setLoadedOrderId(null); } }}
-                className="bg-zinc-900 border border-zinc-800 rounded-xl px-2 py-2 text-xs font-bold text-zinc-400 outline-none"
+                className="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-3 text-xs font-bold text-zinc-400 outline-none"
               >
                 <option value="Pick-up">Pick Up</option>
                 <option value="Delivery">Delivery</option>
@@ -1053,7 +1053,7 @@ export function PosPage() {
                 </div>
                 <input value={deliveryOrderCode} onChange={e => setDeliveryOrderCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
                   placeholder="Código de orden"
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-10 py-2 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-10 py-3 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
                 />
                 {isLoadingOrder && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -1081,22 +1081,22 @@ export function PosPage() {
                     <div className="font-bold text-sm text-white truncate">{item.product.name}{item.selectedChoices && item.selectedChoices.length > 0 ? <span className="text-zinc-500 text-[10px] font-normal"> — {item.selectedChoices.join(', ')}</span> : ''}</div>
                     <div className="text-primary-vibrant font-black text-sm">${item.product.price.toFixed(2)}</div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <button onClick={() => updateQty(itemKey, -1)}
-                      className="w-7 h-7 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
+                      className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
                     >
-                      <Minus className="w-3 h-3" />
+                      <Minus className="w-4 h-4" />
                     </button>
-                    <span className="font-black text-sm w-5 text-center">{item.quantity}</span>
+                    <span className="font-black text-sm w-6 text-center">{item.quantity}</span>
                     <button onClick={() => updateQty(itemKey, 1)}
-                      className="w-7 h-7 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
+                      className="w-8 h-8 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
                     >
-                      <Plus className="w-3 h-3" />
+                      <Plus className="w-4 h-4" />
                     </button>
                     <button onClick={() => removeItem(itemKey)}
-                      className="w-7 h-7 bg-red-500/10 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-all"
+                      className="w-8 h-8 bg-red-500/10 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-all"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -1104,7 +1104,7 @@ export function PosPage() {
               })}
           </div>
 
-          <div className="border-t border-zinc-800 p-4 space-y-3 flex-shrink-0">
+          <div className="border-t border-zinc-800 p-5 space-y-3 flex-shrink-0">
             <div className="flex justify-between items-center">
               <span className="text-zinc-500 font-bold text-sm">Items:</span>
               <span className="font-bold text-white">{cartCount}</span>
@@ -1114,7 +1114,7 @@ export function PosPage() {
               <span className="text-2xl font-black text-primary-vibrant">${cartTotal.toFixed(2)}</span>
             </div>
             <button onClick={() => setShowPayModal(true)} disabled={cart.length === 0 || !isFormValid}
-              className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+              className="w-full bg-primary-vibrant text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
             >
               <DollarSign className="w-5 h-5" /> Cobrar
             </button>
