@@ -113,6 +113,7 @@ export interface Cashier {
   employee_id?: string;
   location_id?: string;
   pin?: string;
+  cashier_number?: number;
 }
 
 export interface Order {

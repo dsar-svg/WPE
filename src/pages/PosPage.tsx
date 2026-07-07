@@ -36,7 +36,13 @@ function PosLogin({ onLogin }: { onLogin: (cashier: Cashier) => void }) {
         .limit(1)
         .maybeSingle();
       if (data) {
-        onLogin({ id: data.id, name: data.name || data.email, email: data.email, employee_id: data.employee_id, location_id: data.location_id });
+        const { data: all } = await supabase
+          .from('admins')
+          .select('id')
+          .eq('location_id', data.location_id)
+          .order('employee_id', { ascending: true })
+        const number = all ? all.findIndex(a => a.id === data.id) + 1 : 1;
+        onLogin({ id: data.id, name: data.name || data.email, email: data.email, employee_id: data.employee_id, location_id: data.location_id, cashier_number: number });
       } else {
         setError('PIN incorrecto');
         setPin('');
@@ -920,7 +926,7 @@ export function PosPage() {
           <h1 className="font-display text-xl uppercase tracking-wider text-white max-md:hidden">POS</h1>
           <div className="flex items-center gap-2 text-sm">
             <User className="w-4 h-4 text-primary-vibrant" />
-            <span className="font-bold text-zinc-300">Caja #{cashier.employee_id || cashier.name.replace(/\D/g, '').slice(0, 3) || cashier.id.slice(0, 4)}</span>
+            <span className="font-bold text-zinc-300">Caja #{cashier.cashier_number || cashier.employee_id || cashier.name.replace(/\D/g, '').slice(0, 3) || cashier.id.slice(0, 4)}</span>
           </div>
           <span className="text-xs text-zinc-500 font-bold">{locationName}</span>
         </div>
