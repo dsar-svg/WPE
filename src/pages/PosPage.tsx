@@ -695,10 +695,13 @@ export function PosPage() {
     customerPhone.replace(/\D/g, '').length >= 7;
 
   useEffect(() => {
-    if (!selectedLocationId && locations.length > 0) {
+    if (selectedLocationId) return;
+    if (cashier?.location_id && locations.some(l => l.id === cashier.location_id)) {
+      setSelectedLocationId(cashier.location_id);
+    } else if (locations.length > 0) {
       setSelectedLocationId(locations[0].id);
     }
-  }, [locations, selectedLocationId]);
+  }, [locations, selectedLocationId, cashier]);
 
   // Lookup customer by cedula
   const cedulaLookupRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -895,13 +898,9 @@ export function PosPage() {
           <h1 className="font-display text-xl uppercase tracking-wider text-white max-md:hidden">POS</h1>
           <div className="flex items-center gap-2 text-sm">
             <User className="w-4 h-4 text-primary-vibrant" />
-            <span className="font-bold text-zinc-300">{cashier.name}</span>
+            <span className="font-bold text-zinc-300">Caja #{cashier.employee_id || cashier.name.replace(/\D/g, '').slice(0, 3) || cashier.id.slice(0, 4)}</span>
           </div>
-          <select value={selectedLocationId} onChange={e => setSelectedLocationId(e.target.value)}
-            className="bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-1.5 text-xs font-bold text-zinc-300 outline-none"
-          >
-            {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
+          <span className="text-xs text-zinc-500 font-bold">{locationName}</span>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowCorteDeCaja(true)}
