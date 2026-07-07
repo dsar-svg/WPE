@@ -797,16 +797,16 @@ export function PosPage() {
     });
   }, []);
 
-  const updateQty = useCallback((productId: string, delta: number) => {
+  const updateQty = useCallback((key: string, delta: number) => {
     setCart(prev => prev.map(i => {
-      if (i.product.id !== productId) return i;
+      if (getItemKey(i.product.id, i.selectedChoices) !== key) return i;
       const newQty = i.quantity + delta;
       return newQty <= 0 ? null : { ...i, quantity: newQty };
     }).filter(Boolean) as POSCartItem[]);
   }, []);
 
-  const removeItem = useCallback((productId: string) => {
-    setCart(prev => prev.filter(i => i.product.id !== productId));
+  const removeItem = useCallback((key: string) => {
+    setCart(prev => prev.filter(i => getItemKey(i.product.id, i.selectedChoices) !== key));
   }, []);
 
   const handlePayment = useCallback(async (method: PaymentMethod, amountReceived: number, changeAmount: number) => {
@@ -1052,32 +1052,35 @@ export function PosPage() {
             {cart.length === 0 && (
               <div className="text-center py-12 text-zinc-600 text-sm">Carrito vacío</div>
             )}
-            {cart.map(item => (
-              <div key={item.product.id} className="bg-zinc-900 rounded-2xl p-3 flex items-center gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm text-white truncate">{item.product.name}{item.selectedChoices && item.selectedChoices.length > 0 ? <span className="text-zinc-500 text-[10px] font-normal"> — {item.selectedChoices.join(', ')}</span> : ''}</div>
-                  <div className="text-primary-vibrant font-black text-sm">${item.product.price.toFixed(2)}</div>
+              {cart.map(item => {
+                const itemKey = getItemKey(item.product.id, item.selectedChoices);
+                return (
+                <div key={itemKey} className="bg-zinc-900 rounded-2xl p-3 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-sm text-white truncate">{item.product.name}{item.selectedChoices && item.selectedChoices.length > 0 ? <span className="text-zinc-500 text-[10px] font-normal"> — {item.selectedChoices.join(', ')}</span> : ''}</div>
+                    <div className="text-primary-vibrant font-black text-sm">${item.product.price.toFixed(2)}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => updateQty(itemKey, -1)}
+                      className="w-7 h-7 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="font-black text-sm w-5 text-center">{item.quantity}</span>
+                    <button onClick={() => updateQty(itemKey, 1)}
+                      className="w-7 h-7 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                    <button onClick={() => removeItem(itemKey)}
+                      className="w-7 h-7 bg-red-500/10 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-all"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => updateQty(item.product.id, -1)}
-                    className="w-7 h-7 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
-                  >
-                    <Minus className="w-3 h-3" />
-                  </button>
-                  <span className="font-black text-sm w-5 text-center">{item.quantity}</span>
-                  <button onClick={() => updateQty(item.product.id, 1)}
-                    className="w-7 h-7 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
-                  >
-                    <Plus className="w-3 h-3" />
-                  </button>
-                  <button onClick={() => removeItem(item.product.id)}
-                    className="w-7 h-7 bg-red-500/10 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-all"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            ))}
+                );
+              })}
           </div>
 
           <div className="border-t border-zinc-800 p-4 space-y-3 flex-shrink-0">
