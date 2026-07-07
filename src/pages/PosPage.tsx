@@ -6,6 +6,7 @@ import { Product, Cashier, POSCartItem, PaymentMethod, Order, OrderItem } from '
 import { supabase } from '../lib/supabase';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
 import { fetchBcvRate } from '../services/bcvRate';
+import { ChoiceSelectorModal } from '../components/ui/ChoiceSelectorModal';
 
 // ==============================
 // PIN Login
@@ -272,7 +273,7 @@ ${config.businessPhone ? `<p>Tel: ${config.businessPhone}</p>` : ''}
 <hr>
 <table>
 <tr><th>Item</th><th class="c">Cant</th><th class="r">Precio</th></tr>
-${items.map(i => `<tr><td>${i.product.name}</td><td class="c">${i.quantity}</td><td class="r">$${(i.product.price * i.quantity).toFixed(2)}</td></tr>`).join('')}
+${items.map(i => `<tr><td>${i.product.name}${i.selectedChoices && i.selectedChoices.length > 0 ? ' — ' + i.selectedChoices.join(', ') : ''}</td><td class="c">${i.quantity}</td><td class="r">$${(i.product.price * i.quantity).toFixed(2)}</td></tr>`).join('')}
 </table>
 <hr>
 <table>
@@ -337,7 +338,7 @@ ${paymentMethod === 'Efectivo' ? `<p>Recibido: $${(total + changeAmount).toFixed
         <div className="bg-zinc-950 rounded-2xl p-3 space-y-1.5 text-sm max-h-36 overflow-y-auto">
           {items.map(i => (
             <div key={i.product.id} className="flex justify-between text-zinc-400">
-              <span className="truncate flex-1">{i.quantity}x {i.product.name}</span>
+              <span className="truncate flex-1">{i.quantity}x {i.product.name}{i.selectedChoices && i.selectedChoices.length > 0 ? <span className="text-zinc-500 text-[10px]"> — {i.selectedChoices.join(', ')}</span> : ''}</span>
               <span className="text-white font-bold ml-2">${(i.product.price * i.quantity).toFixed(2)}</span>
             </div>
           ))}
@@ -600,6 +601,23 @@ ${order.change_amount && order.change_amount > 0 ? `<p>Vuelto: $${order.change_a
 // ==============================
 // Main POS Page
 // ==============================
+function getItemKey(productId: string, selectedChoices?: string[]): string {
+  if (!selectedChoices || selectedChoices.length === 0) return productId;
+  const sorted = [...selectedChoices].sort().join('|');
+  return `${productId}__${sorted}`;
+}
+
+function getChoicePriceAdjust(product: Product, selectedChoices?: string[]): number {
+  if (!selectedChoices || !product.choices) return 0;
+  let adjust = 0;
+  for (const choice of product.choices) {
+    if (selectedChoices.includes(choice.name)) {
+      adjust += choice.priceAdjust ?? 0;
+    }
+  }
+  return adjust;
+}
+
 function rowToOrder(row: any): Order {
   return {
     id: row.id,
@@ -651,6 +669,7 @@ export function PosPage() {
   const [loadedOrderId, setLoadedOrderId] = useState<string | null>(null);
   const [isLoadingOrder, setIsLoadingOrder] = useState(false);
   const [posOrders, setPosOrders] = useState<Order[]>([]);
+  const [choiceProduct, setChoiceProduct] = useState<Product | null>(null);
 
   // Fetch orders directly (POS uses PIN login, not Supabase Auth)
   useEffect(() => {
@@ -761,16 +780,20 @@ export function PosPage() {
     return items;
   }, [menuItems, activeCategory, search]);
 
-  const cartTotal = useMemo(() => cart.reduce((s, i) => s + i.product.price * i.quantity, 0), [cart]);
+  const cartTotal = useMemo(() => cart.reduce((s, i) => {
+    const adjust = getChoicePriceAdjust(i.product, i.selectedChoices);
+    return s + (i.product.price + adjust) * i.quantity;
+  }, 0), [cart]);
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
 
-  const addToCart = useCallback((product: Product) => {
+  const addToCart = useCallback((product: Product, selectedChoices?: string[]) => {
+    const key = getItemKey(product.id, selectedChoices);
     setCart(prev => {
-      const existing = prev.find(i => i.product.id === product.id);
+      const existing = prev.find(i => getItemKey(i.product.id, i.selectedChoices) === key);
       if (existing) {
-        return prev.map(i => i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+        return prev.map(i => getItemKey(i.product.id, i.selectedChoices) === key ? { ...i, quantity: i.quantity + 1 } : i);
       }
-      return [...prev, { product, quantity: 1 }];
+      return [...prev, { product, quantity: 1, selectedChoices }];
     });
   }, []);
 
@@ -792,7 +815,7 @@ export function PosPage() {
     const orderItems = cart.map(i => ({
       id: i.product.id,
       name: i.product.name,
-      price: i.product.price,
+      price: i.product.price + getChoicePriceAdjust(i.product, i.selectedChoices),
       quantity: i.quantity,
       notes: i.notes || '',
       selectedChoices: i.selectedChoices || [],
@@ -937,7 +960,13 @@ export function PosPage() {
           <div className="flex-1 overflow-y-auto p-3">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
               {filteredProducts.map(product => (
-                <button key={product.id} onClick={() => addToCart(product)}
+                <button key={product.id} onClick={() => {
+                  if (product.choices && product.choices.length > 0) {
+                    setChoiceProduct(product);
+                  } else {
+                    addToCart(product);
+                  }
+                }}
                   className="bg-dark-card border border-zinc-800 hover:border-primary-vibrant/50 rounded-2xl p-2 text-left transition-all active:scale-95 hover:shadow-lg hover:shadow-primary-vibrant/5 relative"
                 >
                   {product.code && (
@@ -1026,7 +1055,7 @@ export function PosPage() {
             {cart.map(item => (
               <div key={item.product.id} className="bg-zinc-900 rounded-2xl p-3 flex items-center gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm text-white truncate">{item.product.name}</div>
+                  <div className="font-bold text-sm text-white truncate">{item.product.name}{item.selectedChoices && item.selectedChoices.length > 0 ? <span className="text-zinc-500 text-[10px] font-normal"> — {item.selectedChoices.join(', ')}</span> : ''}</div>
                   <div className="text-primary-vibrant font-black text-sm">${item.product.price.toFixed(2)}</div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1078,6 +1107,20 @@ export function PosPage() {
           <span className="text-lg">${cartTotal.toFixed(2)}</span>
         </button>
       )}
+
+      {/* Choice selector modal */}
+      <AnimatePresence>
+        {choiceProduct && (
+          <ChoiceSelectorModal
+            product={choiceProduct}
+            onClose={() => setChoiceProduct(null)}
+            onConfirm={(selectedChoices) => {
+              addToCart(choiceProduct, selectedChoices);
+              setChoiceProduct(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Payment modal */}
       <AnimatePresence>
