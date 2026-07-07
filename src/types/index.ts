@@ -138,7 +138,7 @@ export interface Order {
   created_at: string;
 }
 
-export type PaymentMethod = 'Efectivo' | 'Tarjeta' | 'Transferencia' | 'QR' | 'Otro';
+export type PaymentMethod = 'Efectivo' | 'Tarjeta' | 'Pago Movil' | 'QR' | 'Otro';
 
 export interface Customer {
   cedula: string;

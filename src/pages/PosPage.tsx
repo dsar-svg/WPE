@@ -5,6 +5,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { Product, Cashier, POSCartItem, PaymentMethod, Order, OrderItem } from '../types';
 import { supabase } from '../lib/supabase';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
+import { fetchBcvRate } from '../services/bcvRate';
 
 // ==============================
 // PIN Login
@@ -103,10 +104,15 @@ function PaymentModal({
 }) {
   const [method, setMethod] = useState<PaymentMethod>('Efectivo');
   const [amountReceived, setAmountReceived] = useState('');
+  const [bcvRate, setBcvRate] = useState<number | null>(null);
   const changeAmount = method === 'Efectivo'
     ? Math.max(0, (parseFloat(amountReceived) || 0) - total)
     : 0;
   const isCashEnough = method !== 'Efectivo' || (parseFloat(amountReceived) || 0) >= total;
+
+  useEffect(() => {
+    fetchBcvRate().then(setBcvRate);
+  }, []);
 
   const handleConfirm = () => {
     if (!isCashEnough) return;
@@ -116,7 +122,7 @@ function PaymentModal({
   const methods: { key: PaymentMethod; icon: typeof DollarSign; label: string; color: string }[] = [
     { key: 'Efectivo', icon: Banknote, label: 'Efectivo', color: 'bg-green-500' },
     { key: 'Tarjeta', icon: CreditCard, label: 'Tarjeta', color: 'bg-blue-500' },
-    { key: 'Transferencia', icon: Smartphone, label: 'Transferencia', color: 'bg-purple-500' },
+    { key: 'Pago Movil', icon: Smartphone, label: 'Pago Móvil', color: 'bg-purple-500' },
     { key: 'QR', icon: QrCode, label: 'QR', color: 'bg-orange-500' },
   ];
 
@@ -151,6 +157,18 @@ function PaymentModal({
             </button>
           ))}
         </div>
+
+        {(method === 'Tarjeta' || method === 'Pago Movil') && (
+          <div className="bg-zinc-950 rounded-2xl p-4 text-center space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Equivalente en VES</p>
+            <p className="text-2xl font-black text-purple-400">
+              {bcvRate ? `Bs. ${(total * bcvRate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : (
+                <span className="text-zinc-600 animate-pulse">Cargando tasa...</span>
+              )}
+            </p>
+            {bcvRate && <p className="text-[10px] text-zinc-600">Tasa BCV: Bs. {bcvRate.toFixed(2)}</p>}
+          </div>
+        )}
 
         {method === 'Efectivo' && (
           <div className="space-y-3">
@@ -378,7 +396,7 @@ function CorteDeCajaModal({
 
   const totalEfectivo = todayOrders.filter(o => o.payment_method === 'Efectivo').reduce((s, o) => s + o.total, 0);
   const totalTarjeta = todayOrders.filter(o => o.payment_method === 'Tarjeta').reduce((s, o) => s + o.total, 0);
-  const totalTransferencia = todayOrders.filter(o => o.payment_method === 'Transferencia').reduce((s, o) => s + o.total, 0);
+  const totalPagoMovil = todayOrders.filter(o => o.payment_method === 'Pago Movil').reduce((s, o) => s + o.total, 0);
   const totalQR = todayOrders.filter(o => o.payment_method === 'QR').reduce((s, o) => s + o.total, 0);
   const granTotal = todayOrders.reduce((s, o) => s + o.total, 0);
   const count = todayOrders.length;
@@ -420,7 +438,7 @@ function CorteDeCajaModal({
           {[
             { method: 'Efectivo', total: totalEfectivo, icon: Banknote, color: 'text-green-400' },
             { method: 'Tarjeta', total: totalTarjeta, icon: CreditCard, color: 'text-blue-400' },
-            { method: 'Transferencia', total: totalTransferencia, icon: Smartphone, color: 'text-purple-400' },
+            { method: 'Pago Movil', total: totalPagoMovil, icon: Smartphone, color: 'text-purple-400' },
             { method: 'QR', total: totalQR, icon: QrCode, color: 'text-orange-400' },
           ].map(({ method, total: t, icon: Icon, color }) => (
             <div key={method} className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl">
