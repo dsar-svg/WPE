@@ -279,10 +279,12 @@ ${items.map(i => `<tr><td>${i.product.name}${i.selectedChoices && i.selectedChoi
 </table>
 <hr>
 <table>
+${deliveryType === 'Delivery' ? `
 <tr><td>Subtotal (sin IVA)</td><td class="r">$${subtotalWithoutTax.toFixed(2)}</td></tr>
 <tr><td>IVA 16%</td><td class="r">$${taxAmount.toFixed(2)}</td></tr>
 <tr><td>Subtotal</td><td class="r">$${subtotal.toFixed(2)}</td></tr>
-${deliveryType === 'Delivery' ? `<tr><td>Envío</td><td class="r">$${deliveryFee.toFixed(2)}</td></tr>` : ''}
+<tr><td>Envío</td><td class="r">$${deliveryFee.toFixed(2)}</td></tr>` : `
+<tr><td>Subtotal</td><td class="r">$${subtotal.toFixed(2)}</td></tr>`}
 <tr class="total"><td>TOTAL</td><td class="r">$${total.toFixed(2)}</td></tr>
 </table>
 <hr>
@@ -350,15 +352,17 @@ ${paymentMethod === 'Efectivo' ? `<p>Recibido: $${(total + changeAmount).toFixed
             <span>Subtotal</span>
             <span>${subtotal.toFixed(2)}</span>
           </div>
-          <div className="flex justify-between text-[11px] text-zinc-500">
-            <span>IVA 16%</span>
-            <span>${taxAmount.toFixed(2)}</span>
-          </div>
           {deliveryType === 'Delivery' && (
+            <>
+            <div className="flex justify-between text-[11px] text-zinc-500">
+              <span>IVA 16%</span>
+              <span>${taxAmount.toFixed(2)}</span>
+            </div>
             <div className="flex justify-between text-[11px] text-zinc-500">
               <span>Envío</span>
               <span>${deliveryFee.toFixed(2)}</span>
             </div>
+            </>
           )}
           <div className="flex justify-between text-white font-black text-base border-t border-zinc-800 pt-1.5 mt-1.5">
             <span>Total</span>
@@ -488,10 +492,12 @@ function CorteDeCajaModal({
 // Invoice History
 // ==============================
 function InvoiceHistoryModal({
-  orders, locationId, onClose,
+  orders, locationId, config, locationName, onClose,
 }: {
   orders: Order[];
   locationId: string;
+  config: { rif?: string; businessAddress?: string; businessPhone?: string; name?: string };
+  locationName: string;
   onClose: () => void;
 }) {
   const [searchCedula, setSearchCedula] = useState('');
@@ -521,22 +527,30 @@ function InvoiceHistoryModal({
     const w = window.open('', '', 'width=380,height=700');
     if (!w) return;
     const items = order.items as Array<{ name: string; quantity: number; price: number }>;
+    const isDelivery = order.delivery_type === 'Delivery';
     w.document.write(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Factura</title>
 <style>
 body { font-family: 'Courier New', monospace; font-size: 11px; width: 290px; margin: 0 auto; padding: 8px; }
-h2 { text-align: center; margin: 0; font-size: 14px; }
+h2 { text-align: center; margin: 0; font-size: 15px; text-transform: uppercase; }
+h3 { text-align: center; margin: 2px 0; font-size: 12px; }
 p { text-align: center; margin: 1px 0; font-size: 10px; }
-table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+table { width: 100%; border-collapse: collapse; margin: 8px 0; }
 th, td { text-align: left; padding: 2px 3px; font-size: 10px; }
 th { border-bottom: 1px dashed #000; }
 td.r { text-align: right; }
 td.c { text-align: center; }
-.total td { border-top: 1px dashed #000; font-weight: bold; font-size: 12px; }
-hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
-.footer { text-align: center; font-size: 9px; }
+.total td { border-top: 1px dashed #000; font-weight: bold; font-size: 12px; padding-top: 4px; }
+hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
+.footer { text-align: center; font-size: 9px; margin-top: 6px; }
 </style></head><body>
-<h2>FACTURA ${order.invoice_number || ''}</h2>
+<h2>${config.name || 'Wallace Panda Express'}</h2>
+${config.rif ? `<p>RIF: ${config.rif}</p>` : ''}
+${config.businessAddress ? `<p>${config.businessAddress}</p>` : ''}
+${config.businessPhone ? `<p>Tel: ${config.businessPhone}</p>` : ''}
+<p>${locationName}</p>
+<hr>
+<p>FACTURA N° ${order.invoice_number || ''}</p>
 <p>${formatDate(order.created_at)}</p>
 <p>Cliente: ${order.customer_name}${order.cedula ? ` V-${order.cedula}` : ''}</p>
 <p>${order.delivery_type}${order.delivery_address ? ` — ${order.delivery_address}` : ''}</p>
@@ -547,14 +561,19 @@ ${items.map(i => `<tr><td>${i.name}</td><td class="c">${i.quantity}</td><td clas
 </table>
 <hr>
 <table>
+${isDelivery ? `
+<tr><td>Subtotal (sin IVA)</td><td class="r">$${(order.subtotal / 1.16).toFixed(2)}</td></tr>
+<tr><td>IVA 16%</td><td class="r">$${(order.subtotal - order.subtotal / 1.16).toFixed(2)}</td></tr>
 <tr><td>Subtotal</td><td class="r">$${order.subtotal.toFixed(2)}</td></tr>
-<tr><td>Delivery</td><td class="r">$${order.delivery_fee.toFixed(2)}</td></tr>
+<tr><td>Envío</td><td class="r">$${order.delivery_fee.toFixed(2)}</td></tr>` : `
+<tr><td>Subtotal</td><td class="r">$${order.subtotal.toFixed(2)}</td></tr>`}
 <tr class="total"><td>TOTAL</td><td class="r">$${order.total.toFixed(2)}</td></tr>
 </table>
 <hr>
 <p>Método: ${order.payment_method || 'N/A'}</p>
 ${order.change_amount && order.change_amount > 0 ? `<p>Vuelto: $${order.change_amount.toFixed(2)}</p>` : ''}
 <hr>
+<p class="footer">¡Gracias por su compra!</p>
 <p class="footer">wallacepanda.com</p>
 <script>window.print();</script>
 </body></html>`);
@@ -1191,6 +1210,8 @@ export function PosPage() {
           <InvoiceHistoryModal
             orders={posOrders}
             locationId={selectedLocationId}
+            config={{ rif: config.rif, businessAddress: config.businessAddress, businessPhone: config.businessPhone, name: config.name }}
+            locationName={locationName}
             onClose={() => setShowInvoiceHistory(false)}
           />
         )}
