@@ -489,7 +489,13 @@ function InvoiceHistoryModal({
   const [searchName, setSearchName] = useState('');
 
   const filtered = useMemo(() => {
-    let result = orders.filter(o => o.location_id === locationId && o.invoice_number);
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    let result = orders.filter(o =>
+      o.location_id === locationId &&
+      o.invoice_number &&
+      new Date(o.created_at) >= startOfDay
+    );
     if (searchCedula.trim()) {
       result = result.filter(o => o.cedula?.includes(searchCedula.trim()));
     }
