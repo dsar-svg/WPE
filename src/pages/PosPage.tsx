@@ -808,6 +808,7 @@ export function PosPage() {
           customer_phone: customerPhone || 'N/A',
           cedula: customerCedula || '',
           delivery_type: deliveryType,
+          status: 'exitoso',
           items: orderItems,
           subtotal: cartTotal,
           delivery_fee: 0,
