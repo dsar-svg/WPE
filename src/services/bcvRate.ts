@@ -1,6 +1,6 @@
 const CACHE_KEY = 'bcv_rate_cache';
 const SOURCE_KEY = 'bcv_rate_source';
-const CACHE_TTL = 12 * 60 * 60 * 1000;
+const CACHE_TTL = 10 * 60 * 1000;
 
 interface BcvRateCache {
   rate: number;
