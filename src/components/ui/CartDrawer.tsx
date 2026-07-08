@@ -921,7 +921,7 @@ export function CartDrawer({
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.9, y: 40 }}
                   transition={{ type: 'spring', damping: 28, stiffness: 200 }}
-                  className="fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-lg w-full max-h-[90vh] overflow-y-auto bg-dark-card rounded-3xl z-[60] flex flex-col border border-white/10 shadow-2xl"
+                  className="fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-dark-card rounded-3xl z-[60] flex flex-col border border-white/10 shadow-2xl"
                 >
                   {/* Modal header */}
                   <div className="sticky top-0 bg-dark-card z-10 p-5 sm:p-6 border-b border-white/10 flex items-center justify-between">
