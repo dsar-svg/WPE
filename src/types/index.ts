@@ -163,3 +163,10 @@ export interface PaymentScreenshot {
   uploaded: boolean;
   path?: string;
 }
+
+export interface PagoMovilData {
+  reference: string;
+  payerCedula: string;
+  payerPhone: string;
+  sameAsCustomer: boolean;
+}

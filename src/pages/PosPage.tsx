@@ -103,15 +103,21 @@ function PosLogin({ onLogin }: { onLogin: (cashier: Cashier) => void }) {
 // Payment Modal
 // ==============================
 function PaymentModal({
-  total, onConfirm, onClose,
+  total, customerCedula, customerPhone, onConfirm, onClose,
 }: {
   total: number;
-  onConfirm: (method: PaymentMethod, amountReceived: number, changeAmount: number) => void;
+  customerCedula: string;
+  customerPhone: string;
+  onConfirm: (method: PaymentMethod, amountReceived: number, changeAmount: number, pagoMovil?: { reference: string; payerCedula: string; payerPhone: string }) => void;
   onClose: () => void;
 }) {
   const [method, setMethod] = useState<PaymentMethod>('Efectivo');
   const [amountReceived, setAmountReceived] = useState('');
   const [bcvRate, setBcvRate] = useState<number | null>(null);
+  const [pmReference, setPmReference] = useState('');
+  const [pmSameAsCustomer, setPmSameAsCustomer] = useState(true);
+  const [pmPayerCedula, setPmPayerCedula] = useState('');
+  const [pmPayerPhone, setPmPayerPhone] = useState('');
   const changeAmount = method === 'Efectivo'
     ? Math.max(0, (parseFloat(amountReceived) || 0) - total)
     : 0;
@@ -119,11 +125,23 @@ function PaymentModal({
 
   useEffect(() => {
     fetchBcvRate().then(setBcvRate);
-  }, []);
+    setPmReference('');
+    setPmSameAsCustomer(true);
+    setPmPayerCedula('');
+    setPmPayerPhone('');
+  }, [method]);
 
   const handleConfirm = () => {
     if (!isCashEnough) return;
-    onConfirm(method, method === 'Efectivo' ? parseFloat(amountReceived) || 0 : total, changeAmount);
+    if (method === 'Pago Movil') {
+      if (!pmReference.trim()) { alert('Ingresa la referencia del pago'); return; }
+      const payerCedula = pmSameAsCustomer ? customerCedula : pmPayerCedula;
+      const payerPhone = pmSameAsCustomer ? customerPhone : pmPayerPhone;
+      if (!payerCedula || !payerPhone) { alert('Completa los datos del emisor (cédula y teléfono)'); return; }
+      onConfirm(method, total, changeAmount, { reference: pmReference.trim(), payerCedula, payerPhone });
+    } else {
+      onConfirm(method, method === 'Efectivo' ? parseFloat(amountReceived) || 0 : total, changeAmount);
+    }
   };
 
   const methods: { key: PaymentMethod; icon: typeof DollarSign; label: string; color: string }[] = [
@@ -174,6 +192,38 @@ function PaymentModal({
               )}
             </p>
             {bcvRate && <p className="text-[10px] text-zinc-600">Tasa BCV: Bs. {bcvRate.toFixed(2)}</p>}
+          </div>
+        )}
+
+        {method === 'Pago Movil' && (
+          <div className="space-y-4 bg-zinc-950 rounded-2xl p-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Referencia del pago</label>
+              <input value={pmReference} onChange={e => setPmReference(e.target.value)}
+                placeholder="N° de referencia"
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={pmSameAsCustomer} onChange={e => setPmSameAsCustomer(e.target.checked)}
+                  className="w-4 h-4 rounded border-zinc-700 bg-zinc-900 text-primary-vibrant focus:ring-primary-vibrant/50 accent-primary-vibrant"
+                />
+                <span className="text-[11px] text-zinc-400 font-medium">Los datos del emisor son los mismos del cliente</span>
+              </label>
+            </div>
+            {!pmSameAsCustomer && (
+              <div className="space-y-2">
+                <input value={pmPayerCedula} onChange={e => setPmPayerCedula(e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
+                  placeholder="Cédula del emisor"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
+                />
+                <input value={pmPayerPhone} onChange={e => setPmPayerPhone(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                  placeholder="Teléfono del emisor"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -837,7 +887,7 @@ export function PosPage() {
     setCart(prev => prev.filter(i => getItemKey(i.product.id, i.selectedChoices) !== key));
   }, []);
 
-  const handlePayment = useCallback(async (method: PaymentMethod, amountReceived: number, changeAmount: number) => {
+  const handlePayment = useCallback(async (method: PaymentMethod, amountReceived: number, changeAmount: number, pagoMovil?: { reference: string; payerCedula: string; payerPhone: string }) => {
     if (!cashier || !selectedLocationId || cart.length === 0) return;
 
     const orderItems = cart.map(i => ({
@@ -855,6 +905,7 @@ export function PosPage() {
       const deliveryFee = deliveryType === 'Delivery' ? (config.deliveryFee ?? 0) : 0;
       const totalWithDelivery = cartTotal + deliveryFee;
 
+      let orderId = loadedOrderId;
       if (loadedOrderId) {
         const { error } = await supabase.from('orders').update({
           status: 'exitoso',
@@ -874,7 +925,7 @@ export function PosPage() {
         }).eq('id', loadedOrderId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('orders').insert({
+        const { data: newOrder, error } = await supabase.from('orders').insert({
           location_id: selectedLocationId,
           customer_name: customerName || 'Mostrador',
           customer_phone: customerPhone || 'N/A',
@@ -890,11 +941,24 @@ export function PosPage() {
           change_amount: changeAmount,
           cashier_id: cashier.id,
           invoice_number: invoiceNumber,
-        });
+        }).select('id').single();
         if (error) throw error;
+        orderId = newOrder.id;
       }
 
       await saveCustomer({ cedula: customerCedula, name: customerName || 'Mostrador', phone: customerPhone || 'N/A' });
+
+      // Save Pago Movil record if applicable
+      if (method === 'Pago Movil' && pagoMovil && orderId) {
+        const { error: pmError } = await supabase.from('pago_movil_records').insert({
+          order_id: orderId,
+          reference: pagoMovil.reference,
+          payer_cedula: pagoMovil.payerCedula,
+          payer_phone: pagoMovil.payerPhone,
+          amount: totalWithDelivery,
+        });
+        if (pmError) console.error('Error saving pago movil record:', pmError);
+      }
 
       setShowPayModal(false);
       setShowReceipt({ items: cart, total: totalWithDelivery, paymentMethod: method, changeAmount, invoiceNumber, deliveryType, deliveryFee });
@@ -1155,7 +1219,7 @@ export function PosPage() {
       {/* Payment modal */}
       <AnimatePresence>
         {showPayModal && (
-          <PaymentModal total={cartTotal} onConfirm={handlePayment} onClose={() => setShowPayModal(false)} />
+          <PaymentModal total={cartTotal} customerCedula={customerCedula} customerPhone={customerPhone} onConfirm={handlePayment} onClose={() => setShowPayModal(false)} />
         )}
       </AnimatePresence>
 
