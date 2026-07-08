@@ -449,8 +449,8 @@ export function CartDrawer({
   const totalVES = finalTotal * (config.exchangeRate ?? 1);
 
   // ── Submit ───────────────────────────────────────────────────────────
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     const nameOk = validateField('name', customerName);
     const phoneOk = validateField('phone', customerPhone);
     const cedulaOk = customerCedula.length >= 7;
@@ -705,7 +705,7 @@ export function CartDrawer({
                             <Phone className="w-4 h-4" />
                           </div>
                           <input
-                            required type="tel" inputMode="numeric" pattern="[0-9+\-\s()]*"
+                            required type="tel" inputMode="numeric"
                             placeholder={t('cart.whatsapp')}
                             aria-describedby={formErrors.phone ? 'phone-error' : undefined}
                             aria-invalid={formErrors.phone ? 'true' : 'false'}
@@ -1033,8 +1033,8 @@ export function CartDrawer({
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.95 }}
-                        form="checkout-form"
-                        type="submit"
+                        type="button"
+                        onClick={handleSubmit}
                         disabled={deliveryType === 'Delivery' && !isWithinRange}
                         className={`w-full sm:flex-[2] bg-[#25D366] text-white py-5 sm:py-6 rounded-[20px] font-display uppercase tracking-[0.2em] text-xs sm:text-[11px] shadow-[0_20px_50px_rgba(37,211,102,0.3)] transition-all duration-300 flex items-center justify-center gap-3 ${
                           deliveryType === 'Delivery' && !isWithinRange ? 'opacity-50 cursor-not-allowed' : ''
