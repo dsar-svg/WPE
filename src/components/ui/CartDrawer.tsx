@@ -66,7 +66,8 @@ export function CartDrawer({
   } = useDistanceCalculation();
 
   // ── State ─────────────────────────────────────────────────────────────
-  const [step, setStep] = useState<'cart' | 'checkout' | 'confirm'>('cart');
+  const [step, setStep] = useState<'cart' | 'checkout'>('cart');
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [deliveryType] = useState<DeliveryType>('Delivery');
   const [customerCedula, setCustomerCedula] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -458,19 +459,20 @@ export function CartDrawer({
     const addressOk = deliveryType === 'Delivery' ? deliveryAddress.length >= 5 : true;
     if (!nameOk || !phoneOk || !cedulaOk || (deliveryType === 'Delivery' && !addressOk)) return;
 
-    if (step === 'checkout') {
-      setStep('confirm');
-      return;
-    }
+    setShowConfirmModal(true);
+  };
 
+  const handleConfirmOrder = () => {
     if (!termsAccepted) return;
     if (deliveryType === 'Delivery') {
       if (!deliveryCoordinates) {
         setAddressError('Selecciona tu ubicación en el mapa');
+        setShowConfirmModal(false);
         return;
       }
       if (!isWithinRange) {
         setAddressError(t('cart.error.addressOutOfRange'));
+        setShowConfirmModal(false);
         return;
       }
       if (!paymentScreenshot) {
@@ -542,7 +544,7 @@ export function CartDrawer({
                   <div className="w-10 h-10 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-xl flex items-center justify-center">
                     <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  {step === 'cart' ? t('cart.title') : step === 'checkout' ? 'Datos y Dirección' : 'Confirmar Pedido'}
+                  {step === 'cart' ? t('cart.title') : 'Datos y Dirección'}
                 </h2>
                 <button
                   onClick={onClose}
@@ -647,7 +649,7 @@ export function CartDrawer({
                     </div>
                   )}
                 </>
-              ) : step === 'checkout' ? (
+              ) : (
                 <form id="checkout-form" className="space-y-6" onSubmit={handleSubmit}>
                   <div className="space-y-5 font-body">
                     {/* Cédula first — auto-lookup fills name & phone */}
@@ -871,116 +873,6 @@ export function CartDrawer({
                     )}
                   </div>
                 </form>
-              ) : (
-                /* Step 3: Confirm */
-                <div className="space-y-5 font-body">
-                  {/* Compact order summary */}
-                  {items.length > 0 && (
-                    <div className="space-y-1.5 pb-3 border-b border-white/10">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.3em] text-primary-vibrant">Resumen del Pedido</p>
-                      {items.map((item) => (
-                        <div key={getItemKey(item.id, item.selectedChoices)} className="flex justify-between items-center text-[11px] text-zinc-300">
-                          <span className="truncate flex-1">{item.quantity}x {item.name}
-                            {item.selectedChoices && item.selectedChoices.length > 0 && (
-                              <span className="text-zinc-500 font-normal"> — {item.selectedChoices.join(', ')}</span>
-                            )}
-                          </span>
-                          <span className="font-medium text-white">${(item.price * item.quantity).toFixed(2)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Totals */}
-                  <div className="space-y-2 bg-dark-surface rounded-2xl p-4 border border-white/5">
-                    <div className="flex justify-between text-[11px] text-zinc-400">
-                      <span>Subtotal</span>
-                      <span className="text-white font-medium">${total.toFixed(2)}</span>
-                    </div>
-                    {deliveryType === 'Delivery' && (
-                      <div className="flex justify-between text-[11px] text-zinc-400">
-                        <span>Envío</span>
-                        <span className="text-secondary-vibrant font-medium">${calculatedFee.toFixed(2)}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between items-end border-t border-white/10 pt-2">
-                      <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-secondary-vibrant">{t('cart.orderTotal')}</span>
-                      <span className="font-display text-2xl tracking-wider text-white">
-                        ${finalTotal.toFixed(2)} <span className="text-[10px] text-zinc-400 ml-1 font-medium font-body">USD</span>
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center pt-1">
-                      <span className="text-[8px] font-bold text-secondary-vibrant uppercase tracking-widest">{t('cart.inBolivares')}</span>
-                      <span className="font-display text-lg text-secondary-vibrant tracking-wider">
-                        {totalVES.toLocaleString(language === 'es' ? 'es-VE' : 'en-US', { minimumFractionDigits: 2 })}{' '}
-                        <span className="text-[9px] font-body">Bs.</span>
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[8px] text-zinc-600">Tasa: {config.exchangeRate}</span>
-                    </div>
-                  </div>
-
-                  {/* Payment screenshot (Delivery only) */}
-                  {deliveryType === 'Delivery' && (
-                    <div className="space-y-3">
-                      <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
-                        <CheckCircle2 className="w-3 h-3 text-primary-vibrant" />
-                        Comprobante de Pago Móvil
-                      </p>
-                      <div className="p-4 bg-dark-surface border-2 border-white/10 rounded-[20px] space-y-3">
-                        <div className="p-3 bg-primary-vibrant/10 rounded-lg border border-primary-vibrant/20">
-                          <p className="text-[10px] font-bold text-primary-vibrant uppercase tracking-wider mb-2">Datos de Pago Móvil</p>
-                          <div className="space-y-1 text-[10px] text-zinc-300 font-mono">
-                            <p><span className="text-zinc-500">Banesco:</span> 0212-XXXX-XXXX-XXXX-XXXX</p>
-                            <p><span className="text-zinc-500">Mercantil:</span> 0414-XXXX-XXXX-XXXX-XXXX</p>
-                            <p><span className="text-zinc-500">Vatlanta:</span> 0416-XXXX-XXXX-XXXX-XXXX</p>
-                            <p><span className="text-zinc-500">Monto:</span> ${calculatedFee.toFixed(2)} USD</p>
-                          </div>
-                        </div>
-                        <div className="relative">
-                          <input type="file" accept="image/*" id="payment-screenshot"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                const url = URL.createObjectURL(file);
-                                setPaymentPreviewUrl(url);
-                                setPaymentScreenshot(file);
-                              }
-                            }}
-                            className="hidden"
-                          />
-                          <label htmlFor="payment-screenshot"
-                            className="flex flex-col items-center justify-center w-full p-4 bg-white/5 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-primary-vibrant/50 transition-colors duration-200"
-                          >
-                            {paymentPreviewUrl ? (
-                              <div className="relative w-full">
-                                <img src={paymentPreviewUrl} alt="Capture de pago" className="w-full h-32 object-cover rounded-lg mb-2" />
-                                <button type="button" onClick={(e) => { e.stopPropagation(); URL.revokeObjectURL(paymentPreviewUrl); setPaymentPreviewUrl(null); setPaymentScreenshot(null); }}
-                                  className="absolute top-2 right-2 w-6 h-6 bg-red-500/80 rounded-full flex items-center justify-center text-white text-xs hover:bg-red-600"
-                                >×</button>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="w-12 h-12 bg-primary-vibrant/10 rounded-xl flex items-center justify-center mb-2">
-                                  <svg className="w-6 h-6 text-primary-vibrant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 112.828 2.828L6 18h2a2 2 0 002-2zM14 6l3 3m-3-3V3m0 0l-3 3m3-3l3-3" />
-                                  </svg>
-                                </div>
-                                <div className="text-center">
-                                  <p className="text-[11px] font-medium text-zinc-300">
-                                    <span className="text-primary-vibrant">Click para subir</span> captura de pago
-                                  </p>
-                                  <p className="text-[9px] text-zinc-500 mt-1">PNG, JPG (recomendado: 800x600)</p>
-                                </div>
-                              </>
-                            )}
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
               )}
             </div>
 
@@ -1009,45 +901,197 @@ export function CartDrawer({
                     Continuar <ArrowRight className="w-5 h-5" />
                   </motion.button>
                 )}
+              </div>
+            )}
+          </motion.div>
 
-                {step === 'confirm' && (
-                  <>
-                    <label className="flex items-center gap-2 justify-center cursor-pointer mb-3">
+          {/* Confirm Modal */}
+          <AnimatePresence>
+            {showConfirmModal && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowConfirmModal(false)}
+                  className="fixed inset-0 bg-black/80 z-[60]"
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 40 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 40 }}
+                  transition={{ type: 'spring', damping: 28, stiffness: 200 }}
+                  className="fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-lg w-full max-h-[90vh] overflow-y-auto bg-dark-card rounded-3xl z-[60] flex flex-col border border-white/10 shadow-2xl"
+                >
+                  {/* Modal header */}
+                  <div className="sticky top-0 bg-dark-card z-10 p-5 sm:p-6 border-b border-white/10 flex items-center justify-between">
+                    <h2 className="font-display text-xl tracking-wider text-white flex items-center gap-3">
+                      <CheckCircle2 className="w-6 h-6 text-primary-vibrant" />
+                      Confirmar Pedido
+                    </h2>
+                    <button onClick={() => setShowConfirmModal(false)}
+                      className="p-2 bg-white/10 hover:bg-primary-vibrant rounded-xl transition-all duration-300 text-white"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Modal content */}
+                  <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
+
+                    {/* Order summary */}
+                    {items.length > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary-vibrant">Resumen del Pedido</p>
+                        <div className="space-y-2">
+                          {items.map((item) => (
+                            <div key={getItemKey(item.id, item.selectedChoices)} className="flex justify-between items-center text-sm text-zinc-300">
+                              <span className="truncate flex-1 font-medium">{item.quantity}x {item.name}
+                                {item.selectedChoices && item.selectedChoices.length > 0 && (
+                                  <span className="text-zinc-500"> — {item.selectedChoices.join(', ')}</span>
+                                )}
+                              </span>
+                              <span className="font-semibold text-white">${(item.price * item.quantity).toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Totals */}
+                    <div className="bg-dark-surface rounded-2xl p-5 border border-white/10 space-y-3">
+                      <div className="flex justify-between text-sm text-zinc-400">
+                        <span>Subtotal</span>
+                        <span className="text-white font-semibold">${total.toFixed(2)}</span>
+                      </div>
+                      {deliveryType === 'Delivery' && (
+                        <div className="flex justify-between text-sm text-zinc-400">
+                          <span>Envío</span>
+                          <span className="text-secondary-vibrant font-semibold">${calculatedFee.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-end border-t border-white/10 pt-3">
+                        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-secondary-vibrant">Total</span>
+                        <span className="font-display text-3xl tracking-wider text-white">
+                          ${finalTotal.toFixed(2)} <span className="text-xs text-zinc-400 ml-1 font-medium">USD</span>
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[9px] font-bold text-secondary-vibrant uppercase tracking-widest">En Bs.</span>
+                        <span className="font-display text-xl text-secondary-vibrant tracking-wider">
+                          {totalVES.toLocaleString(language === 'es' ? 'es-VE' : 'en-US', { minimumFractionDigits: 2 })}{' '}
+                          <span className="text-[10px]">Bs.</span>
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[9px] text-zinc-600">Tasa: {config.exchangeRate}</span>
+                      </div>
+                    </div>
+
+                    {/* Pago Móvil section — Delivery only */}
+                    {deliveryType === 'Delivery' && (
+                      <div className="space-y-4">
+                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-primary-vibrant" />
+                          Datos de Pago Móvil
+                        </p>
+                        <div className="p-5 bg-dark-surface border-2 border-white/10 rounded-2xl space-y-4">
+                          <div className="p-4 bg-primary-vibrant/10 rounded-xl border border-primary-vibrant/20">
+                            <p className="text-sm font-bold text-primary-vibrant uppercase tracking-wider mb-3">Transferir a</p>
+                            <div className="space-y-2 text-sm text-zinc-300 font-mono">
+                              <p><span className="text-zinc-500">Banesco:</span> 0212-XXXX-XXXX-XXXX</p>
+                              <p><span className="text-zinc-500">Mercantil:</span> 0414-XXXX-XXXX-XXXX</p>
+                              <p><span className="text-zinc-500">Vatlanta:</span> 0416-XXXX-XXXX-XXXX</p>
+                              <div className="border-t border-primary-vibrant/20 my-2" />
+                              <p className="text-primary-vibrant font-bold text-base">
+                                Monto: ${calculatedFee.toFixed(2)} USD
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Screenshot upload */}
+                          <div className="relative">
+                            <input type="file" accept="image/*" id="confirm-payment-screenshot"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const url = URL.createObjectURL(file);
+                                  setPaymentPreviewUrl(url);
+                                  setPaymentScreenshot(file);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                            <label htmlFor="confirm-payment-screenshot"
+                              className="flex flex-col items-center justify-center w-full p-5 bg-white/5 border-2 border-dashed border-white/20 rounded-xl cursor-pointer hover:border-primary-vibrant/50 transition-colors duration-200"
+                            >
+                              {paymentPreviewUrl ? (
+                                <div className="relative w-full">
+                                  <img src={paymentPreviewUrl} alt="Capture de pago" className="w-full h-40 object-cover rounded-xl mb-2" />
+                                  <button type="button" onClick={(e) => { e.stopPropagation(); URL.revokeObjectURL(paymentPreviewUrl); setPaymentPreviewUrl(null); setPaymentScreenshot(null); }}
+                                    className="absolute top-2 right-2 w-7 h-7 bg-red-500/80 rounded-full flex items-center justify-center text-white text-sm hover:bg-red-600"
+                                  >×</button>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="w-14 h-14 bg-primary-vibrant/10 rounded-xl flex items-center justify-center mb-3">
+                                    <svg className="w-7 h-7 text-primary-vibrant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 112.828 2.828L6 18h2a2 2 0 002-2zM14 6l3 3m-3-3V3m0 0l-3 3m3-3l3-3" />
+                                    </svg>
+                                  </div>
+                                  <div className="text-center">
+                                    <p className="text-sm font-medium text-zinc-300">
+                                      <span className="text-primary-vibrant">Click para subir</span> comprobante de pago
+                                    </p>
+                                    <p className="text-xs text-zinc-500 mt-1">PNG, JPG</p>
+                                  </div>
+                                </>
+                              )}
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Modal footer */}
+                  <div className="sticky bottom-0 bg-dark-card border-t border-white/10 p-5 sm:p-6 space-y-3">
+                    <label className="flex items-center gap-2 justify-center cursor-pointer">
                       <input type="checkbox" checked={termsAccepted} onChange={e => setTermsAccepted(e.target.checked)}
                         className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-primary-vibrant focus:ring-primary-vibrant/50 accent-primary-vibrant" />
-                      <span className="text-[10px] text-zinc-500">
+                      <span className="text-xs text-zinc-500">
                         Acepto los{' '}
                         <Link to="/legal" className="underline hover:text-white transition-colors">{t('legal.terms.title')}</Link>
                         {' '}&{' '}
                         <Link to="/legal#privacidad" className="underline hover:text-white transition-colors">{t('legal.privacy.title')}</Link>
                       </span>
                     </label>
-                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    <div className="flex flex-col sm:flex-row gap-3">
                       <motion.button
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => setStep('checkout')}
-                        className="w-full sm:flex-1 bg-white/5 text-zinc-400 py-5 sm:py-6 rounded-[20px] font-display uppercase tracking-widest text-xs sm:text-[11px] transition-all duration-300 hover:bg-white/10 border border-white/5"
+                        onClick={() => setShowConfirmModal(false)}
+                        className="w-full sm:flex-1 bg-white/5 text-zinc-400 py-4 rounded-2xl font-display uppercase tracking-widest text-xs transition-all duration-300 hover:bg-white/10 border border-white/5"
                       >
-                        {t('cart.back')}
+                        Atrás
                       </motion.button>
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.95 }}
                         type="button"
-                        onClick={handleSubmit}
+                        onClick={handleConfirmOrder}
                         disabled={deliveryType === 'Delivery' && !isWithinRange}
-                        className={`w-full sm:flex-[2] bg-[#25D366] text-white py-5 sm:py-6 rounded-[20px] font-display uppercase tracking-[0.2em] text-xs sm:text-[11px] shadow-[0_20px_50px_rgba(37,211,102,0.3)] transition-all duration-300 flex items-center justify-center gap-3 ${
+                        className={`w-full sm:flex-[2] bg-[#25D366] text-white py-4 rounded-2xl font-display uppercase tracking-[0.2em] text-sm shadow-[0_20px_50px_rgba(37,211,102,0.3)] transition-all duration-300 flex items-center justify-center gap-3 ${
                           deliveryType === 'Delivery' && !isWithinRange ? 'opacity-50 cursor-not-allowed' : ''
                         }`}
                       >
-                        {deliveryType === 'Delivery' && !isWithinRange ? t('cart.outOfCoverage') : t('cart.confirmWhatsApp')}
+                        {deliveryType === 'Delivery' && !isWithinRange ? 'Fuera de cobertura' : 'Enviar Pedido'}
                       </motion.button>
                     </div>
-                  </>
-                )}
-              </div>
+                  </div>
+                </motion.div>
+              </>
             )}
-          </motion.div>
+          </AnimatePresence>
 
           {/* Toast notification */}
           <AnimatePresence>
