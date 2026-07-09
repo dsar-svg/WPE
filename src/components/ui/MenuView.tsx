@@ -248,34 +248,47 @@ export function MenuView({
         )}
       </AnimatePresence>
 
-      {/* Floating Cart Button */}
+      {/* Floating Cart Button — mobile: round floating (right), desktop: wide bar */}
       {cartCount > 0 && (
-        <motion.button initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-          onClick={onOpenCart}
-          className="fixed bottom-6 left-6 right-6 max-w-lg mx-auto text-white p-5 rounded-2xl flex items-center justify-between z-40 group transition-all duration-200"
-          style={{
-            background: 'linear-gradient(135deg, rgba(203,32,39,0.98) 0%, rgba(139,15,21,0.98) 100%)',
-            boxShadow: '0 10px 30px rgba(203,32,39,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
-          }}>
-          <div className="flex items-center gap-4">
-            <div className="relative bg-white/15 p-3 rounded-2xl">
-              <ShoppingCart className="w-6 h-6" />
-              <span
-                className="absolute -top-2 -right-2 bg-secondary-vibrant text-dark text-[11px] font-bold w-6 h-6 rounded-xl flex items-center justify-center shadow-xl"
-              >
-                {cartCount}
-              </span>
+        <>
+          {/* Mobile */}
+          <motion.button initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            onClick={onOpenCart}
+            className="fixed bottom-6 right-6 z-50 lg:hidden w-14 h-14 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-2xl flex items-center justify-center shadow-2xl shadow-primary-vibrant/40 transition-all duration-200 active:scale-90 after:absolute after:inset-0 after:rounded-2xl after:animate-ping after:bg-white/20"
+          >
+            <ShoppingCart className="w-6 h-6 text-white" />
+            <span className="absolute -top-2 -right-2 bg-secondary-vibrant text-dark text-[11px] font-bold w-6 h-6 rounded-xl flex items-center justify-center shadow-xl">
+              {cartCount}
+            </span>
+          </motion.button>
+          {/* Desktop */}
+          <motion.button initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+            onClick={onOpenCart}
+            className="fixed bottom-6 left-6 right-6 max-w-lg mx-auto text-white p-5 rounded-2xl flex items-center justify-between z-40 group transition-all duration-200 max-lg:hidden"
+            style={{
+              background: 'linear-gradient(135deg, rgba(203,32,39,0.98) 0%, rgba(139,15,21,0.98) 100%)',
+              boxShadow: '0 10px 30px rgba(203,32,39,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
+            }}>
+            <div className="flex items-center gap-4">
+              <div className="relative bg-white/15 p-3 rounded-2xl">
+                <ShoppingCart className="w-6 h-6" />
+                <span
+                  className="absolute -top-2 -right-2 bg-secondary-vibrant text-dark text-[11px] font-bold w-6 h-6 rounded-xl flex items-center justify-center shadow-xl"
+                >
+                  {cartCount}
+                </span>
+              </div>
+              <div className="flex flex-col items-start">
+                <span className="font-display text-lg uppercase tracking-wider leading-none">{t("menu.viewCart")}</span>
+                <span className="text-[10px] font-medium text-white/60 uppercase tracking-[0.2em] mt-1">{t("menu.ready")}</span>
+              </div>
             </div>
-            <div className="flex flex-col items-start">
-              <span className="font-display text-lg uppercase tracking-wider leading-none">{t("menu.viewCart")}</span>
-              <span className="text-[10px] font-medium text-white/60 uppercase tracking-[0.2em] mt-1">{t("menu.ready")}</span>
+            <div className="flex flex-col items-end">
+              <span className="text-secondary-vibrant font-display text-xs uppercase tracking-widest">{t("menu.total")}</span>
+              <span className="text-2xl font-display tracking-wider leading-none">${total.toFixed(2)}</span>
             </div>
-          </div>
-          <div className="flex flex-col items-end">
-            <span className="text-secondary-vibrant font-display text-xs uppercase tracking-widest">{t("menu.total")}</span>
-            <span className="text-2xl font-display tracking-wider leading-none">${total.toFixed(2)}</span>
-          </div>
-        </motion.button>
+          </motion.button>
+        </>
       )}
     </div>
     </div>
