@@ -571,7 +571,7 @@ export function CartDrawer({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 200 }}
-            className="fixed inset-0 z-50 bg-dark-card flex flex-col"
+            className="fixed inset-0 z-50 bg-dark-card flex flex-col md:inset-x-4 md:inset-y-4 md:max-w-2xl md:mx-auto md:rounded-3xl md:shadow-2xl md:border md:border-white/10"
             id="cart-drawer"
             role="dialog"
             aria-modal="true"
