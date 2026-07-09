@@ -1,5 +1,7 @@
-import { createContext, useContext, useState, useCallback, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, ReactNode } from 'react';
 import { Product, CartItem } from '../types';
+
+const CART_STORAGE_KEY = 'wpe_cart';
 
 interface CartContextType {
   items: CartItem[];
@@ -31,7 +33,16 @@ function getChoicePriceAdjust(product: Product, selectedChoices?: string[]): num
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(CART_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
 
   const addToCart = useCallback((product: Product, selectedChoices?: string[]) => {
     setItems((prev) => {

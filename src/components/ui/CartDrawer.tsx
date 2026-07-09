@@ -9,6 +9,7 @@ import {
   Minus,
   X,
   ArrowRight,
+  ArrowLeft,
   Navigation,
   AlertCircle,
   Loader2,
@@ -22,7 +23,7 @@ import { useRestaurant } from '../../context/RestaurantContext';
 import { useDistanceCalculation } from '../../hooks/useDistanceCalculation';
 import { fetchBcvRate, getRateSource } from '../../services/bcvRate';
 import { OptimizedImage } from './OptimizedImage';
-import { getItemKey } from '../../context/CartContext';
+import { getItemKey, useCart } from '../../context/CartContext';
 
 interface CartDrawerProps {
   isOpen: boolean;
@@ -50,6 +51,7 @@ export function CartDrawer({
   onCheckout,
 }: CartDrawerProps) {
   const { config, updateConfig, findCustomer } = useRestaurant();
+  const { clearCart } = useCart();
   const { t, language } = useLanguage();
   const {
     searchAddress,
@@ -66,8 +68,17 @@ export function CartDrawer({
   } = useDistanceCalculation();
 
   // ── State ─────────────────────────────────────────────────────────────
-  const [step, setStep] = useState<'cart' | 'checkout'>('cart');
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const STEP_KEY = 'wpe_cart_step';
+  const FORM_KEY = 'wpe_cart_form';
+
+  const [step, setStep] = useState<'cart' | 'checkout' | 'confirm'>(() => {
+    try {
+      const saved = localStorage.getItem(STEP_KEY);
+      if (saved === 'checkout' || saved === 'confirm') return saved;
+    } catch {}
+    return 'cart';
+  });
+  const [stepDirection, setStepDirection] = useState(0);
   const [deliveryType] = useState<DeliveryType>('Delivery');
   const [customerCedula, setCustomerCedula] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -91,6 +102,38 @@ export function CartDrawer({
   const [termsAccepted, setTermsAccepted] = useState(true);
   const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
   const [paymentPreviewUrl, setPaymentPreviewUrl] = useState<string | null>(null);
+
+  // Persist step
+  useEffect(() => { localStorage.setItem(STEP_KEY, step); }, [step]);
+
+  // Persist form data
+  useEffect(() => {
+    const form = { customerCedula, customerName, customerPhone, deliveryAddress, reference, orderNotes, termsAccepted };
+    localStorage.setItem(FORM_KEY, JSON.stringify(form));
+  }, [customerCedula, customerName, customerPhone, deliveryAddress, reference, orderNotes, termsAccepted]);
+
+  // Restore form data on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(FORM_KEY);
+      if (saved) {
+        const f = JSON.parse(saved);
+        if (f.customerCedula) setCustomerCedula(f.customerCedula);
+        if (f.customerName) setCustomerName(f.customerName);
+        if (f.customerPhone) setCustomerPhone(f.customerPhone);
+        if (f.deliveryAddress) setDeliveryAddress(f.deliveryAddress);
+        if (f.reference) setReference(f.reference);
+        if (f.orderNotes) setOrderNotes(f.orderNotes);
+        if (f.termsAccepted !== undefined) setTermsAccepted(f.termsAccepted);
+      }
+    } catch {}
+  }, []);
+
+  const goToStep = (s: typeof step) => {
+    const dir = s === 'checkout' ? 1 : s === 'confirm' ? (step === 'cart' ? 2 : 1) : -1;
+    setStepDirection(dir);
+    setStep(s);
+  };
 
   // Revoke ObjectURL on unmount or when preview changes to prevent memory leak
   useEffect(() => {
@@ -207,7 +250,6 @@ export function CartDrawer({
   // ── Suggestion selected ──────────────────────────────────────────────
   const handleAddressSelect = useCallback(
     (suggestion: AddressSuggestion) => {
-      // Cancel any pending blur timeout so the dropdown doesn't flicker
       if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
 
       const addr = suggestion.display_name;
@@ -231,7 +273,6 @@ export function CartDrawer({
   const handleAddressBlur = useCallback(async () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    // Delay hiding suggestions so button clicks can register first
     blurTimeoutRef.current = setTimeout(() => {
       setShowSuggestions(false);
     }, 200);
@@ -353,7 +394,6 @@ export function CartDrawer({
     const ranges = config.distancePricing?.ranges ?? [];
     const maxDist = config.distancePricing?.maxDeliveryDistance ?? 20;
 
-    // Quick Haversine check first
     const quick = calculateDistanceAndFee(
       location.latitude,
       location.longitude,
@@ -376,12 +416,10 @@ export function CartDrawer({
       }
     }
 
-    // Debounce: skip road distance if coords haven't changed
     const coordsKey = `${deliveryCoordinates.lat.toFixed(4)}_${deliveryCoordinates.lng.toFixed(4)}`;
     if (coordsKey === lastCoordsRef.current) return;
     lastCoordsRef.current = coordsKey;
 
-    // Async road distance update with abort cleanup
     let aborted = false;
     const roadTimer = setTimeout(async () => {
       try {
@@ -459,7 +497,7 @@ export function CartDrawer({
     const addressOk = deliveryType === 'Delivery' ? deliveryAddress.length >= 5 : true;
     if (!nameOk || !phoneOk || !cedulaOk || (deliveryType === 'Delivery' && !addressOk)) return;
 
-    setShowConfirmModal(true);
+    goToStep('confirm');
   };
 
   const handleConfirmOrder = () => {
@@ -467,12 +505,10 @@ export function CartDrawer({
     if (deliveryType === 'Delivery') {
       if (!deliveryCoordinates) {
         setAddressError('Selecciona tu ubicación en el mapa');
-        setShowConfirmModal(false);
         return;
       }
       if (!isWithinRange) {
         setAddressError(t('cart.error.addressOutOfRange'));
-        setShowConfirmModal(false);
         return;
       }
       if (!paymentScreenshot) {
@@ -509,6 +545,12 @@ export function CartDrawer({
           ? 'pending'
           : '';
 
+  const slideVariants = {
+    enter: (dir: number) => ({ x: dir > 0 ? 200 : -200, opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (dir: number) => ({ x: dir > 0 ? -200 : 200, opacity: 0 }),
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -523,44 +565,77 @@ export function CartDrawer({
             id="cart-overlay"
           />
 
-          {/* Drawer */}
+          {/* Full page cart */}
           <motion.div
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 200 }}
-            className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-dark-card rounded-t-[2rem] z-50 overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh]"
+            className="fixed inset-0 z-50 bg-dark-card flex flex-col"
             id="cart-drawer"
             role="dialog"
             aria-modal="true"
             aria-label="Carrito de compras"
           >
             {/* Header */}
-            <div className="p-5 sm:p-6 border-b-2 border-primary-vibrant/20 bg-dark-card relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary-vibrant/20 rounded-full blur-xl -mr-16 -mt-16" />
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-secondary-vibrant/15 rounded-full blur-lg -ml-12 -mb-12" />
-              <div className="flex items-center justify-between relative z-10">
-                <h2 className="font-display text-xl sm:text-2xl tracking-wider flex items-center gap-3 text-white">
-                  <div className="w-10 h-10 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-xl flex items-center justify-center">
-                    <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                  </div>
-                  {step === 'cart' ? t('cart.title') : 'Datos y Dirección'}
-                </h2>
-                <button
-                  onClick={onClose}
-                  className="p-2 bg-white/10 hover:bg-primary-vibrant rounded-xl transition-all duration-300 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-primary-vibrant"
-                  aria-label="Cerrar carrito"
-                >
-                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
+            <div className="p-4 sm:p-5 border-b border-white/10 bg-dark-card flex-shrink-0">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  {step !== 'cart' && (
+                    <button onClick={() => goToStep(step === 'confirm' ? 'checkout' : 'cart')}
+                      className="p-2 bg-white/10 hover:bg-white/15 rounded-xl transition-all text-zinc-400 hover:text-white"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                    </button>
+                  )}
+                  <h2 className="font-display text-lg tracking-wider text-white flex items-center gap-2">
+                    <div className="w-8 h-8 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-xl flex items-center justify-center">
+                      <ShoppingCart className="w-4 h-4 text-white" />
+                    </div>
+                    {step === 'cart' ? t('cart.title') : step === 'checkout' ? 'Datos y Dirección' : 'Confirmar Pedido'}
+                  </h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  {step === 'cart' && items.length > 0 && (
+                    <button onClick={() => { if (confirm('¿Vaciar carrito?')) { clearCart(); } }}
+                      className="p-2 bg-white/5 hover:bg-red-500/10 rounded-xl transition-all text-zinc-500 hover:text-red-400 border border-white/5 hover:border-red-500/20"
+                      aria-label="Vaciar carrito"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+                  <button onClick={onClose}
+                    className="p-2 bg-white/10 hover:bg-primary-vibrant rounded-xl transition-all text-white border border-white/10"
+                    aria-label="Cerrar carrito"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-full transition-all duration-500 ease-out"
+                    style={{ width: step === 'cart' ? '33%' : step === 'checkout' ? '66%' : '100%' }}
+                  />
+                </div>
+                <span className="text-[10px] font-bold text-zinc-500 tabular-nums">
+                  {step === 'cart' ? '1' : step === 'checkout' ? '2' : '3'}/3
+                </span>
               </div>
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-5 bg-dark-card scroll-smooth pb-32 sm:pb-40">
-              {step === 'cart' ? (
-                <>
-                  {items.length === 0 ? (
+            <div className="flex-1 overflow-y-auto bg-dark-card scroll-smooth">
+              <AnimatePresence mode="wait" custom={stepDirection}>
+                {step === 'cart' && !items.length && (
+                  <motion.div key="empty" custom={stepDirection} variants={slideVariants}
+                    initial="enter" animate="center" exit="exit"
+                    className="p-4 sm:p-6"
+                  >
                     <div className="py-24 text-center space-y-6">
                       <motion.div
                         initial={{ scale: 0.8, opacity: 0 }}
@@ -575,305 +650,294 @@ export function CartDrawer({
                         <p className="text-zinc-600 text-xs font-medium">{t('cart.emptyTagline')}</p>
                       </div>
                     </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {items.map((item) => {
-                        const itemKey = getItemKey(item.id, item.selectedChoices);
-                        return (
-                        <motion.div
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          key={itemKey}
-                          className="flex gap-3 bg-dark-card p-4 rounded-xl border border-white/10 group hover:border-primary-vibrant/20 transition-colors duration-300"
-                        >
-                          <div className="w-16 h-16 shrink-0 rounded-2xl overflow-hidden border border-white/10">
-                            <OptimizedImage src={item.image} alt={item.name} className="w-full h-full p-1" />
-                          </div>
-                          <div className="flex-1 min-w-0 flex flex-col justify-between">
-                            <div className="flex justify-between items-start gap-2">
-                              <h3 className="font-bold text-sm text-white uppercase tracking-wider truncate">{item.name}</h3>
-                              <p className="font-display text-secondary-vibrant text-sm tracking-wider">${(item.price * item.quantity).toFixed(2)}</p>
-                            </div>
-                            {item.selectedChoices && item.selectedChoices.length > 0 && (
-                              <div className="flex flex-wrap gap-1.5 mt-1">
-                                <span className="text-[9px] font-bold bg-white/5 text-zinc-400 px-2 py-0.5 rounded-md border border-white/5">
-                                  {item.selectedChoices.join(', ')}
-                                </span>
-                              </div>
-                            )}
-                            <div className="flex items-center justify-between mt-2">
-                              <div className="flex items-center gap-1.5 bg-white/10 rounded-xl p-1 border border-white/10">
-                                <motion.button
-                                  whileTap={{ scale: 0.8 }}
-                                  onClick={() => updateQuantity(itemKey, item.quantity - 1)}
-                                  className="w-11 h-11 bg-white/10 hover:bg-white/15 rounded-lg flex items-center justify-center text-zinc-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-vibrant focus:ring-offset-1 focus:ring-offset-dark"
-                                  aria-label={`Decrease quantity of ${item.name}`}
-                                >
-                                  <Minus className="w-4 h-4" />
-                                </motion.button>
-                                <span className="w-7 text-center font-bold text-sm text-white">{item.quantity}</span>
-                                <motion.button
-                                  whileTap={{ scale: 0.8 }}
-                                  onClick={() => updateQuantity(itemKey, item.quantity + 1)}
-                                  className="w-11 h-11 bg-primary-vibrant text-white rounded-lg flex items-center justify-center shadow-lg shadow-primary-vibrant/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-1 focus:ring-offset-primary-vibrant"
-                                  aria-label={`Increase quantity of ${item.name}`}
-                                >
-                                  <Plus className="w-4 h-4" />
-                                </motion.button>
-                              </div>
-                              <motion.button
-                                whileTap={{ scale: 0.8 }}
-                                onClick={() => removeFromCart(itemKey)}
-                                className="w-11 h-11 bg-white/5 hover:bg-red-500/10 rounded-lg flex items-center justify-center text-zinc-500 hover:text-red-400 transition-colors duration-200 border border-white/5 hover:border-red-500/20"
-                                aria-label={`Remove ${item.name}`}
-                              >
-                                <X className="w-4 h-4" />
-                              </motion.button>
-                              <div className="flex-1 ml-3 relative">
-                                <textarea
-                                  placeholder={t('cart.specialInstructions') + ' (ej: sin picante)'}
-                                  aria-label={t('cart.specialInstructions')}
-                                  value={item.notes}
-                                  onChange={(e) => updateNotes(itemKey, e.target.value)}
-                                  className="w-full text-xs bg-white/5 border border-white/5 rounded-lg px-3 py-2 focus:border-primary-vibrant/50 outline-none transition-colors duration-200 resize-none min-h-[32px] text-zinc-300 placeholder:text-zinc-600"
-                                  rows={1}
-                                  maxLength={100}
-                                />
-                                {item.notes && <span className="absolute -bottom-4 right-0 text-[8px] text-zinc-600">{item.notes.length}/100</span>}
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <form id="checkout-form" className="space-y-6" onSubmit={handleSubmit}>
-                  <div className="space-y-5 font-body">
-                    {/* Cédula first — auto-lookup fills name & phone */}
-                    <div className="space-y-4">
-                      <div className="flex flex-col gap-4">
-                        <div className="relative">
-                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-xs font-bold">V-</div>
-                          <input
-                            required
-                            type="text" inputMode="numeric" pattern="[0-9]*" maxLength={8}
-                            placeholder="Cédula de identidad (auto-buscar)"
-                            aria-describedby={formErrors.cedula ? 'cedula-error' : undefined}
-                            aria-invalid={formErrors.cedula ? 'true' : 'false'}
-                            className={`w-full pl-12 pr-12 py-4 bg-dark-surface border-2 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500 ${formErrors.cedula ? 'border-red-500/50' : 'border-white/10'}`}
-                            value={customerCedula}
-                            onChange={(e) => {
-                              const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 8);
-                              setCustomerCedula(v);
-                              if (v.length < 7) setFormErrors(prev => ({ ...prev, cedula: 'Mínimo 7 dígitos' }));
-                              else setFormErrors(prev => ({ ...prev, cedula: '' }));
-                            }}
-                          />
-                          {isLookingUpCustomer && (
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                              <Loader2 className="w-4 h-4 text-primary-vibrant animate-spin" />
-                            </div>
-                          )}
-                          {formErrors.cedula && (
-                            <span id="cedula-error" className="absolute -bottom-5 left-0 text-[10px] text-red-400" role="alert">{formErrors.cedula}</span>
-                          )}
+                  </motion.div>
+                )}
+                {step === 'cart' && items.length > 0 && (
+                  <motion.div key="cart" custom={stepDirection} variants={slideVariants}
+                    initial="enter" animate="center" exit="exit"
+                    className="p-4 sm:p-6 space-y-3"
+                  >
+                    {items.map((item) => {
+                      const itemKey = getItemKey(item.id, item.selectedChoices);
+                      return (
+                      <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        key={itemKey}
+                        className="flex gap-3 bg-dark-card p-4 rounded-xl border border-white/10 group hover:border-primary-vibrant/20 transition-colors duration-300"
+                      >
+                        <div className="w-16 h-16 shrink-0 rounded-2xl overflow-hidden border border-white/10">
+                          <OptimizedImage src={item.image} alt={item.name} className="w-full h-full p-1" />
                         </div>
-
-                        {/* Name */}
-                        <div className="relative">
-                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
-                            <User className="w-4 h-4" />
+                        <div className="flex-1 min-w-0 flex flex-col justify-between">
+                          <div className="flex justify-between items-start gap-2">
+                            <h3 className="font-bold text-sm text-white uppercase tracking-wider truncate">{item.name}</h3>
+                            <p className="font-display text-secondary-vibrant text-sm tracking-wider">${(item.price * item.quantity).toFixed(2)}</p>
                           </div>
-                          <input
-                            required
-                            placeholder={t('cart.fullName')}
-                            aria-describedby={formErrors.name ? 'name-error' : undefined}
-                            aria-invalid={formErrors.name ? 'true' : 'false'}
-                            className={`w-full pl-12 pr-4 py-4 bg-dark-surface border-2 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500 ${formErrors.name ? 'border-red-500/50' : 'border-white/10'}`}
-                            value={customerName}
-                            onChange={(e) => { setCustomerName(e.target.value); validateField('name', e.target.value); }}
-                          />
-                          {formErrors.name && (
-                            <span id="name-error" className="absolute -bottom-5 left-0 text-[10px] text-red-400" role="alert">{formErrors.name}</span>
-                          )}
-                        </div>
-
-                        {/* Phone */}
-                        <div className="relative">
-                          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
-                            <Phone className="w-4 h-4" />
-                          </div>
-                          <input
-                            required type="tel" inputMode="numeric"
-                            placeholder={t('cart.whatsapp')}
-                            aria-describedby={formErrors.phone ? 'phone-error' : undefined}
-                            aria-invalid={formErrors.phone ? 'true' : 'false'}
-                            className={`w-full pl-12 pr-4 py-4 bg-dark-surface border-2 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500 ${formErrors.phone ? 'border-red-500/50' : 'border-white/10'}`}
-                            value={customerPhone}
-                            onChange={(e) => {
-                              const v = e.target.value.replace(/[^0-9+\-\s()]/g, '');
-                              setCustomerPhone(v);
-                              validateField('phone', v);
-                            }}
-                          />
-                          {formErrors.phone && (
-                            <span id="phone-error" className="absolute -bottom-5 left-0 text-[10px] text-red-400" role="alert">{formErrors.phone}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Delivery fields */}
-                    {deliveryType === 'Delivery' && (
-                      <div className="space-y-4 border-t border-white/10 pt-5">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary-vibrant flex items-center gap-2">
-                          <MapPin className="w-4 h-4" /> Dirección de Entrega
-                        </p>
-
-                        {/* Reference */}
-                        <div className="space-y-1.5">
-                          <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
-                            <MapPin className="w-3 h-3 text-primary-vibrant" />
-                            Referencia de entrega
-                          </label>
-                          <input
-                            placeholder="Ej: frente al Mercado XYZ, al lado de la farmacia..."
-                            className="w-full px-5 py-3.5 bg-dark-surface border-2 border-white/10 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-600"
-                            value={reference}
-                            onChange={(e) => setReference(e.target.value)}
-                          />
-                        </div>
-
-                        {/* GPS button */}
-                        <motion.button
-                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                          type="button"
-                          onClick={handleGetUserLocation}
-                          disabled={isLocating}
-                          className="w-full py-4 bg-secondary-vibrant/10 border border-secondary-vibrant/30 rounded-[20px] text-[11px] font-bold uppercase tracking-[0.2em] text-secondary-vibrant hover:bg-secondary-vibrant/15 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
-                        >
-                          {isLocating ? (
-                            <><Loader2 className="w-4 h-4 animate-spin" /> {t('cart.locating') || 'Localizando...'}</>
-                          ) : (
-                            <><Navigation className="w-4 h-4" /> {t('cart.useLocation') || 'Usar mi ubicación actual'}</>
-                          )}
-                        </motion.button>
-
-                        {/* Address input with autocomplete */}
-                        <div className="relative">
-                          <div className="absolute left-4 top-4 text-zinc-400">
-                            <MapPin className="w-4 h-4" />
-                          </div>
-                          {statusDotClass && (
-                            <div className="absolute right-4 top-4">
-                              <div className={`address-status-dot ${statusDotClass}`} title={
-                                addressStatus === 'valid' ? 'Dirección válida' :
-                                addressStatus === 'out_of_zone' ? 'Fuera de zona de entrega' :
-                                addressStatus === 'invalid' ? 'Dirección no encontrada' : 'Buscando...'
-                              } />
-                            </div>
-                          )}
-                          <textarea
-                            ref={addressInputRef}
-                            required
-                            placeholder={t('cart.address') + ' (escribe para buscar)'}
-                            className={`w-full pl-12 pr-10 py-4 bg-dark-surface border-2 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500 min-h-[100px] resize-none ${formErrors.address ? 'border-red-500/50' : 'border-white/10'}`}
-                            value={deliveryAddress}
-                            onChange={(e) => handleAddressChange(e.target.value)}
-                            onBlur={handleAddressBlur}
-                          />
-                          {(isLoadingAddress || addressStatus === 'gps_pending') && (
-                            <div className="absolute right-10 top-4 flex items-center gap-2 bg-primary-vibrant/10 px-3 py-1 rounded-full">
-                              <Loader2 className="w-3 h-3 text-primary-vibrant animate-spin" />
-                              <span className="text-[10px] font-medium text-primary-vibrant">
-                                {addressStatus === 'gps_pending' ? 'GPS...' : 'Buscando...'}
+                          {item.selectedChoices && item.selectedChoices.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 mt-1">
+                              <span className="text-[9px] font-bold bg-white/5 text-zinc-400 px-2 py-0.5 rounded-md border border-white/5">
+                                {item.selectedChoices.join(', ')}
                               </span>
                             </div>
                           )}
-                          {formErrors.address && (
-                            <span id="address-error" className="absolute -bottom-5 left-0 text-[10px] text-red-400" role="alert">{formErrors.address}</span>
-                          )}
-
-                          {/* Autocomplete dropdown */}
-                          {showSuggestions && suggestions.length > 0 && (
-                            <div className="absolute z-10 w-full bg-dark-surface border border-white/10 rounded-[20px] mt-2 shadow-2xl overflow-hidden max-h-48 overflow-y-auto">
-                              {suggestions.map((s) => (
-                                <button key={s.place_id} type="button" onClick={() => handleAddressSelect(s)}
-                                  className="block w-full text-left p-4 text-[11px] hover:bg-white/5 border-b border-white/5 font-medium truncate text-zinc-300 transition-colors duration-200"
-                                >{s.display_name}</button>
-                              ))}
+                          <div className="flex items-center justify-between mt-2">
+                            <div className="flex items-center gap-1.5 bg-white/10 rounded-xl p-1 border border-white/10">
+                              <motion.button
+                                whileTap={{ scale: 0.8 }}
+                                onClick={() => updateQuantity(itemKey, item.quantity - 1)}
+                                className="w-10 h-10 bg-white/10 hover:bg-white/15 rounded-lg flex items-center justify-center text-zinc-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-vibrant focus:ring-offset-1 focus:ring-offset-dark"
+                                aria-label={`Decrease quantity of ${item.name}`}
+                              >
+                                <Minus className="w-4 h-4" />
+                              </motion.button>
+                              <span className="w-7 text-center font-bold text-sm text-white">{item.quantity}</span>
+                              <motion.button
+                                whileTap={{ scale: 0.8 }}
+                                onClick={() => updateQuantity(itemKey, item.quantity + 1)}
+                                className="w-10 h-10 bg-primary-vibrant text-white rounded-lg flex items-center justify-center shadow-lg shadow-primary-vibrant/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-1 focus:ring-offset-primary-vibrant"
+                                aria-label={`Increase quantity of ${item.name}`}
+                              >
+                                <Plus className="w-4 h-4" />
+                              </motion.button>
                             </div>
-                          )}
-
-                          {showSuggestions && suggestions.length === 0 && !isLoadingAddress && deliveryAddress.length > 3 && (
-                            <div className="absolute z-10 w-full bg-dark-surface border border-white/10 rounded-[20px] mt-2 shadow-2xl p-5">
-                              <div className="flex flex-col items-center text-center gap-3">
-                                <div className="w-10 h-10 bg-primary-vibrant/10 rounded-xl flex items-center justify-center">
-                                  <MapPin className="w-5 h-5 text-primary-vibrant" />
-                                </div>
-                                <div>
-                                  <p className="text-[11px] font-bold text-zinc-300 mb-1">No encontramos tu dirección</p>
-                                  <p className="text-[10px] text-zinc-500">Arrastra el mapa para fijar tu ubicación exacta</p>
-                                </div>
-                              </div>
+                            <motion.button
+                              whileTap={{ scale: 0.8 }}
+                              onClick={() => removeFromCart(itemKey)}
+                              className="w-10 h-10 bg-white/5 hover:bg-red-500/10 rounded-lg flex items-center justify-center text-zinc-500 hover:text-red-400 transition-colors duration-200 border border-white/5 hover:border-red-500/20"
+                              aria-label={`Remove ${item.name}`}
+                            >
+                              <X className="w-4 h-4" />
+                            </motion.button>
+                            <div className="flex-1 ml-3 relative">
+                              <textarea
+                                placeholder={t('cart.specialInstructions') + ' (ej: sin picante)'}
+                                aria-label={t('cart.specialInstructions')}
+                                value={item.notes}
+                                onChange={(e) => updateNotes(itemKey, e.target.value)}
+                                className="w-full text-xs bg-white/5 border border-white/5 rounded-lg px-3 py-2 focus:border-primary-vibrant/50 outline-none transition-colors duration-200 resize-none min-h-[32px] text-zinc-300 placeholder:text-zinc-600"
+                                rows={1}
+                                maxLength={100}
+                              />
+                              {item.notes && <span className="absolute -bottom-4 right-0 text-[8px] text-zinc-600">{item.notes.length}/100</span>}
                             </div>
-                          )}
-
-                          {addressError && (
-                            <div className="absolute -bottom-6 left-0 text-red-400 text-[10px] font-medium flex items-center gap-1">
-                              <AlertCircle className="w-3 h-3" /> {addressError}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Embedded map */}
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          className="space-y-3 p-4 bg-dark-surface rounded-2xl border border-white/5"
-                        >
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-primary-vibrant" />
-                            <span className="text-xs font-bold text-zinc-300">Ubicación de entrega</span>
                           </div>
-                          <div className="w-full h-56 sm:h-64 rounded-xl overflow-hidden border border-white/10 relative z-0">
-                            <MapComponent
-                              center={
-                                deliveryCoordinates
-                                  ? [deliveryCoordinates.lat, deliveryCoordinates.lng]
-                                  : location.latitude && location.longitude
-                                    ? [location.latitude, location.longitude]
-                                    : [10.162, -68.007]
-                              }
-                              centerKey={mapCenterKey}
-                              zoom={deliveryCoordinates ? 16 : 13}
-                              onLocationSelect={handleMapLocationSelect}
-                              onDragEnd={handleMapDragEnd}
-                              onOutOfBounds={handleMapOutOfBounds}
-                              markerColor={isWithinRange && addressStatus !== 'out_of_zone' ? 'red' : 'orange'}
+                        </div>
+                      </motion.div>
+                      );
+                    })}
+                  </motion.div>
+                )}
+                {step === 'checkout' && (
+                  <motion.form key="checkout" custom={stepDirection} variants={slideVariants}
+                    initial="enter" animate="center" exit="exit"
+                    id="checkout-form" onSubmit={handleSubmit}
+                    className="p-4 sm:p-6 space-y-5"
+                  >
+                    <div className="space-y-5 font-body">
+                      <div className="space-y-4">
+                        <div className="flex flex-col gap-4">
+                          <div className="relative">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 text-xs font-bold">V-</div>
+                            <input required type="text" inputMode="numeric" pattern="[0-9]*" maxLength={8}
+                              placeholder="Cédula de identidad (auto-buscar)"
+                              aria-describedby={formErrors.cedula ? 'cedula-error' : undefined}
+                              aria-invalid={formErrors.cedula ? 'true' : 'false'}
+                              className={`w-full pl-12 pr-12 py-4 bg-dark-surface border-2 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500 ${formErrors.cedula ? 'border-red-500/50' : 'border-white/10'}`}
+                              value={customerCedula}
+                              onChange={(e) => {
+                                const v = e.target.value.replace(/[^0-9]/g, '').slice(0, 8);
+                                setCustomerCedula(v);
+                                if (v.length < 7) setFormErrors(prev => ({ ...prev, cedula: 'Mínimo 7 dígitos' }));
+                                else setFormErrors(prev => ({ ...prev, cedula: '' }));
+                              }}
                             />
-                            {!deliveryCoordinates && (
-                              <div className="absolute inset-x-0 bottom-4 pointer-events-none flex justify-center z-[1000]">
-                                <span className="bg-black/80 backdrop-blur-sm text-white text-[10px] px-4 py-2 rounded-full font-medium shadow-lg">
-                                  Mueve el mapa para fijar tu ubicación
-                                </span>
+                            {isLookingUpCustomer && (
+                              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                <Loader2 className="w-4 h-4 text-primary-vibrant animate-spin" />
                               </div>
                             )}
+                            {formErrors.cedula && (
+                              <span id="cedula-error" className="absolute -bottom-5 left-0 text-[10px] text-red-400" role="alert">{formErrors.cedula}</span>
+                            )}
                           </div>
-                          {deliveryCoordinates && (
-                            <p className="text-[10px] text-zinc-600 text-center font-medium">
-                              Coordenadas: {deliveryCoordinates.lat.toFixed(5)}, {deliveryCoordinates.lng.toFixed(5)}
-                            </p>
-                          )}
-                        </motion.div>
+                          <div className="relative">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
+                              <User className="w-4 h-4" />
+                            </div>
+                            <input required placeholder={t('cart.fullName')}
+                              aria-describedby={formErrors.name ? 'name-error' : undefined}
+                              aria-invalid={formErrors.name ? 'true' : 'false'}
+                              className={`w-full pl-12 pr-4 py-4 bg-dark-surface border-2 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500 ${formErrors.name ? 'border-red-500/50' : 'border-white/10'}`}
+                              value={customerName}
+                              onChange={(e) => { setCustomerName(e.target.value); validateField('name', e.target.value); }}
+                            />
+                            {formErrors.name && (
+                              <span id="name-error" className="absolute -bottom-5 left-0 text-[10px] text-red-400" role="alert">{formErrors.name}</span>
+                            )}
+                          </div>
+                          <div className="relative">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
+                              <Phone className="w-4 h-4" />
+                            </div>
+                            <input required type="tel" inputMode="numeric"
+                              placeholder={t('cart.whatsapp')}
+                              aria-describedby={formErrors.phone ? 'phone-error' : undefined}
+                              aria-invalid={formErrors.phone ? 'true' : 'false'}
+                              className={`w-full pl-12 pr-4 py-4 bg-dark-surface border-2 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500 ${formErrors.phone ? 'border-red-500/50' : 'border-white/10'}`}
+                              value={customerPhone}
+                              onChange={(e) => {
+                                const v = e.target.value.replace(/[^0-9+\-\s()]/g, '');
+                                setCustomerPhone(v);
+                                validateField('phone', v);
+                              }}
+                            />
+                            {formErrors.phone && (
+                              <span id="phone-error" className="absolute -bottom-5 left-0 text-[10px] text-red-400" role="alert">{formErrors.phone}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {deliveryType === 'Delivery' && (
+                        <div className="space-y-4 border-t border-white/10 pt-5">
+                          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary-vibrant flex items-center gap-2">
+                            <MapPin className="w-4 h-4" /> Dirección de Entrega
+                          </p>
+                          <div className="space-y-1.5">
+                            <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
+                              <MapPin className="w-3 h-3 text-primary-vibrant" />
+                              Referencia de entrega
+                            </label>
+                            <input placeholder="Ej: frente al Mercado XYZ, al lado de la farmacia..."
+                              className="w-full px-5 py-3.5 bg-dark-surface border-2 border-white/10 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-600"
+                              value={reference} onChange={(e) => setReference(e.target.value)}
+                            />
+                          </div>
+                          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                            type="button" onClick={handleGetUserLocation} disabled={isLocating}
+                            className="w-full py-4 bg-secondary-vibrant/10 border border-secondary-vibrant/30 rounded-[20px] text-[11px] font-bold uppercase tracking-[0.2em] text-secondary-vibrant hover:bg-secondary-vibrant/15 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+                          >
+                            {isLocating ? <><Loader2 className="w-4 h-4 animate-spin" /> {t('cart.locating') || 'Localizando...'}</> : <><Navigation className="w-4 h-4" /> {t('cart.useLocation') || 'Usar mi ubicación actual'}</>}
+                          </motion.button>
+                          <div className="relative">
+                            <div className="absolute left-4 top-4 text-zinc-400"><MapPin className="w-4 h-4" /></div>
+                            {statusDotClass && (<div className="absolute right-4 top-4"><div className={`address-status-dot ${statusDotClass}`} /></div>)}
+                            <textarea ref={addressInputRef} required
+                              placeholder={t('cart.address') + ' (escribe para buscar)'}
+                              className={`w-full pl-12 pr-10 py-4 bg-dark-surface border-2 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500 min-h-[100px] resize-none ${formErrors.address ? 'border-red-500/50' : 'border-white/10'}`}
+                              value={deliveryAddress} onChange={(e) => handleAddressChange(e.target.value)} onBlur={handleAddressBlur}
+                            />
+                            {(isLoadingAddress || addressStatus === 'gps_pending') && (
+                              <div className="absolute right-10 top-4 flex items-center gap-2 bg-primary-vibrant/10 px-3 py-1 rounded-full">
+                                <Loader2 className="w-3 h-3 text-primary-vibrant animate-spin" />
+                                <span className="text-[10px] font-medium text-primary-vibrant">{addressStatus === 'gps_pending' ? 'GPS...' : 'Buscando...'}</span>
+                              </div>
+                            )}
+                            {formErrors.address && (<span id="address-error" className="absolute -bottom-5 left-0 text-[10px] text-red-400" role="alert">{formErrors.address}</span>)}
+                            {showSuggestions && suggestions.length > 0 && (
+                              <div className="absolute z-10 w-full bg-dark-surface border border-white/10 rounded-[20px] mt-2 shadow-2xl overflow-hidden max-h-48 overflow-y-auto">
+                                {suggestions.map((s) => (<button key={s.place_id} type="button" onClick={() => handleAddressSelect(s)}
+                                  className="block w-full text-left p-4 text-[11px] hover:bg-white/5 border-b border-white/5 font-medium truncate text-zinc-300 transition-colors duration-200"
+                                >{s.display_name}</button>))}
+                              </div>
+                            )}
+                            {showSuggestions && suggestions.length === 0 && !isLoadingAddress && deliveryAddress.length > 3 && (
+                              <div className="absolute z-10 w-full bg-dark-surface border border-white/10 rounded-[20px] mt-2 shadow-2xl p-5">
+                                <div className="flex flex-col items-center text-center gap-3">
+                                  <div className="w-10 h-10 bg-primary-vibrant/10 rounded-xl flex items-center justify-center"><MapPin className="w-5 h-5 text-primary-vibrant" /></div>
+                                  <div><p className="text-[11px] font-bold text-zinc-300 mb-1">No encontramos tu dirección</p><p className="text-[10px] text-zinc-500">Arrastra el mapa para fijar tu ubicación exacta</p></div>
+                                </div>
+                              </div>
+                            )}
+                            {addressError && (<div className="absolute -bottom-6 left-0 text-red-400 text-[10px] font-medium flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {addressError}</div>)}
+                          </div>
+                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                            className="space-y-3 p-4 bg-dark-surface rounded-2xl border border-white/5"
+                          >
+                            <div className="flex items-center gap-2"><MapPin className="w-4 h-4 text-primary-vibrant" /><span className="text-xs font-bold text-zinc-300">Ubicación de entrega</span></div>
+                            <div className="w-full h-56 sm:h-64 rounded-xl overflow-hidden border border-white/10 relative z-0">
+                              <MapComponent center={deliveryCoordinates ? [deliveryCoordinates.lat, deliveryCoordinates.lng] : location.latitude && location.longitude ? [location.latitude, location.longitude] : [10.162, -68.007]}
+                                centerKey={mapCenterKey} zoom={deliveryCoordinates ? 16 : 13}
+                                onLocationSelect={handleMapLocationSelect} onDragEnd={handleMapDragEnd} onOutOfBounds={handleMapOutOfBounds}
+                                markerColor={isWithinRange && addressStatus !== 'out_of_zone' ? 'red' : 'orange'}
+                              />
+                              {!deliveryCoordinates && (<div className="absolute inset-x-0 bottom-4 pointer-events-none flex justify-center z-[1000]"><span className="bg-black/80 backdrop-blur-sm text-white text-[10px] px-4 py-2 rounded-full font-medium shadow-lg">Mueve el mapa para fijar tu ubicación</span></div>)}
+                            </div>
+                            {deliveryCoordinates && (<p className="text-[10px] text-zinc-600 text-center font-medium">Coordenadas: {deliveryCoordinates.lat.toFixed(5)}, {deliveryCoordinates.lng.toFixed(5)}</p>)}
+                          </motion.div>
+                        </div>
+                      )}
+                    </div>
+                  </motion.form>
+                )}
+                {step === 'confirm' && (
+                  <motion.div key="confirm" custom={stepDirection} variants={slideVariants}
+                    initial="enter" animate="center" exit="exit"
+                    className="p-4 sm:p-6 space-y-5"
+                  >
+                    {items.length > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary-vibrant">Resumen del Pedido</p>
+                        <div className="space-y-2">
+                          {items.map((item) => (<div key={getItemKey(item.id, item.selectedChoices)} className="flex justify-between items-center text-sm text-zinc-300">
+                            <span className="truncate flex-1 font-medium">{item.quantity}x {item.name}{item.selectedChoices && item.selectedChoices.length > 0 && <span className="text-zinc-500"> — {item.selectedChoices.join(', ')}</span>}</span>
+                            <span className="font-semibold text-white">${(item.price * item.quantity).toFixed(2)}</span>
+                          </div>))}
+                        </div>
                       </div>
                     )}
-                  </div>
-                </form>
-              )}
+                    <div className="bg-dark-surface rounded-2xl p-5 border border-white/10 space-y-3">
+                      <div className="flex justify-between text-sm text-zinc-400"><span>Subtotal</span><span className="text-white font-semibold">${total.toFixed(2)}</span></div>
+                      {deliveryType === 'Delivery' && (<div className="flex justify-between text-sm text-zinc-400"><span>Envío</span><span className="text-secondary-vibrant font-semibold">${calculatedFee.toFixed(2)}</span></div>)}
+                      <div className="flex justify-between items-end border-t border-white/10 pt-3">
+                        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-secondary-vibrant">Total</span>
+                        <span className="font-display text-3xl tracking-wider text-white">${finalTotal.toFixed(2)} <span className="text-xs text-zinc-400 ml-1 font-medium">USD</span></span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[9px] font-bold text-secondary-vibrant uppercase tracking-widest">En Bs.</span>
+                        <span className="font-display text-xl text-secondary-vibrant tracking-wider">{totalVES.toLocaleString(language === 'es' ? 'es-VE' : 'en-US', { minimumFractionDigits: 2 })} <span className="text-[10px]">Bs.</span></span>
+                      </div>
+                      <div className="text-right"><span className="text-[9px] text-zinc-600">Tasa: {config.exchangeRate}</span></div>
+                    </div>
+                    {deliveryType === 'Delivery' && (
+                      <div className="space-y-4">
+                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-primary-vibrant" /> Datos de Pago Móvil</p>
+                        <div className="p-5 bg-dark-surface border-2 border-white/10 rounded-2xl space-y-4">
+                          <div className="p-4 bg-primary-vibrant/10 rounded-xl border border-primary-vibrant/20">
+                            <p className="text-sm font-bold text-primary-vibrant uppercase tracking-wider mb-3">Transferir a</p>
+                            <div className="space-y-2 text-sm text-zinc-300 font-mono">
+                              <p><span className="text-zinc-500">Banesco:</span> 0212-XXXX-XXXX-XXXX</p>
+                              <p><span className="text-zinc-500">Mercantil:</span> 0414-XXXX-XXXX-XXXX</p>
+                              <p><span className="text-zinc-500">Vatlanta:</span> 0416-XXXX-XXXX-XXXX</p>
+                              <div className="border-t border-primary-vibrant/20 my-2" />
+                              <p className="text-primary-vibrant font-bold text-base">Monto: ${finalTotal.toFixed(2)} USD</p>
+                            </div>
+                          </div>
+                          <div className="relative">
+                            <input type="file" accept="image/*" id="confirm-payment-screenshot"
+                              onChange={(e) => { const file = e.target.files?.[0]; if (file) { const url = URL.createObjectURL(file); setPaymentPreviewUrl(url); setPaymentScreenshot(file); } }}
+                              className="hidden"
+                            />
+                            <label htmlFor="confirm-payment-screenshot"
+                              className="flex flex-col items-center justify-center w-full p-5 bg-white/5 border-2 border-dashed border-white/20 rounded-xl cursor-pointer hover:border-primary-vibrant/50 transition-colors duration-200"
+                            >
+                              {paymentPreviewUrl ? (
+                                <div className="relative w-full">
+                                  <img src={paymentPreviewUrl} alt="Capture de pago" className="w-full h-40 object-cover rounded-xl mb-2" />
+                                  <button type="button" onClick={(e) => { e.stopPropagation(); URL.revokeObjectURL(paymentPreviewUrl); setPaymentPreviewUrl(null); setPaymentScreenshot(null); }}
+                                    className="absolute top-2 right-2 w-7 h-7 bg-red-500/80 rounded-full flex items-center justify-center text-white text-sm hover:bg-red-600"
+                                  >×</button>
+                                </div>
+                              ) : (<><div className="w-14 h-14 bg-primary-vibrant/10 rounded-xl flex items-center justify-center mb-3"><svg className="w-7 h-7 text-primary-vibrant" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 112.828 2.828L6 18h2a2 2 0 002-2zM14 6l3 3m-3-3V3m0 0l-3 3m3-3l3-3" /></svg></div>
+                                <div className="text-center"><p className="text-sm font-medium text-zinc-300"><span className="text-primary-vibrant">Click para subir</span> comprobante de pago</p><p className="text-xs text-zinc-500 mt-1">PNG, JPG</p></div></>)}
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Footer */}
@@ -883,7 +947,7 @@ export function CartDrawer({
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => setStep('checkout')}
+                    onClick={() => goToStep('checkout')}
                     className="w-full vibrant-gradient text-white py-5 sm:py-6 rounded-[20px] font-display uppercase tracking-[0.2em] text-sm flex items-center justify-center gap-3 shadow-[0_20px_50px_rgba(203,32,39,0.3)] transition-all duration-300 hover:shadow-[0_20px_60px_rgba(203,32,39,0.5)]"
                   >
                     {t('cart.continue')} <ArrowRight className="w-5 h-5" />
@@ -901,178 +965,26 @@ export function CartDrawer({
                     Continuar <ArrowRight className="w-5 h-5" />
                   </motion.button>
                 )}
-              </div>
-            )}
-          </motion.div>
 
-          {/* Confirm Modal */}
-          <AnimatePresence>
-            {showConfirmModal && (
-              <>
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  onClick={() => setShowConfirmModal(false)}
-                  className="fixed inset-0 bg-black/80 z-[60]"
-                />
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9, y: 40 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 40 }}
-                  transition={{ type: 'spring', damping: 28, stiffness: 200 }}
-                  className="fixed inset-4 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-dark-card rounded-3xl z-[60] flex flex-col border border-white/10 shadow-2xl"
-                >
-                  {/* Modal header */}
-                  <div className="sticky top-0 bg-dark-card z-10 p-5 sm:p-6 border-b border-white/10 flex items-center justify-between">
-                    <h2 className="font-display text-xl tracking-wider text-white flex items-center gap-3">
-                      <CheckCircle2 className="w-6 h-6 text-primary-vibrant" />
-                      Confirmar Pedido
-                    </h2>
-                    <button onClick={() => setShowConfirmModal(false)}
-                      className="p-2 bg-white/10 hover:bg-primary-vibrant rounded-xl transition-all duration-300 text-white"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Modal content */}
-                  <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-5">
-
-                    {/* Order summary */}
-                    {items.length > 0 && (
-                      <div className="space-y-3">
-                        <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary-vibrant">Resumen del Pedido</p>
-                        <div className="space-y-2">
-                          {items.map((item) => (
-                            <div key={getItemKey(item.id, item.selectedChoices)} className="flex justify-between items-center text-sm text-zinc-300">
-                              <span className="truncate flex-1 font-medium">{item.quantity}x {item.name}
-                                {item.selectedChoices && item.selectedChoices.length > 0 && (
-                                  <span className="text-zinc-500"> — {item.selectedChoices.join(', ')}</span>
-                                )}
-                              </span>
-                              <span className="font-semibold text-white">${(item.price * item.quantity).toFixed(2)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Totals */}
-                    <div className="bg-dark-surface rounded-2xl p-5 border border-white/10 space-y-3">
-                      <div className="flex justify-between text-sm text-zinc-400">
-                        <span>Subtotal</span>
-                        <span className="text-white font-semibold">${total.toFixed(2)}</span>
-                      </div>
-                      {deliveryType === 'Delivery' && (
-                        <div className="flex justify-between text-sm text-zinc-400">
-                          <span>Envío</span>
-                          <span className="text-secondary-vibrant font-semibold">${calculatedFee.toFixed(2)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between items-end border-t border-white/10 pt-3">
-                        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-secondary-vibrant">Total</span>
-                        <span className="font-display text-3xl tracking-wider text-white">
-                          ${finalTotal.toFixed(2)} <span className="text-xs text-zinc-400 ml-1 font-medium">USD</span>
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-[9px] font-bold text-secondary-vibrant uppercase tracking-widest">En Bs.</span>
-                        <span className="font-display text-xl text-secondary-vibrant tracking-wider">
-                          {totalVES.toLocaleString(language === 'es' ? 'es-VE' : 'en-US', { minimumFractionDigits: 2 })}{' '}
-                          <span className="text-[10px]">Bs.</span>
-                        </span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[9px] text-zinc-600">Tasa: {config.exchangeRate}</span>
-                      </div>
-                    </div>
-
-                    {/* Pago Móvil section — Delivery only */}
-                    {deliveryType === 'Delivery' && (
-                      <div className="space-y-4">
-                        <p className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-primary-vibrant" />
-                          Datos de Pago Móvil
-                        </p>
-                        <div className="p-5 bg-dark-surface border-2 border-white/10 rounded-2xl space-y-4">
-                          <div className="p-4 bg-primary-vibrant/10 rounded-xl border border-primary-vibrant/20">
-                            <p className="text-sm font-bold text-primary-vibrant uppercase tracking-wider mb-3">Transferir a</p>
-                            <div className="space-y-2 text-sm text-zinc-300 font-mono">
-                              <p><span className="text-zinc-500">Banesco:</span> 0212-XXXX-XXXX-XXXX</p>
-                              <p><span className="text-zinc-500">Mercantil:</span> 0414-XXXX-XXXX-XXXX</p>
-                              <p><span className="text-zinc-500">Vatlanta:</span> 0416-XXXX-XXXX-XXXX</p>
-                              <div className="border-t border-primary-vibrant/20 my-2" />
-                              <p className="text-primary-vibrant font-bold text-base">
-                                Monto: ${calculatedFee.toFixed(2)} USD
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Screenshot upload */}
-                          <div className="relative">
-                            <input type="file" accept="image/*" id="confirm-payment-screenshot"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  const url = URL.createObjectURL(file);
-                                  setPaymentPreviewUrl(url);
-                                  setPaymentScreenshot(file);
-                                }
-                              }}
-                              className="hidden"
-                            />
-                            <label htmlFor="confirm-payment-screenshot"
-                              className="flex flex-col items-center justify-center w-full p-5 bg-white/5 border-2 border-dashed border-white/20 rounded-xl cursor-pointer hover:border-primary-vibrant/50 transition-colors duration-200"
-                            >
-                              {paymentPreviewUrl ? (
-                                <div className="relative w-full">
-                                  <img src={paymentPreviewUrl} alt="Capture de pago" className="w-full h-40 object-cover rounded-xl mb-2" />
-                                  <button type="button" onClick={(e) => { e.stopPropagation(); URL.revokeObjectURL(paymentPreviewUrl); setPaymentPreviewUrl(null); setPaymentScreenshot(null); }}
-                                    className="absolute top-2 right-2 w-7 h-7 bg-red-500/80 rounded-full flex items-center justify-center text-white text-sm hover:bg-red-600"
-                                  >×</button>
-                                </div>
-                              ) : (
-                                <>
-                                  <div className="w-14 h-14 bg-primary-vibrant/10 rounded-xl flex items-center justify-center mb-3">
-                                    <svg className="w-7 h-7 text-primary-vibrant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 112.828 2.828L6 18h2a2 2 0 002-2zM14 6l3 3m-3-3V3m0 0l-3 3m3-3l3-3" />
-                                    </svg>
-                                  </div>
-                                  <div className="text-center">
-                                    <p className="text-sm font-medium text-zinc-300">
-                                      <span className="text-primary-vibrant">Click para subir</span> comprobante de pago
-                                    </p>
-                                    <p className="text-xs text-zinc-500 mt-1">PNG, JPG</p>
-                                  </div>
-                                </>
-                              )}
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Modal footer */}
-                  <div className="sticky bottom-0 bg-dark-card border-t border-white/10 p-5 sm:p-6 space-y-3">
-                    <label className="flex items-center gap-2 justify-center cursor-pointer">
+                {step === 'confirm' && (
+                  <>
+                    <label className="flex items-center gap-2 justify-center cursor-pointer mb-3">
                       <input type="checkbox" checked={termsAccepted} onChange={e => setTermsAccepted(e.target.checked)}
                         className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-primary-vibrant focus:ring-primary-vibrant/50 accent-primary-vibrant" />
-                      <span className="text-xs text-zinc-500">
+                      <span className="text-[10px] text-zinc-500">
                         Acepto los{' '}
                         <Link to="/legal" className="underline hover:text-white transition-colors">{t('legal.terms.title')}</Link>
                         {' '}&{' '}
                         <Link to="/legal#privacidad" className="underline hover:text-white transition-colors">{t('legal.privacy.title')}</Link>
                       </span>
                     </label>
-                    <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                       <motion.button
                         whileTap={{ scale: 0.95 }}
-                        onClick={() => setShowConfirmModal(false)}
-                        className="w-full sm:flex-1 bg-white/5 text-zinc-400 py-4 rounded-2xl font-display uppercase tracking-widest text-xs transition-all duration-300 hover:bg-white/10 border border-white/5"
+                        onClick={() => goToStep('checkout')}
+                        className="w-full sm:flex-1 bg-white/5 text-zinc-400 py-5 sm:py-6 rounded-[20px] font-display uppercase tracking-widest text-xs sm:text-[11px] transition-all duration-300 hover:bg-white/10 border border-white/5"
                       >
-                        Atrás
+                        {t('cart.back')}
                       </motion.button>
                       <motion.button
                         whileHover={{ scale: 1.02 }}
@@ -1080,18 +992,18 @@ export function CartDrawer({
                         type="button"
                         onClick={handleConfirmOrder}
                         disabled={deliveryType === 'Delivery' && !isWithinRange}
-                        className={`w-full sm:flex-[2] bg-[#25D366] text-white py-4 rounded-2xl font-display uppercase tracking-[0.2em] text-sm shadow-[0_20px_50px_rgba(37,211,102,0.3)] transition-all duration-300 flex items-center justify-center gap-3 ${
+                        className={`w-full sm:flex-[2] bg-[#25D366] text-white py-5 sm:py-6 rounded-[20px] font-display uppercase tracking-[0.2em] text-xs sm:text-[11px] shadow-[0_20px_50px_rgba(37,211,102,0.3)] transition-all duration-300 flex items-center justify-center gap-3 ${
                           deliveryType === 'Delivery' && !isWithinRange ? 'opacity-50 cursor-not-allowed' : ''
                         }`}
                       >
-                        {deliveryType === 'Delivery' && !isWithinRange ? 'Fuera de cobertura' : 'Enviar Pedido'}
+                        {deliveryType === 'Delivery' && !isWithinRange ? t('cart.outOfCoverage') : t('cart.confirmWhatsApp')}
                       </motion.button>
                     </div>
-                  </div>
-                </motion.div>
-              </>
+                  </>
+                )}
+              </div>
             )}
-          </AnimatePresence>
+          </motion.div>
 
           {/* Toast notification */}
           <AnimatePresence>
