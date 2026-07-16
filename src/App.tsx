@@ -56,6 +56,7 @@ function MainView() {
       const deliveryFee = data.calculatedDeliveryFee ?? config.deliveryFee ?? 0;
       await createOrder({
         location_id: selectedLocation.id,
+        cedula: data.cedula || '',
         customer_name: data.name,
         customer_phone: data.phone,
         delivery_type: data.deliveryType || 'Delivery',

@@ -167,6 +167,5 @@ export interface POSCartItem {
 export interface PaymentScreenshot {
   filename: string;
   previewUrl: string;
-  uploaded: boolean;
-  path?: string;
+  uploadedUrl?: string;
 }

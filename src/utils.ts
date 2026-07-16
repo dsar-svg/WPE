@@ -44,6 +44,10 @@ export function generateWhatsAppLink(
   message += `*Subtotal:* $${subtotal.toFixed(2)}\n`;
   message += `*Delivery:* $${deliveryFee.toFixed(2)}\n`;
   message += `*TOTAL:* $${totalUSD.toFixed(2)}\n`;
+  if (checkout.paymentScreenshot?.uploadedUrl) {
+    message += `*Comprobante:* ${checkout.paymentScreenshot.uploadedUrl}\n`;
+  }
+
   message += `----------------------------------\n`;
   message += `_Pedido realizado desde la App Web_`;
 
