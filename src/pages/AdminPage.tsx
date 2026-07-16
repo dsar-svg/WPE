@@ -1,19 +1,21 @@
 ﻿import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, MapPin, Clock, MessageCircle, Power, RefreshCcw, Plus, Trash2, Tag, Edit2, Eye, EyeOff, Menu, X } from 'lucide-react';
+import { LogIn, MapPin, Clock, MessageCircle, Power, RefreshCcw, Plus, Trash2, Tag, Edit2, Eye, EyeOff, Menu, X, Key, AlertTriangle } from 'lucide-react';
 import { useRestaurant } from '../context/RestaurantContext';
 import { Product, Location } from '../types';
 import { Link } from 'react-router-dom';
 import { LocationForm } from '../components/admin/LocationForm';
 import { ProductForm } from '../components/admin/ProductForm';
 import { CategoryModal } from '../components/admin/CategoryModal';
-import { CashierModal } from '../components/admin/CashierModal';
+import { CashierForm } from '../components/admin/CashierForm';
 import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { SettingsPage } from '../components/admin/SettingsPage';
 import { OrdersPage } from '../components/admin/OrdersPage';
 import { DashboardView } from '../components/admin/DashboardView';
 import { Pagination } from '../components/ui/Pagination';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
+import { supabase } from '../lib/supabase';
+import { Cashier } from '../types';
 const formatTime12h = (time: string) => { if (!time) return ''; const [hours, minutes] = time.split(':');
 const h = parseInt(hours);
 const ampm = h >= 12 ? 'PM' : 'AM'; const h12 = h % 12 || 12; return `${h12}:${minutes} ${ampm}`;};
@@ -25,6 +27,23 @@ const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
 useEffect(() => {
   if (isSedesHidden && (activeTab === 'sedes' || activeTab === 'cajeras')) setActiveTab('dashboard');
 }, [isSedesHidden, activeTab]);
+
+const fetchCashiers = async () => {
+  setCashiersLoading(true);
+  const { data } = await supabase.from('admins').select('*').eq('role', 'cashier');
+  if (data) setCashiers(data.map(r => ({ id: r.id, name: r.name, email: r.email, employee_id: r.employee_id, location_id: r.location_id, pin: r.pin })));
+  setCashiersLoading(false);
+};
+
+useEffect(() => {
+  if (activeTab === 'cajeras') fetchCashiers();
+}, [activeTab]);
+
+const handleDeleteCashier = async (id: string) => {
+  await supabase.from('admins').delete().eq('id', id);
+  setConfirmDeleteCashier(null);
+  fetchCashiers();
+};
 const [authError, setAuthError] = useState<string | null>(null);
 const [email, setEmail] = useState('');
 const [password, setPassword] = useState('');
@@ -41,7 +60,12 @@ const [editingProd, setEditingProd] = useState<Product | null>(null);
 const [isAddingLoc, setIsAddingLoc] = useState(false);
 const [isAddingProd, setIsAddingProd] = useState(false);
 const [isManageCatsOpen, setIsManageCatsOpen] = useState(false);
-const [isManageCashiersOpen, setIsManageCashiersOpen] = useState(false);
+const [cashiers, setCashiers] = useState<Cashier[]>([]);
+const [cashiersLoading, setCashiersLoading] = useState(false);
+const [editingCashier, setEditingCashier] = useState<Cashier | null>(null);
+const [isAddingCashier, setIsAddingCashier] = useState(false);
+const [confirmDeleteCashier, setConfirmDeleteCashier] = useState<string | null>(null);
+const [showPin, setShowPin] = useState<string | null>(null);
 const [activeProductCategory, setActiveProductCategory] = useState('Todos');
 const [productPage, setProductPage] = useState(1);
 useEffect(() => { setProductPage(1); }, [activeProductCategory]);
@@ -358,16 +382,89 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
             <div className="flex justify-between items-center mb-8">
               <div>
                 <h2 className="text-2xl font-black">Cajeras</h2>
-                <p className="text-admin-text-muted text-sm">Personal con acceso al sistema POS</p>
+                <p className="text-admin-text-muted text-sm">{cashiers.length} cajera(s) registradas</p>
               </div>
               {isSuperAdmin && (
-                <button onClick={() => setIsManageCashiersOpen(true)}
+                <button onClick={() => setIsAddingCashier(true)}
                   className="bg-primary-vibrant hover:scale-105 active:scale-95 transition-transform text-white px-6 py-3 rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-primary-vibrant/20"
                 >
-                  <Plus className="w-4 h-4" /> Gestionar Cajeras
+                  <Plus className="w-4 h-4" /> Nueva Cajera
                 </button>
               )}
             </div>
+            {cashiersLoading ? (
+              <div className="text-center py-16 text-admin-muted text-sm animate-pulse">Cargando...</div>
+            ) : cashiers.length === 0 ? (
+              <div className="text-center py-16 text-admin-muted text-sm">No hay cajeras registradas</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {cashiers.map(c => {
+                  const locName = locations.find(l => l.id === c.location_id)?.name;
+                  return (
+                    <motion.div layoutId={c.id} key={c.id}
+                      className="bg-admin-surface border border-admin-border rounded-2xl p-8 flex flex-col justify-between group overflow-hidden"
+                    >
+                      <div className="space-y-6">
+                        <div className="flex justify-between items-start">
+                          <div className="w-16 h-16 bg-zinc-800 rounded-2xl flex items-center justify-center border border-admin-border shadow-xl">
+                            <Key className="w-7 h-7 text-zinc-500" />
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => setEditingCashier(c)} className="p-2 hover:bg-admin-border rounded-xl text-admin-muted transition-colors">
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            {isSuperAdmin && (
+                              <button onClick={() => setConfirmDeleteCashier(c.id)} className="p-2 hover:bg-red-500/10 text-red-500/50 hover:text-red-500 rounded-xl transition-all">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div className="space-y-3">
+                          <div>
+                            <h3 className="text-2xl font-black">{c.name}</h3>
+                            <p className="text-admin-text-muted text-xs mt-0.5">{c.email}</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            {c.employee_id && (
+                              <div className="bg-admin-bg p-3 rounded-2xl border border-admin-border/50">
+                                <div className="flex items-center gap-1.5 mb-1 opacity-50">
+                                  <span className="text-[8px] font-black uppercase tracking-widest">ID</span>
+                                </div>
+                                <p className="text-xs font-black text-admin-text">{c.employee_id}</p>
+                              </div>
+                            )}
+                            <div className="bg-admin-bg p-3 rounded-2xl border border-admin-border/50">
+                              <div className="flex items-center gap-1.5 mb-1 opacity-50">
+                                <span className="text-[8px] font-black uppercase tracking-widest">PIN</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-mono font-black text-admin-text">
+                                  {showPin === c.id ? c.pin : '****'}
+                                </span>
+                                <button onClick={() => setShowPin(showPin === c.id ? null : c.id)}
+                                  className="text-zinc-600 hover:text-white transition-all">
+                                  {showPin === c.id ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                </button>
+                              </div>
+                            </div>
+                            {locName && (
+                              <div className="bg-admin-bg p-3 rounded-2xl border border-admin-border/50 col-span-2">
+                                <div className="flex items-center gap-1.5 mb-1 opacity-50">
+                                  <MapPin className="w-3 h-3" />
+                                  <span className="text-[8px] font-black uppercase tracking-widest">Sede</span>
+                                </div>
+                                <p className="text-xs font-black text-admin-text">{locName}</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -408,8 +505,34 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
           onDelete={deleteCategory}
         />
       )}
-      {isManageCashiersOpen && (
-        <CashierModal onClose={() => setIsManageCashiersOpen(false)} />
+      {(isAddingCashier || editingCashier) && (
+        <CashierForm
+          cashier={editingCashier || undefined}
+          onClose={() => { setEditingCashier(null); setIsAddingCashier(false); }}
+          onSaved={fetchCashiers}
+        />
+      )}
+      {confirmDeleteCashier && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/80" onClick={() => setConfirmDeleteCashier(null)} />
+          <motion.div initial={{ scale: 0.9, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.9, y: 20, opacity: 0 }}
+            className="relative w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-6 text-center">
+            <div className="w-16 h-16 bg-primary-vibrant/10 rounded-2xl flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-8 h-8 text-primary-vibrant" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-white">Eliminar Cajera</h3>
+              <p className="text-zinc-400 text-sm">¿Estás seguro? No se podrá recuperar.</p>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDeleteCashier(null)}
+                className="flex-1 py-3 rounded-2xl bg-zinc-800 text-zinc-300 font-bold text-sm hover:bg-zinc-700 transition-colors">Cancelar</button>
+              <button onClick={() => handleDeleteCashier(confirmDeleteCashier)}
+                className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-colors">Eliminar</button>
+            </div>
+          </motion.div>
+        </motion.div>
       )}
     </AnimatePresence>
   </div>

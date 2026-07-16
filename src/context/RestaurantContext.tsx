@@ -59,6 +59,7 @@ const DEFAULT_CONFIG: RestaurantConfig = {
     ],
     maxDeliveryDistance: 20,
   },
+  pagoMovil: { banesco: '', mercantil: '', venezuela: '' },
 };
 
 function computeIsOpen(row: any): boolean {
@@ -162,6 +163,7 @@ function rowToConfig(row: any): RestaurantConfig {
     rif: row.rif || '',
     businessAddress: row.business_address || '',
     businessPhone: row.business_phone || '',
+    pagoMovil: row.pago_movil || { banesco: '', mercantil: '', venezuela: '' },
   };
 }
 
@@ -347,6 +349,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     if (newConfig.rif !== undefined) dbRow.rif = newConfig.rif;
     if (newConfig.businessAddress !== undefined) dbRow.business_address = newConfig.businessAddress;
     if (newConfig.businessPhone !== undefined) dbRow.business_phone = newConfig.businessPhone;
+    if (newConfig.pagoMovil !== undefined) dbRow.pago_movil = newConfig.pagoMovil;
     const { error } = await supabase.from('config').update(dbRow).eq('id', 1);
     if (error) throw error;
     invalidate(['config']);

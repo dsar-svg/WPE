@@ -375,6 +375,32 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
 
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-6">
             <div className="flex justify-between items-center">
+              <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500">Pago Móvil</label>
+              <span className="text-[8px] text-zinc-600">Datos que aparecen en el carrito</span>
+            </div>
+            <div className="space-y-4">
+              {(['banesco', 'mercantil', 'venezuela'] as const).map(bank => (
+                <div key={bank} className="space-y-2">
+                  <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">
+                    {bank === 'banesco' ? 'Banesco' : bank === 'mercantil' ? 'Mercantil' : 'Venezuela'}
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold text-xs focus:ring-2 focus:ring-primary-vibrant outline-none"
+                    value={data.pagoMovil?.[bank] || ''}
+                    onChange={e => setData({
+                      ...data,
+                      pagoMovil: { ...data.pagoMovil, [bank]: e.target.value }
+                    })}
+                    placeholder="0123-XXXX-XXXX-XXXX-XXXX"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-6">
+            <div className="flex justify-between items-center">
               <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500">Tarifas por Distancia</label>
               <span className="text-[8px] text-zinc-600">Configuración global</span>
             </div>

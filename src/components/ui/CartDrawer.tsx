@@ -1039,9 +1039,9 @@ export function CartDrawer({
                               <div className="p-3 bg-primary-vibrant/10 rounded-lg border border-primary-vibrant/20">
                                 <p className="text-[10px] font-bold text-primary-vibrant uppercase tracking-wider mb-2">Datos de Pago Móvil</p>
                                 <div className="space-y-1 text-[10px] text-zinc-300 font-mono">
-                                  <p><span className="text-zinc-500">Banesco:</span> 0212-XXXX-XXXX-XXXX-XXXX</p>
-                                  <p><span className="text-zinc-500">Mercantil:</span> 0414-XXXX-XXXX-XXXX-XXXX</p>
-                                  <p><span className="text-zinc-500">Vatlanta:</span> 0416-XXXX-XXXX-XXXX-XXXX</p>
+                                  {config.pagoMovil?.banesco && <p><span className="text-zinc-500">Banesco:</span> {config.pagoMovil.banesco}</p>}
+                                  {config.pagoMovil?.mercantil && <p><span className="text-zinc-500">Mercantil:</span> {config.pagoMovil.mercantil}</p>}
+                                  {config.pagoMovil?.venezuela && <p><span className="text-zinc-500">Venezuela:</span> {config.pagoMovil.venezuela}</p>}
                                   <p><span className="text-zinc-500">Monto:</span> ${calculatedFee.toFixed(2)} USD</p>
                                 </div>
                               </div>

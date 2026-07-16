@@ -21,6 +21,11 @@ export interface RestaurantConfig {
   rif?: string;
   businessAddress?: string;
   businessPhone?: string;
+  pagoMovil?: {
+    banesco?: string;
+    mercantil?: string;
+    venezuela?: string;
+  };
 }
 
 export interface Location {
