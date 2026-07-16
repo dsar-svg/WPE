@@ -59,7 +59,7 @@ const DEFAULT_CONFIG: RestaurantConfig = {
     ],
     maxDeliveryDistance: 20,
   },
-  pagoMovil: { banesco: '', mercantil: '', venezuela: '' },
+  pagoMovil: [],
 };
 
 function computeIsOpen(row: any): boolean {
@@ -163,7 +163,7 @@ function rowToConfig(row: any): RestaurantConfig {
     rif: row.rif || '',
     businessAddress: row.business_address || '',
     businessPhone: row.business_phone || '',
-    pagoMovil: row.pago_movil || { banesco: '', mercantil: '', venezuela: '' },
+    pagoMovil: Array.isArray(row.pago_movil) ? row.pago_movil : [],
   };
 }
 

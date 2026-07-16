@@ -1,8 +1,7 @@
-import { useState, ChangeEvent, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Save, RefreshCcw, Image as ImageIcon, Plus, Trash2, Settings, DollarSign, Loader2 } from 'lucide-react';
+import { useState, ChangeEvent, useMemo, useRef, useCallback, useEffect } from 'react';
+import { Save, RefreshCcw, Image as ImageIcon } from 'lucide-react';
 import { RestaurantConfig, Product, Category } from '../../types';
 import { useUploadImage } from '../../hooks/useUploadImage';
-import { fetchBcvRate, getRateSource, saveRateSource } from '../../services/bcvRate';
 import { Pagination } from '../ui/Pagination';
 
 interface SettingsPageProps {
@@ -26,27 +25,15 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
     aboutUs: initialConfig.aboutUs || '',
     socialMedia: initialConfig.socialMedia || {},
     featuredProductIds: getFeaturedIds(initialConfig.featuredProductIds),
-    distancePricing: initialConfig.distancePricing || {
-      ranges: [
-        { maxDistance: 5, fee: 3.00 },
-        { maxDistance: 10, fee: 5.00 },
-        { maxDistance: 15, fee: 7.00 },
-        { maxDistance: null, fee: 0.00 }
-      ],
-      maxDeliveryDistance: 20
-    }
   }));
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'finanzas'>('general');
   const [featuredCategory, setFeaturedCategory] = useState('Todos');
   const [featuredPage, setFeaturedPage] = useState(1);
   const [toasts, setToasts] = useState<Array<{ id: number; type: 'success' | 'error'; message: string }>>([]);
   const toastTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   const ITEMS_PER_PAGE = 10;
   const uploadImage = useUploadImage();
-  const [isFetchingRate, setIsFetchingRate] = useState(false);
-  const [rateSource, setRateSource] = useState<'bcv' | 'manual'>('manual');
 
   // Cleanup all toast timers on unmount
   useEffect(() => {
@@ -105,24 +92,6 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
 
   useEffect(() => { setFeaturedPage(1); }, [featuredCategory]);
 
-  // Auto-fetch BCV rate on mount (only if source is 'bcv')
-  useEffect(() => {
-    const source = getRateSource();
-    setRateSource(source);
-    if (source === 'bcv') {
-      (async () => {
-        setIsFetchingRate(true);
-        try {
-          const rate = await fetchBcvRate();
-          if (rate !== null) {
-            setData(prev => ({ ...prev, exchangeRate: rate }));
-          }
-        } catch {}
-        setIsFetchingRate(false);
-      })();
-    }
-  }, []);
-
   const toggleFeaturedProduct = (id: string) => {
     setData(prev => {
       const ids = getFeaturedIds(prev.featuredProductIds);
@@ -141,26 +110,7 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
         <p className="text-zinc-500 text-sm">Configuración del restaurante</p>
       </div>
 
-      <div className="flex gap-2 p-1.5 bg-zinc-900 border border-zinc-800 rounded-2xl">
-        {[
-          { id: 'general' as const, label: 'General', icon: Settings },
-          { id: 'finanzas' as const, label: 'Finanzas', icon: DollarSign }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveSettingsTab(tab.id)}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
-              activeSettingsTab === tab.id ? 'bg-white text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'
-            }`}
-          >
-            <tab.icon className="w-3 h-3" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {activeSettingsTab === 'general' && (
-        <div className="space-y-8">
+      <div className="space-y-8">
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-4">
             <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Logo</label>
             <div className="flex gap-4">
@@ -262,224 +212,6 @@ export function SettingsPage({ config: initialConfig, menuItems, categories, onS
             <Pagination currentPage={featuredPage} totalPages={totalFeaturedPages} onPageChange={setFeaturedPage} />
           </div>
         </div>
-      )}
-
-      {activeSettingsTab === 'finanzas' && (
-        <div className="space-y-8">
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-6">
-            <div className="flex justify-between items-center">
-              <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500">Información Fiscal</label>
-              <span className="text-[8px] text-zinc-600">Datos para facturación</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">RIF</label>
-                <input
-                  type="text"
-                  className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold text-xs focus:ring-2 focus:ring-primary-vibrant outline-none"
-                  value={data.rif || ''}
-                  onChange={e => setData({...data, rif: e.target.value})}
-                  placeholder="J-12345678-9"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Teléfono del Negocio</label>
-                <input
-                  type="text"
-                  className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold text-xs focus:ring-2 focus:ring-primary-vibrant outline-none"
-                  value={data.businessPhone || ''}
-                  onChange={e => setData({...data, businessPhone: e.target.value})}
-                  placeholder="+58 412-1234567"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Dirección Fiscal</label>
-              <input
-                type="text"
-                className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold text-xs focus:ring-2 focus:ring-primary-vibrant outline-none"
-                value={data.businessAddress || ''}
-                onChange={e => setData({...data, businessAddress: e.target.value})}
-                placeholder="Dirección del establecimiento"
-              />
-            </div>
-          </div>
-
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-6">
-            <div className="flex justify-between items-center">
-              <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500">Impuestos y Delivery</label>
-              <span className="text-[8px] text-zinc-600">Configuración global</span>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Delivery Base ($)</label>
-                <input
-                  type="number" step="0.1"
-                  className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
-                  value={data.deliveryFee}
-                  onChange={e => setData({...data, deliveryFee: parseFloat(e.target.value) || 0})}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between ml-2">
-                <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500">Tasa de Cambio (BS/USD)</label>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setIsFetchingRate(true);
-                      try {
-                        const rate = await fetchBcvRate();
-                        if (rate !== null) {
-                          setData(prev => ({ ...prev, exchangeRate: rate }));
-                          setRateSource('bcv');
-                          saveRateSource('bcv');
-                        }
-                      } catch {}
-                      setIsFetchingRate(false);
-                    }}
-                    disabled={isFetchingRate}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-                      rateSource === 'bcv'
-                        ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                        : 'bg-zinc-800 text-zinc-500 hover:text-zinc-300 border border-zinc-700'
-                    } disabled:opacity-50`}
-                  >
-                    {isFetchingRate ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <RefreshCcw className="w-3 h-3" />
-                    )}
-                    {rateSource === 'bcv' ? 'BCV Activo' : 'Usar BCV'}
-                  </button>
-                </div>
-              </div>
-              <input
-                type="number" step="0.01"
-                className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
-                value={data.exchangeRate}
-                onChange={e => {
-                  setData({...data, exchangeRate: parseFloat(e.target.value) || 1});
-                  setRateSource('manual');
-                  saveRateSource('manual');
-                }}
-              />
-              <p className="text-[9px] text-zinc-600 ml-2">
-                {rateSource === 'bcv'
-                  ? 'Se actualiza automáticamente del BCV al abrir el carrito.'
-                  : 'Modo manual. La tasa no se actualizará automáticamente.'}
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-6">
-            <div className="flex justify-between items-center">
-              <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500">Pago Móvil</label>
-              <span className="text-[8px] text-zinc-600">Datos que aparecen en el carrito</span>
-            </div>
-            <div className="space-y-4">
-              {(['banesco', 'mercantil', 'venezuela'] as const).map(bank => (
-                <div key={bank} className="space-y-2">
-                  <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">
-                    {bank === 'banesco' ? 'Banesco' : bank === 'mercantil' ? 'Mercantil' : 'Venezuela'}
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold text-xs focus:ring-2 focus:ring-primary-vibrant outline-none"
-                    value={data.pagoMovil?.[bank] || ''}
-                    onChange={e => setData({
-                      ...data,
-                      pagoMovil: { ...data.pagoMovil, [bank]: e.target.value }
-                    })}
-                    placeholder="0123-XXXX-XXXX-XXXX-XXXX"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl space-y-6">
-            <div className="flex justify-between items-center">
-              <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500">Tarifas por Distancia</label>
-              <span className="text-[8px] text-zinc-600">Configuración global</span>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">
-                Distancia Máxima de Delivery (km)
-              </label>
-              <input
-                type="number" step="1"
-                className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
-                value={data.distancePricing?.maxDeliveryDistance || 20}
-                onChange={e => setData({
-                  ...data,
-                  distancePricing: {
-                    ...data.distancePricing!,
-                    maxDeliveryDistance: parseInt(e.target.value) || 20
-                  }
-                })}
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Rangos de Tarifas</label>
-              <div className="space-y-2">
-                {(data.distancePricing?.ranges || []).map((range, idx) => (
-                  <div key={idx} className="flex gap-2 items-center bg-zinc-950 border border-zinc-800 p-3 rounded-xl">
-                    <div className="flex items-center gap-1 flex-1">
-                      <span className="text-[11px] font-black text-zinc-500">Hasta</span>
-                      <input
-                        type="number" step="1"
-                        className="w-16 bg-transparent font-bold text-xs outline-none text-center"
-                        placeholder="km"
-                        value={range.maxDistance === null ? '' : range.maxDistance}
-                        onChange={e => {
-                          const ranges = [...(data.distancePricing?.ranges || [])];
-                          ranges[idx].maxDistance = e.target.value === '' ? null : parseInt(e.target.value);
-                          setData({ ...data, distancePricing: { ...data.distancePricing!, ranges } });
-                        }}
-                      />
-                      <span className="text-[11px] font-black text-zinc-500">km →</span>
-                    </div>
-                    <div className="flex items-center gap-1 bg-zinc-900 px-3 py-2 rounded-lg border border-zinc-800">
-                      <span className="text-[11px] font-black text-zinc-500">$</span>
-                      <input
-                        type="number" step="0.1"
-                        className="w-16 bg-transparent font-bold text-xs outline-none"
-                        value={range.fee}
-                        onChange={e => {
-                          const ranges = [...(data.distancePricing?.ranges || [])];
-                          ranges[idx].fee = parseFloat(e.target.value) || 0;
-                          setData({ ...data, distancePricing: { ...data.distancePricing!, ranges } });
-                        }}
-                      />
-                    </div>
-                    <button
-                      onClick={() => {
-                        const ranges = (data.distancePricing?.ranges || []).filter((_, i) => i !== idx);
-                        setData({ ...data, distancePricing: { ...data.distancePricing!, ranges } });
-                      }}
-                      className="p-2 text-zinc-600 hover:text-red-500"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <button
-                onClick={() => {
-                  const ranges = [...(data.distancePricing?.ranges || [])];
-                  ranges.push({ maxDistance: null, fee: 0 });
-                  setData({ ...data, distancePricing: { ...data.distancePricing!, ranges } });
-                }}
-                className="text-[11px] font-black text-primary-vibrant uppercase flex items-center gap-1 hover:opacity-80"
-              >
-                <Plus className="w-3 h-3" /> Añadir Rango
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <button
         disabled={isSaving}

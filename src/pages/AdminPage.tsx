@@ -8,6 +8,7 @@ import { LocationForm } from '../components/admin/LocationForm';
 import { ProductForm } from '../components/admin/ProductForm';
 import { CategoryModal } from '../components/admin/CategoryModal';
 import { CashierForm } from '../components/admin/CashierForm';
+import { FinanzasPage } from '../components/admin/FinanzasPage';
 import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { SettingsPage } from '../components/admin/SettingsPage';
 import { OrdersPage } from '../components/admin/OrdersPage';
@@ -20,12 +21,12 @@ const formatTime12h = (time: string) => { if (!time) return ''; const [hours, mi
 const h = parseInt(hours);
 const ampm = h >= 12 ? 'PM' : 'AM'; const h12 = h % 12 || 12; return `${h12}:${minutes} ${ampm}`;};
 export function AdminPage() { const { locations, menuItems, categories, config, isAdmin, isLoading, isSuperAdmin, managedLocationId, userEmail, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, orders, signIn, signOut, createLocationAdmin } = useRestaurant(); const isSedesHidden = !isSuperAdmin;
-const [activeTab, setActiveTab] = useState<'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras'>('dashboard');
+const [activeTab, setActiveTab] = useState<'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras' | 'finanzas'>('dashboard');
 const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
 const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
 useEffect(() => {
-  if (isSedesHidden && (activeTab === 'sedes' || activeTab === 'cajeras')) setActiveTab('dashboard');
+  if (isSedesHidden && (activeTab === 'sedes' || activeTab === 'cajeras' || activeTab === 'finanzas')) setActiveTab('dashboard');
 }, [isSedesHidden, activeTab]);
 
 const fetchCashiers = async () => {
@@ -362,6 +363,13 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
               </>
             )}
           </div>
+        )}
+
+        {activeTab === 'finanzas' && (
+          <FinanzasPage
+            config={config}
+            onSave={updateConfig}
+          />
         )}
 
         {activeTab === 'ajustes' && (

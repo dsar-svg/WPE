@@ -1038,10 +1038,17 @@ export function CartDrawer({
                               {/* Datos de Pago Móvil */}
                               <div className="p-3 bg-primary-vibrant/10 rounded-lg border border-primary-vibrant/20">
                                 <p className="text-[10px] font-bold text-primary-vibrant uppercase tracking-wider mb-2">Datos de Pago Móvil</p>
-                                <div className="space-y-1 text-[10px] text-zinc-300 font-mono">
-                                  {config.pagoMovil?.banesco && <p><span className="text-zinc-500">Banesco:</span> {config.pagoMovil.banesco}</p>}
-                                  {config.pagoMovil?.mercantil && <p><span className="text-zinc-500">Mercantil:</span> {config.pagoMovil.mercantil}</p>}
-                                  {config.pagoMovil?.venezuela && <p><span className="text-zinc-500">Venezuela:</span> {config.pagoMovil.venezuela}</p>}
+                                <div className="space-y-2 text-[10px] text-zinc-300 font-mono">
+                                  {(config.pagoMovil || []).map(pm => (
+                                    <div key={pm.id} className="border-b border-primary-vibrant/10 pb-1.5 last:border-0">
+                                      <p className="text-primary-vibrant font-bold text-[11px]">{pm.bank}</p>
+                                      <p><span className="text-zinc-500">Teléfono:</span> {pm.phone}</p>
+                                      {pm.rifCedula && <p><span className="text-zinc-500">RIF/Cédula:</span> {pm.rifCedula}</p>}
+                                      {pm.qrImage && (
+                                        <img src={pm.qrImage} alt="QR" className="w-16 h-16 mt-1 rounded-lg border border-primary-vibrant/20" />
+                                      )}
+                                    </div>
+                                  ))}
                                   <p><span className="text-zinc-500">Monto:</span> ${calculatedFee.toFixed(2)} USD</p>
                                 </div>
                               </div>

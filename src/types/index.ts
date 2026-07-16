@@ -1,4 +1,12 @@
 
+export interface PagoMovilData {
+  id: string;
+  bank: string;
+  phone: string;
+  rifCedula: string;
+  qrImage: string;
+}
+
 export interface RestaurantConfig {
   id: string;
   name: string;
@@ -21,11 +29,7 @@ export interface RestaurantConfig {
   rif?: string;
   businessAddress?: string;
   businessPhone?: string;
-  pagoMovil?: {
-    banesco?: string;
-    mercantil?: string;
-    venezuela?: string;
-  };
+  pagoMovil?: PagoMovilData[];
 }
 
 export interface Location {
