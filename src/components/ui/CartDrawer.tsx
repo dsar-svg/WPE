@@ -65,7 +65,7 @@ export function CartDrawer({
   } = useDistanceCalculation();
 
   // ── State ─────────────────────────────────────────────────────────────
-  const [step, setStep] = useState<'cart' | 'checkout'>('cart');
+  const [step, setStep] = useState<'cart' | 'checkout' | 'payment'>('cart');
   const [deliveryType] = useState<DeliveryType>('Delivery');
   const [formData, setFormData] = useState({ name: '', phone: '', cedula: '', address: '', reference: '', notes: '' });
   const [deliveryCoordinates, setDeliveryCoordinates] = useState<{ lat: number; lng: number } | null>(null);
@@ -431,8 +431,27 @@ export function CartDrawer({
   const totalVES = finalTotal * (config.exchangeRate ?? 1);
 
   // ── Submit ───────────────────────────────────────────────────────────
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const goToPayment = () => {
+    const nameOk = validateField('name', formData.name);
+    const phoneOk = validateField('phone', formData.phone);
+    const cedulaOk = formData.cedula.length >= 7;
+    if (!cedulaOk) setFormErrors(prev => ({ ...prev, cedula: 'Mínimo 7 dígitos' }));
+    const addressOk = deliveryType === 'Pick-up' || validateField('address', formData.address);
+    if (!nameOk || !phoneOk || !cedulaOk || !addressOk) return;
+    if (deliveryType === 'Delivery') {
+      if (!deliveryCoordinates) {
+        setAddressError('Selecciona tu ubicación en el mapa');
+        return;
+      }
+      if (!isWithinRange) {
+        setAddressError(t('cart.error.addressOutOfRange'));
+        return;
+      }
+    }
+    setStep('payment');
+  };
+
+  const handleSubmit = () => {
     const nameOk = validateField('name', formData.name);
     const phoneOk = validateField('phone', formData.phone);
     const cedulaOk = formData.cedula.length >= 7;
@@ -498,7 +517,7 @@ export function CartDrawer({
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 200 }}
-            className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-dark-card rounded-t-[2rem] z-50 overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh]"
+            className="fixed bottom-0 left-0 right-0 mx-auto bg-dark-card z-50 overflow-hidden flex flex-col h-full sm:max-h-[90vh] sm:rounded-t-[2rem] sm:max-w-lg"
             id="cart-drawer"
             role="dialog"
             aria-modal="true"
@@ -513,7 +532,7 @@ export function CartDrawer({
                   <div className="w-10 h-10 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-xl flex items-center justify-center">
                     <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  {step === 'cart' ? t('cart.title') : t('cart.checkout')}
+                  {step === 'cart' ? t('cart.title') : step === 'checkout' ? t('cart.checkout') : 'Pago'}
                 </h2>
                 <button
                   onClick={onClose}
@@ -525,9 +544,9 @@ export function CartDrawer({
               </div>
               {/* Step indicators */}
               <div className="flex items-center gap-2 mt-4 relative z-10">
-                {['Carrito', 'Envío'].map((label, i) => {
-                  const isActive = (i === 0 && step === 'cart') || (i === 1 && step === 'checkout');
-                  const isDone = i === 0 && step === 'checkout';
+                {['Carrito', 'Envío', 'Pago'].map((label, i) => {
+                  const isActive = (i === 0 && step === 'cart') || (i === 1 && step === 'checkout') || (i === 2 && step === 'payment');
+                  const isDone = (i === 0 && (step === 'checkout' || step === 'payment')) || (i === 1 && step === 'payment');
                   return (
                     <div key={label} className="flex items-center gap-2 flex-1">
                       <div className={`flex items-center gap-2 ${!isActive && !isDone ? 'opacity-30' : ''}`}>
@@ -539,7 +558,7 @@ export function CartDrawer({
                           isActive ? 'text-white' : 'text-zinc-500'
                         }`}>{label}</span>
                       </div>
-                      {i === 0 && <div className="flex-1 h-px bg-white/10 mx-1" />}
+                      {i < 2 && <div className="flex-1 h-px bg-white/10 mx-1" />}
                     </div>
                   );
                 })}
@@ -636,8 +655,8 @@ export function CartDrawer({
                     </div>
                   )}
                 </>
-              ) : (
-                <form id="checkout-form" className="space-y-6" onSubmit={handleSubmit}>
+              ) : step === 'checkout' ? (
+                <form id="checkout-form" className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                   <div className="space-y-5 font-body">
                     <div className="space-y-4">
                       <div className="flex flex-col gap-4">
@@ -910,6 +929,105 @@ export function CartDrawer({
                     </div>
                   </div>
                 </form>
+              ) : (
+                <div className="space-y-6 pt-2">
+                  {deliveryType === 'Delivery' && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
+                          <CheckCircle2 className="w-3 h-3 text-primary-vibrant" />
+                          Comprobante de Pago Móvil
+                        </label>
+                        <div className="p-4 bg-dark-surface border-2 border-white/10 rounded-[20px] space-y-3">
+                          <div className="p-3 bg-primary-vibrant/10 rounded-lg border border-primary-vibrant/20">
+                            <p className="text-[10px] font-bold text-primary-vibrant uppercase tracking-wider mb-2">Datos de Pago Móvil</p>
+                            <div className="space-y-2 text-[10px] text-zinc-300 font-mono">
+                              {(config.pagoMovil || []).map(pm => (
+                                <div key={pm.id} className="border-b border-primary-vibrant/10 pb-1.5 last:border-0">
+                                  <p className="text-primary-vibrant font-bold text-[11px]">{pm.bank}</p>
+                                  <p><span className="text-zinc-500">Teléfono:</span> {pm.phone}</p>
+                                  {pm.rifCedula && <p><span className="text-zinc-500">RIF/Cédula:</span> {pm.rifCedula}</p>}
+                                  {pm.qrImage && (
+                                    <img src={pm.qrImage} alt="QR" className="w-16 h-16 mt-1 rounded-lg border border-primary-vibrant/20" />
+                                  )}
+                                </div>
+                              ))}
+                              <p><span className="text-zinc-500">Monto:</span> ${calculatedFee.toFixed(2)} USD</p>
+                            </div>
+                          </div>
+                          <div className="relative">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  const url = URL.createObjectURL(file);
+                                  setPaymentPreviewUrl(url);
+                                  setPaymentScreenshot(file);
+                                }
+                              }}
+                              className="hidden"
+                              id="payment-screenshot"
+                            />
+                            <label
+                              htmlFor="payment-screenshot"
+                              className="flex flex-col items-center justify-center w-full p-4 bg-white/5 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-primary-vibrant/50 transition-colors duration-200"
+                            >
+                              {paymentPreviewUrl ? (
+                                <div className="relative w-full">
+                                  <img src={paymentPreviewUrl} alt="Capture de pago" className="w-full h-32 object-cover rounded-lg mb-2" />
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setPaymentPreviewUrl(null);
+                                      setPaymentScreenshot(null);
+                                    }}
+                                    className="absolute top-2 right-2 w-6 h-6 bg-red-500/80 rounded-full flex items-center justify-center text-white text-xs hover:bg-red-600"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="w-12 h-12 bg-primary-vibrant/10 rounded-xl flex items-center justify-center mb-2">
+                                    <svg className="w-6 h-6 text-primary-vibrant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 112.828 2.828L6 18h2a2 2 0 002-2zM14 6l3 3m-3-3V3m0 0l-3 3m3-3l3-3" />
+                                    </svg>
+                                  </div>
+                                  <div className="text-center">
+                                    <p className="text-[11px] font-medium text-zinc-300">
+                                      <span className="text-primary-vibrant">Click para subir</span> captura de pago
+                                    </p>
+                                    <p className="text-[9px] text-zinc-500 mt-1">PNG, JPG (recomendado: 800x600)</p>
+                                  </div>
+                                </>
+                              )}
+                            </label>
+                          </div>
+                          {!paymentPreviewUrl && (
+                            <div className="text-center py-2">
+                              <p className="text-[9px] text-zinc-600 italic">
+                                Adjunte captura de pantalla del comprobante de pago móvil
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                  <label className="flex items-center gap-2 justify-center cursor-pointer py-2">
+                    <input type="checkbox" checked={termsAccepted} onChange={e => setTermsAccepted(e.target.checked)}
+                      className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-primary-vibrant focus:ring-primary-vibrant/50 accent-primary-vibrant" />
+                    <span className="text-[10px] text-zinc-500">
+                      Acepto los{' '}
+                      <Link to="/legal" className="underline hover:text-white transition-colors">{t('legal.terms.title')}</Link>
+                      {' '}&{' '}
+                      <Link to="/legal#privacidad" className="underline hover:text-white transition-colors">{t('legal.privacy.title')}</Link>
+                    </span>
+                  </label>
+                </div>
               )}
             </div>
 
@@ -1034,136 +1152,45 @@ export function CartDrawer({
                   >
                     {t('cart.continue')} <ArrowRight className="w-5 h-5" />
                   </motion.button>
+                ) : step === 'checkout' ? (
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setStep('cart')}
+                      className="w-full sm:flex-1 bg-white/5 text-zinc-400 py-5 sm:py-6 rounded-[20px] font-display uppercase tracking-widest text-xs sm:text-[11px] transition-all duration-300 hover:bg-white/10 border border-white/5"
+                    >
+                      {t('cart.back')}
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={goToPayment}
+                      className="w-full sm:flex-[2] vibrant-gradient text-white py-5 sm:py-6 rounded-[20px] font-display uppercase tracking-[0.2em] text-xs sm:text-[11px] shadow-[0_20px_50px_rgba(203,32,39,0.3)] transition-all duration-300 flex items-center justify-center gap-3"
+                    >
+                      Continuar <ArrowRight className="w-4 h-4" />
+                    </motion.button>
+                  </div>
                 ) : (
-                  <>
-                    <label className="flex items-center gap-2 justify-center cursor-pointer mb-3">
-                      <input type="checkbox" checked={termsAccepted} onChange={e => setTermsAccepted(e.target.checked)}
-                        className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 text-primary-vibrant focus:ring-primary-vibrant/50 accent-primary-vibrant" />
-                      <span className="text-[10px] text-zinc-500">
-                        Acepto los{' '}
-                        <Link to="/legal" className="underline hover:text-white transition-colors">{t('legal.terms.title')}</Link>
-                        {' '}&{' '}
-                        <Link to="/legal#privacidad" className="underline hover:text-white transition-colors">{t('legal.privacy.title')}</Link>
-                      </span>
-                    </label>
-                    <div className="space-y-4">
-                      {/* Pago Móvil / Captura de Pago */}
-                      {deliveryType === 'Delivery' && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
-                          <div className="space-y-2">
-                            <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
-                              <CheckCircle2 className="w-3 h-3 text-primary-vibrant" />
-                              Comprobante de Pago Móvil
-                            </label>
-                            <div className="p-4 bg-dark-surface border-2 border-white/10 rounded-[20px] space-y-3">
-                              {/* Datos de Pago Móvil */}
-                              <div className="p-3 bg-primary-vibrant/10 rounded-lg border border-primary-vibrant/20">
-                                <p className="text-[10px] font-bold text-primary-vibrant uppercase tracking-wider mb-2">Datos de Pago Móvil</p>
-                                <div className="space-y-2 text-[10px] text-zinc-300 font-mono">
-                                  {(config.pagoMovil || []).map(pm => (
-                                    <div key={pm.id} className="border-b border-primary-vibrant/10 pb-1.5 last:border-0">
-                                      <p className="text-primary-vibrant font-bold text-[11px]">{pm.bank}</p>
-                                      <p><span className="text-zinc-500">Teléfono:</span> {pm.phone}</p>
-                                      {pm.rifCedula && <p><span className="text-zinc-500">RIF/Cédula:</span> {pm.rifCedula}</p>}
-                                      {pm.qrImage && (
-                                        <img src={pm.qrImage} alt="QR" className="w-16 h-16 mt-1 rounded-lg border border-primary-vibrant/20" />
-                                      )}
-                                    </div>
-                                  ))}
-                                  <p><span className="text-zinc-500">Monto:</span> ${calculatedFee.toFixed(2)} USD</p>
-                                </div>
-                              </div>
-
-                              {/* File Input */}
-                              <div className="relative">
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                      // Show preview
-                                      const url = URL.createObjectURL(file);
-                                      setPaymentPreviewUrl(url);
-                                      setPaymentScreenshot(file);
-                                    }
-                                  }}
-                                  className="hidden"
-                                  id="payment-screenshot"
-                                />
-                                <label
-                                  htmlFor="payment-screenshot"
-                                  className="flex flex-col items-center justify-center w-full p-4 bg-white/5 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-primary-vibrant/50 transition-colors duration-200"
-                                >
-                                  {paymentPreviewUrl ? (
-                                    <div className="relative w-full">
-                                      <img src={paymentPreviewUrl} alt="Capture de pago" className="w-full h-32 object-cover rounded-lg mb-2" />
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setPaymentPreviewUrl(null);
-                                          setPaymentScreenshot(null);
-                                        }}
-                                        className="absolute top-2 right-2 w-6 h-6 bg-red-500/80 rounded-full flex items-center justify-center text-white text-xs hover:bg-red-600"
-                                      >
-                                        ×
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <>
-                                      <div className="w-12 h-12 bg-primary-vibrant/10 rounded-xl flex items-center justify-center mb-2">
-                                        <svg className="w-6 h-6 text-primary-vibrant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 112.828 2.828L6 18h2a2 2 0 002-2zM14 6l3 3m-3-3V3m0 0l-3 3m3-3l3-3" />
-                                        </svg>
-                                      </div>
-                                      <div className="text-center">
-                                        <p className="text-[11px] font-medium text-zinc-300">
-                                          <span className="text-primary-vibrant">Click para subir</span> captura de pago
-                                        </p>
-                                        <p className="text-[9px] text-zinc-500 mt-1">PNG, JPG (recomendado: 800x600)</p>
-                                      </div>
-                                    </>
-                                  )}
-                                </label>
-                              </div>
-
-                              {/* Preview placeholder for when no image is selected */}
-                              {!paymentPreviewUrl && (
-                                <div className="text-center py-2">
-                                  <p className="text-[9px] text-zinc-600 italic">
-                                    Adjunte captura de pantalla del comprobante de pago móvil
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-
-                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => setStep('cart')}
-                          className="w-full sm:flex-1 bg-white/5 text-zinc-400 py-5 sm:py-6 rounded-[20px] font-display uppercase tracking-widest text-xs sm:text-[11px] transition-all duration-300 hover:bg-white/10 border border-white/5"
-                        >
-                          {t('cart.back')}
-                        </motion.button>
-                        <motion.button
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.95 }}
-                          form="checkout-form"
-                          type="submit"
-                          disabled={deliveryType === 'Delivery' && !isWithinRange}
-                          className={`w-full sm:flex-[2] bg-[#25D366] text-white py-5 sm:py-6 rounded-[20px] font-display uppercase tracking-[0.2em] text-xs sm:text-[11px] shadow-[0_20px_50px_rgba(37,211,102,0.3)] transition-all duration-300 flex items-center justify-center gap-3 ${
-                            deliveryType === 'Delivery' && !isWithinRange ? 'opacity-50 cursor-not-allowed' : ''
-                          }`}
-                        >
-                          {deliveryType === 'Delivery' && !isWithinRange ? t('cart.outOfCoverage') : t('cart.confirmWhatsApp')}
-                        </motion.button>
-                      </div>
-                    </div>
-                  </>
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setStep('checkout')}
+                      className="w-full sm:flex-1 bg-white/5 text-zinc-400 py-5 sm:py-6 rounded-[20px] font-display uppercase tracking-widest text-xs sm:text-[11px] transition-all duration-300 hover:bg-white/10 border border-white/5"
+                    >
+                      {t('cart.back')}
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleSubmit}
+                      disabled={deliveryType === 'Delivery' && !isWithinRange}
+                      className={`w-full sm:flex-[2] bg-[#25D366] text-white py-5 sm:py-6 rounded-[20px] font-display uppercase tracking-[0.2em] text-xs sm:text-[11px] shadow-[0_20px_50px_rgba(37,211,102,0.3)] transition-all duration-300 flex items-center justify-center gap-3 ${
+                        deliveryType === 'Delivery' && !isWithinRange ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      {deliveryType === 'Delivery' && !isWithinRange ? t('cart.outOfCoverage') : t('cart.confirmWhatsApp')}
+                    </motion.button>
+                  </div>
                 )}
               </div>
             )}

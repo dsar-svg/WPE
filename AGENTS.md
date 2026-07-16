@@ -1,11 +1,16 @@
 # AGENTS.md — Wallace Panda Express
 
+**Idioma:** Responder siempre en español.
+
 ## Dev commands
 
 ```sh
 npm install          # install deps
 npm run dev          # vite dev server → http://localhost:5173
-npm run build        # tsc && vite build → dist/
+npm run build        # tsc && vite build → dist/ (public app)
+npm run build:admin  # vite build --mode admin → dist-admin/ (admin PWA)
+npm run build:pos    # vite build --mode pos → dist-pos/ (POS PWA)
+npm run build:all    # tsc + all 3 builds (public + admin + POS)
 npm run preview      # vite preview (serve dist/)
 npm run lint         # eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 100
 ```
@@ -88,9 +93,33 @@ Realtime enabled on `orders` table.
 
 ## Deployment
 
-- Frontend: `npm run build` → `dist/`, deploy anywhere (Vercel SPA config in `vercel.json`)
-- Backend: Supabase manages itself; run migrations via Supabase SQL Editor
-- Seed scripts: `supabase/seed.sql`, `supabase/seed_choices.sql`, `supabase/seed_images.sql`
+### 3 PWAs (public + admin + POS)
+
+```sh
+npm run build        # → dist/ (público, wallacepanda.com)
+npm run build:admin  # → dist-admin/ (admin, admin.wallacepanda.com)
+npm run build:pos    # → dist-pos/   (POS,   pos.wallacepanda.com)
+npm run build:all    # los 3 en secuencia
+```
+
+Cada `dist-*/` incluye su propio `index.html` + `vercel.json` (SPA rewrites).
+
+### Primer deploy
+
+1. Instalar Vercel CLI: `npm i -g vercel`
+2. Crear 3 proyectos en vercel.com (o `vercel projects add`)
+3. Vincular cada carpeta:
+   ```sh
+   vercel link --cwd dist --project pndaexpress
+   vercel link --cwd dist-admin --project pndaexpress-admin
+   vercel link --cwd dist-pos --project pndaexpress-pos
+   ```
+4. Asignar dominios en Vercel dashboard
+5. `.\deploy-all.ps1` para build + deploy de los 3
+
+### Backend
+
+Supabase. Migraciones via SQL Editor. Seeds en `supabase/seed.sql`.
 
 ## graphify
 

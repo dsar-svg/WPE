@@ -127,7 +127,7 @@ function MainView() {
   );
 }
 
-export default function App() {
+export default function App({ appMode }: { appMode?: 'public' | 'admin' | 'pos' }) {
   return (
     <ErrorBoundary>
       <LanguageProvider>
@@ -136,13 +136,21 @@ export default function App() {
             <BrowserRouter>
               <Suspense fallback={<LoadingSpinner />}>
                 <Routes>
-                  <Route path="/" element={<LandingPage />} />
-                  <Route path="/menu" element={<PublicMenuPage />} />
-                  <Route path="/pedir" element={<MainView />} />
-                  <Route path="/admin" element={<AdminPage />} />
-                  <Route path="/pos" element={<PosPage />} />
-                  <Route path="/legal" element={<LegalPage />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
+                  {(!appMode || appMode === 'public') && (
+                    <>
+                      <Route path="/" element={<LandingPage />} />
+                      <Route path="/menu" element={<PublicMenuPage />} />
+                      <Route path="/pedir" element={<MainView />} />
+                      <Route path="/legal" element={<LegalPage />} />
+                    </>
+                  )}
+                  {(!appMode || appMode === 'admin') && (
+                    <Route path="/admin" element={<AdminPage />} />
+                  )}
+                  {(!appMode || appMode === 'pos' || appMode === 'admin') && (
+                    <Route path="/pos" element={<PosPage />} />
+                  )}
+                  <Route path="*" element={<Navigate to={appMode === 'admin' ? '/admin' : appMode === 'pos' ? '/pos' : '/'} replace />} />
                 </Routes>
               </Suspense>
             </BrowserRouter>
