@@ -523,6 +523,27 @@ export function CartDrawer({
                   <X className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
+              {/* Step indicators */}
+              <div className="flex items-center gap-2 mt-4 relative z-10">
+                {['Carrito', 'Envío'].map((label, i) => {
+                  const isActive = (i === 0 && step === 'cart') || (i === 1 && step === 'checkout');
+                  const isDone = i === 0 && step === 'checkout';
+                  return (
+                    <div key={label} className="flex items-center gap-2 flex-1">
+                      <div className={`flex items-center gap-2 ${!isActive && !isDone ? 'opacity-30' : ''}`}>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black transition-all ${
+                          isActive ? 'bg-primary-vibrant text-white shadow-lg shadow-primary-vibrant/30' :
+                          isDone ? 'bg-green-500 text-white' : 'bg-white/10 text-zinc-500'
+                        }`}>{isDone ? <span>✓</span> : i + 1}</div>
+                        <span className={`text-[10px] font-bold uppercase tracking-widest ${
+                          isActive ? 'text-white' : 'text-zinc-500'
+                        }`}>{label}</span>
+                      </div>
+                      {i === 0 && <div className="flex-1 h-px bg-white/10 mx-1" />}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Content */}
