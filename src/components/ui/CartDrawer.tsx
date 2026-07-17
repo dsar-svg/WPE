@@ -479,8 +479,9 @@ export function CartDrawer({
       try {
         const { uploadImage } = await import('../../lib/uploadImage');
         uploadedUrl = await uploadImage(paymentScreenshot);
-      } catch {
-        setAddressError('Error al subir el comprobante. Intenta de nuevo.');
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Error al subir el comprobante';
+        setAddressError(msg);
         return;
       }
     }
@@ -1042,10 +1043,10 @@ export function CartDrawer({
                                 </div>
                               ))}
                               <div className="flex items-center justify-between gap-2 pt-1">
-                                <p className="font-bold text-white"><span className="text-zinc-500 font-normal">Monto a transferir:</span> ${finalTotal.toFixed(2)} USD</p>
+                                <p className="font-bold text-white"><span className="text-zinc-500 font-normal">Monto a transferir:</span> {totalVES.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.</p>
                                 <button
                                   type="button"
-                                  onClick={() => { navigator.clipboard.writeText(`${finalTotal.toFixed(2)} USD`); }}
+                                  onClick={() => { navigator.clipboard.writeText(`${totalVES.toFixed(2)}`); }}
                                   className="text-zinc-500 hover:text-primary-vibrant transition-colors p-1"
                                   title="Copiar monto"
                                 >
