@@ -103,7 +103,7 @@ export interface CheckoutData {
   calculatedDistance?: number;
   calculatedDeliveryFee?: number;
   notes: string;
-  paymentScreenshot?: PaymentScreenshot;
+  paymentRef?: string;
 }
 
 export interface OrderItem {
@@ -164,8 +164,4 @@ export interface POSCartItem {
   selectedChoices?: string[];
 }
 
-export interface PaymentScreenshot {
-  filename: string;
-  previewUrl: string;
-  uploadedUrl?: string;
-}
+

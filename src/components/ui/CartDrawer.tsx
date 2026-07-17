@@ -84,8 +84,7 @@ export function CartDrawer({
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [mapCenterKey, setMapCenterKey] = useState(0);
     const [termsAccepted, setTermsAccepted] = useState(true);
-    const [paymentScreenshot, setPaymentScreenshot] = useState<File | null>(null);
-    const [paymentPreviewUrl, setPaymentPreviewUrl] = useState<string | null>(null);
+    const [paymentRef, setPaymentRef] = useState('');
 
   // Keep ref in sync with state for use inside effects
   useEffect(() => { addressStatusRef.current = addressStatus; }, [addressStatus]);
@@ -469,21 +468,10 @@ export function CartDrawer({
         setAddressError(t('cart.error.addressOutOfRange'));
         return;
       }
-      if (!paymentScreenshot) {
-        setAddressError('Debe adjuntar un comprobante de pago móvil para pedidos a domicilio');
-        return;
-      }
     }
-    let uploadedUrl: string | undefined;
-    if (paymentScreenshot) {
-      try {
-        const { uploadImage } = await import('../../lib/uploadImage');
-        uploadedUrl = await uploadImage(paymentScreenshot);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Error al subir el comprobante';
-        setAddressError(msg);
-        return;
-      }
+    if (deliveryType === 'Delivery' && !paymentRef.trim()) {
+      setAddressError('Indica la referencia del pago');
+      return;
     }
     onCheckout({
       ...formData,
@@ -491,11 +479,7 @@ export function CartDrawer({
       deliveryCoordinates: deliveryType === 'Delivery' ? deliveryCoordinates ?? undefined : undefined,
       calculatedDistance: deliveryType === 'Delivery' ? calculatedDistance ?? undefined : undefined,
       calculatedDeliveryFee: deliveryType === 'Delivery' ? calculatedFee : undefined,
-      paymentScreenshot: uploadedUrl ? {
-        filename: paymentScreenshot.name,
-        previewUrl: paymentPreviewUrl || '',
-        uploadedUrl
-      } : undefined
+      paymentRef: paymentRef.trim() || undefined,
     });
   };
 
@@ -1056,63 +1040,21 @@ export function CartDrawer({
                             </div>
                           </div>
                           <div className="relative">
-                            <input
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) {
-                                  const url = URL.createObjectURL(file);
-                                  setPaymentPreviewUrl(url);
-                                  setPaymentScreenshot(file);
-                                }
-                              }}
-                              className="hidden"
-                              id="payment-screenshot"
-                            />
-                            <label
-                              htmlFor="payment-screenshot"
-                              className="flex flex-col items-center justify-center w-full p-4 bg-white/5 border-2 border-dashed border-white/20 rounded-lg cursor-pointer hover:border-primary-vibrant/50 transition-colors duration-200"
-                            >
-                              {paymentPreviewUrl ? (
-                                <div className="relative w-full">
-                                  <img src={paymentPreviewUrl} alt="Capture de pago" className="w-full h-32 object-cover rounded-lg mb-2" />
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setPaymentPreviewUrl(null);
-                                      setPaymentScreenshot(null);
-                                    }}
-                                    className="absolute top-2 right-2 w-6 h-6 bg-red-500/80 rounded-full flex items-center justify-center text-white text-xs hover:bg-red-600"
-                                  >
-                                    ×
-                                  </button>
-                                </div>
-                              ) : (
-                                <>
-                                  <div className="w-12 h-12 bg-primary-vibrant/10 rounded-xl flex items-center justify-center mb-2">
-                                    <svg className="w-6 h-6 text-primary-vibrant" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 112.828 2.828L6 18h2a2 2 0 002-2zM14 6l3 3m-3-3V3m0 0l-3 3m3-3l3-3" />
-                                    </svg>
-                                  </div>
-                                  <div className="text-center">
-                                    <p className="text-[11px] font-medium text-zinc-300">
-                                      <span className="text-primary-vibrant">Click para subir</span> captura de pago
-                                    </p>
-                                    <p className="text-[9px] text-zinc-500 mt-1">PNG, JPG (recomendado: 800x600)</p>
-                                  </div>
-                                </>
-                              )}
-                            </label>
-                          </div>
-                          {!paymentPreviewUrl && (
-                            <div className="text-center py-2">
-                              <p className="text-[9px] text-zinc-600 italic">
-                                Adjunte captura de pantalla del comprobante de pago móvil
-                              </p>
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                              </svg>
                             </div>
-                          )}
+                            <input
+                              required
+                              type="text"
+                              inputMode="numeric"
+                              placeholder="Número de referencia / comprobante"
+                              className="w-full pl-12 pr-4 py-4 bg-dark-surface border-2 border-white/10 rounded-[20px] focus:border-primary-vibrant/50 outline-none transition-all duration-300 text-sm font-medium text-white placeholder:text-zinc-500"
+                              value={paymentRef}
+                              onChange={(e) => setPaymentRef(e.target.value)}
+                            />
+                          </div>
                         </div>
                       </div>
                     </motion.div>
