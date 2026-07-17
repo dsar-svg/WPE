@@ -480,7 +480,7 @@ export function CartDrawer({
       deliveryCoordinates: deliveryType === 'Delivery' ? deliveryCoordinates ?? undefined : undefined,
       calculatedDistance: deliveryType === 'Delivery' ? calculatedDistance ?? undefined : undefined,
       calculatedDeliveryFee: deliveryType === 'Delivery' ? calculatedFee : undefined,
-      paymentMethod: paymentMethod === 'pagomovil' ? 'Transferencia' : 'Efectivo',
+      paymentMethod: paymentMethod === 'pagomovil' ? 'PagoMóvil' : 'Efectivo',
       paymentRef: paymentMethod === 'pagomovil' ? paymentRef.trim() : undefined,
     });
   };

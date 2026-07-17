@@ -103,7 +103,7 @@ export interface CheckoutData {
   calculatedDistance?: number;
   calculatedDeliveryFee?: number;
   notes: string;
-  paymentMethod?: 'Efectivo' | 'Transferencia';
+  paymentMethod?: 'Efectivo' | 'PagoMóvil';
   paymentRef?: string;
 }
 
@@ -148,7 +148,7 @@ export interface Order {
   created_at: string;
 }
 
-export type PaymentMethod = 'Efectivo' | 'Tarjeta' | 'Transferencia' | 'QR' | 'Otro';
+export type PaymentMethod = 'Efectivo' | 'Tarjeta' | 'PagoMóvil' | 'Otro';
 
 export interface Customer {
   cedula: string;

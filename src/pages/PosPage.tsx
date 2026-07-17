@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, Printer, DollarSign, CreditCard, Smartphone, Banknote, QrCode, LogOut, User, IdCard, Calendar, History, Loader2 } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, Printer, DollarSign, CreditCard, Smartphone, Banknote, LogOut, User, IdCard, Calendar, History, Loader2 } from 'lucide-react';
 import { useRestaurant } from '../context/RestaurantContext';
 import { Product, Cashier, POSCartItem, PaymentMethod, Order } from '../types';
 import { supabase } from '../lib/supabase';
@@ -116,8 +116,7 @@ function PaymentModal({
   const methods: { key: PaymentMethod; icon: typeof DollarSign; label: string; color: string }[] = [
     { key: 'Efectivo', icon: Banknote, label: 'Efectivo', color: 'bg-green-500' },
     { key: 'Tarjeta', icon: CreditCard, label: 'Tarjeta', color: 'bg-blue-500' },
-    { key: 'Transferencia', icon: Smartphone, label: 'Transferencia', color: 'bg-purple-500' },
-    { key: 'QR', icon: QrCode, label: 'QR', color: 'bg-orange-500' },
+    { key: 'PagoMóvil', icon: Smartphone, label: 'Pago Móvil', color: 'bg-purple-500' },
   ];
 
   return (
@@ -378,8 +377,7 @@ function CorteDeCajaModal({
 
   const totalEfectivo = todayOrders.filter(o => o.payment_method === 'Efectivo').reduce((s, o) => s + o.total, 0);
   const totalTarjeta = todayOrders.filter(o => o.payment_method === 'Tarjeta').reduce((s, o) => s + o.total, 0);
-  const totalTransferencia = todayOrders.filter(o => o.payment_method === 'Transferencia').reduce((s, o) => s + o.total, 0);
-  const totalQR = todayOrders.filter(o => o.payment_method === 'QR').reduce((s, o) => s + o.total, 0);
+  const totalPagoMovil = todayOrders.filter(o => o.payment_method === 'PagoMóvil').reduce((s, o) => s + o.total, 0);
   const granTotal = todayOrders.reduce((s, o) => s + o.total, 0);
   const count = todayOrders.length;
 
@@ -420,8 +418,7 @@ function CorteDeCajaModal({
           {[
             { method: 'Efectivo', total: totalEfectivo, icon: Banknote, color: 'text-green-400' },
             { method: 'Tarjeta', total: totalTarjeta, icon: CreditCard, color: 'text-blue-400' },
-            { method: 'Transferencia', total: totalTransferencia, icon: Smartphone, color: 'text-purple-400' },
-            { method: 'QR', total: totalQR, icon: QrCode, color: 'text-orange-400' },
+            { method: 'Pago Móvil', total: totalPagoMovil, icon: Smartphone, color: 'text-purple-400' },
           ].map(({ method, total: t, icon: Icon, color }) => (
             <div key={method} className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl">
               <div className="flex items-center gap-2">
