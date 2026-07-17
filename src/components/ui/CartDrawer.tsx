@@ -1190,7 +1190,7 @@ export function CartDrawer({
             {/* Footer */}
             {items.length > 0 && (
               <div className="p-4 sm:p-6 bg-dark-card border-t-2 border-secondary-vibrant/30 space-y-4">
-                {step !== 'checkout' && (
+                {step === 'cart' && (
                   <div className="p-5 bg-dark-surface text-white rounded-xl space-y-3 relative overflow-hidden border-2 border-primary-vibrant/20">
                   <div className="absolute top-0 right-0 w-32 h-32 bg-primary-vibrant/20 rounded-full blur-2xl -mr-16 -mt-16" />
                   <div className="absolute bottom-0 left-0 w-24 h-24 bg-secondary-vibrant/15 rounded-full blur-xl -ml-12 -mb-12" />
