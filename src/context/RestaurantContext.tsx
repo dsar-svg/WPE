@@ -452,6 +452,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
         change_amount: order.change_amount ?? 0,
         cashier_id: order.cashier_id || null,
         invoice_number: order.invoice_number || '',
+        payment_ref: order.payment_ref || '',
       });
       if (error) throw error;
       invalidate(['orders']);

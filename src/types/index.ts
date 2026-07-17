@@ -143,6 +143,7 @@ export interface Order {
   change_amount?: number;
   cashier_id?: string;
   invoice_number?: string;
+  payment_ref?: string;
   created_at: string;
 }
 
