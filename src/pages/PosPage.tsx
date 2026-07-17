@@ -103,10 +103,11 @@ function PaymentModal({
 }) {
   const [method, setMethod] = useState<PaymentMethod>('Efectivo');
   const [amountReceived, setAmountReceived] = useState('');
+  const cashTotal = method === 'Efectivo' ? Math.ceil(total) : total;
   const changeAmount = method === 'Efectivo'
-    ? Math.max(0, (parseFloat(amountReceived) || 0) - total)
+    ? Math.max(0, (parseFloat(amountReceived) || 0) - cashTotal)
     : 0;
-  const isCashEnough = method !== 'Efectivo' || (parseFloat(amountReceived) || 0) >= total;
+  const isCashEnough = method !== 'Efectivo' || (parseFloat(amountReceived) || 0) >= cashTotal;
 
   const handleConfirm = () => {
     if (!isCashEnough) return;
@@ -151,8 +152,12 @@ function PaymentModal({
           ))}
         </div>
 
-        {method === 'Efectivo' && (
+          {method === 'Efectivo' && (
           <div className="space-y-3">
+            <div className="p-3 bg-primary-vibrant/10 rounded-xl border border-primary-vibrant/20 text-center">
+              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total redondeado</p>
+              <p className="text-2xl font-black text-primary-vibrant">${cashTotal.toFixed(2)}</p>
+            </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Monto recibido</label>
               <div className="relative">
