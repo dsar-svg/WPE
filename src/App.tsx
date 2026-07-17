@@ -20,9 +20,20 @@ const CartDrawer = lazy(() => import("./components/ui/CartDrawer").then(m => ({ 
 
 function LoadingSpinner() {
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center space-y-4">
-      <div className="w-12 h-12 border-4 border-primary-vibrant border-t-transparent rounded-full animate-spin" />
-      <p className="text-zinc-400 font-bold uppercase tracking-widest text-xs">Cargando...</p>
+    <div className="min-h-screen bg-white animate-pulse flex flex-col">
+      <div className="h-16 bg-zinc-100 border-b border-zinc-200" />
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 space-y-6 max-w-md mx-auto w-full">
+        <div className="w-20 h-20 bg-zinc-100 rounded-full" />
+        <div className="space-y-3 w-full">
+          <div className="h-6 bg-zinc-100 rounded-lg w-3/4 mx-auto" />
+          <div className="h-3 bg-zinc-100 rounded w-1/2 mx-auto" />
+        </div>
+        <div className="space-y-3 w-full mt-8">
+          <div className="h-28 bg-zinc-100 rounded-2xl" />
+          <div className="h-28 bg-zinc-100 rounded-2xl" />
+          <div className="h-28 bg-zinc-100 rounded-2xl" />
+        </div>
+      </div>
     </div>
   );
 }
@@ -78,11 +89,8 @@ function MainView() {
         payment_ref: data.paymentRef || '',
         status: 'exitoso',
       });
-      // Only clear cart and open WhatsApp if order saved successfully
       const link = generateWhatsAppLink(selectedLocation, items, data, config);
       window.open(link, "_blank");
-      clearCart();
-      setIsCartOpen(false);
     } catch (err) {
       console.error('Error saving order:', err);
       alert('Error al guardar el pedido. Por favor intenta de nuevo.');
@@ -122,6 +130,7 @@ function MainView() {
               updateNotes={updateNotes}
               removeFromCart={removeFromCart}
               onCheckout={handleCheckout}
+              clearCart={clearCart}
             />
           </Suspense>
         </>

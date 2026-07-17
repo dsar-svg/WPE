@@ -34,6 +34,7 @@ interface CartDrawerProps {
   updateNotes: (id: string, notes: string) => void;
   removeFromCart: (id: string) => void;
   onCheckout: (data: CheckoutData) => void;
+  clearCart: () => void;
 }
 
 type AddressStatus = 'idle' | 'searching' | 'valid' | 'invalid' | 'out_of_zone' | 'gps_pending';
@@ -48,6 +49,7 @@ export function CartDrawer({
   updateNotes,
   removeFromCart,
   onCheckout,
+  clearCart,
 }: CartDrawerProps) {
   const { config, updateConfig, findCustomer } = useRestaurant();
   const { t, language } = useLanguage();
@@ -66,7 +68,7 @@ export function CartDrawer({
   } = useDistanceCalculation();
 
   // ── State ─────────────────────────────────────────────────────────────
-  const [step, setStep] = useState<'cart' | 'checkout' | 'payment'>('cart');
+  const [step, setStep] = useState<'cart' | 'checkout' | 'payment' | 'success'>('cart');
   const [deliveryType] = useState<DeliveryType>('Delivery');
   const [formData, setFormData] = useState({ name: '', phone: '', cedula: '', address: '', reference: '', notes: '' });
   const [deliveryCoordinates, setDeliveryCoordinates] = useState<{ lat: number; lng: number } | null>(null);
@@ -452,6 +454,8 @@ export function CartDrawer({
     setStep('payment');
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = async () => {
     const nameOk = validateField('name', formData.name);
     const phoneOk = validateField('phone', formData.phone);
@@ -474,6 +478,7 @@ export function CartDrawer({
       setAddressError('Indica la referencia del pago');
       return;
     }
+    setIsSubmitting(true);
     onCheckout({
       ...formData,
       deliveryType,
@@ -483,6 +488,8 @@ export function CartDrawer({
       paymentMethod: paymentMethod === 'pagomovil' ? 'PagoMóvil' : 'Efectivo',
       paymentRef: paymentMethod === 'pagomovil' ? paymentRef.trim() : undefined,
     });
+    setStep('success');
+    setIsSubmitting(false);
   };
 
   // ── Address status dot ───────────────────────────────────────────────
@@ -530,7 +537,7 @@ export function CartDrawer({
                   <div className="w-10 h-10 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-xl flex items-center justify-center">
                     <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  {step === 'cart' ? t('cart.title') : step === 'checkout' ? t('cart.checkout') : 'Pago'}
+                  {step === 'cart' ? t('cart.title') : step === 'checkout' ? t('cart.checkout') : step === 'success' ? '¡Pedido enviado!' : 'Pago'}
                 </h2>
                 <button
                   onClick={onClose}
@@ -543,8 +550,9 @@ export function CartDrawer({
               {/* Step indicators */}
               <div className="flex items-center gap-2 mt-4 relative z-10">
                 {['Carrito', 'Envío', 'Pago'].map((label, i) => {
-                  const isActive = (i === 0 && step === 'cart') || (i === 1 && step === 'checkout') || (i === 2 && step === 'payment');
-                  const isDone = (i === 0 && (step === 'checkout' || step === 'payment')) || (i === 1 && step === 'payment');
+                  const isSuccess = step === 'success';
+                  const isActive = isSuccess ? false : (i === 0 && step === 'cart') || (i === 1 && step === 'checkout') || (i === 2 && step === 'payment');
+                  const isDone = isSuccess || (i === 0 && (step === 'checkout' || step === 'payment')) || (i === 1 && step === 'payment');
                   return (
                     <div key={label} className="flex items-center gap-2 flex-1">
                       <div className={`flex items-center gap-2 ${!isActive && !isDone ? 'opacity-30' : ''}`}>
@@ -1108,6 +1116,45 @@ export function CartDrawer({
                   </label>
                 </div>
               )}
+
+              {step === 'success' && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="py-12 text-center space-y-6"
+                >
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.2 }}
+                    className="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center mx-auto border-4 border-green-500/40"
+                  >
+                    <CheckCircle2 className="w-12 h-12 text-green-400" />
+                  </motion.div>
+                  <div className="space-y-3">
+                    <h3 className="text-2xl font-display tracking-wider text-white">¡Pedido recibido!</h3>
+                    <p className="text-sm text-zinc-400 max-w-xs mx-auto leading-relaxed">
+                      Te hemos redirigido a WhatsApp para confirmar tu pedido.
+                      Uno de nuestros asesores te atenderá en breve.
+                    </p>
+                  </div>
+                  <div className="bg-white/5 p-4 rounded-xl border border-white/10 max-w-xs mx-auto space-y-2">
+                    <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total del pedido</p>
+                    <p className="text-xl font-display tracking-wider text-white">${total.toFixed(2)} USD</p>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      clearCart();
+                      onClose();
+                    }}
+                    className="mt-2 px-8 py-4 bg-white/10 hover:bg-white/15 text-white rounded-xl font-display uppercase tracking-widest text-xs transition-all border border-white/10"
+                  >
+                    Volver al menú
+                  </motion.button>
+                </motion.div>
+              )}
             </div>
 
             {/* Full-screen map modal */}
@@ -1168,7 +1215,7 @@ export function CartDrawer({
             </AnimatePresence>
 
             {/* Footer */}
-            {items.length > 0 && (
+            {items.length > 0 && step !== 'success' && (
               <div className="p-4 sm:p-6 bg-dark-card border-t-2 border-secondary-vibrant/30 space-y-4">
                 {step === 'cart' && (
                   <div className="p-5 bg-dark-surface text-white rounded-xl space-y-3 relative overflow-hidden border-2 border-primary-vibrant/20">
