@@ -84,6 +84,7 @@ export function CartDrawer({
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [mapCenterKey, setMapCenterKey] = useState(0);
     const [termsAccepted, setTermsAccepted] = useState(true);
+    const [paymentMethod, setPaymentMethod] = useState<'efectivo' | 'pagomovil'>('efectivo');
     const [paymentRef, setPaymentRef] = useState('');
 
   // Keep ref in sync with state for use inside effects
@@ -469,7 +470,7 @@ export function CartDrawer({
         return;
       }
     }
-    if (deliveryType === 'Delivery' && !paymentRef.trim()) {
+    if (deliveryType === 'Delivery' && paymentMethod === 'pagomovil' && !paymentRef.trim()) {
       setAddressError('Indica la referencia del pago');
       return;
     }
@@ -479,7 +480,8 @@ export function CartDrawer({
       deliveryCoordinates: deliveryType === 'Delivery' ? deliveryCoordinates ?? undefined : undefined,
       calculatedDistance: deliveryType === 'Delivery' ? calculatedDistance ?? undefined : undefined,
       calculatedDeliveryFee: deliveryType === 'Delivery' ? calculatedFee : undefined,
-      paymentRef: paymentRef.trim() || undefined,
+      paymentMethod: paymentMethod === 'pagomovil' ? 'Transferencia' : 'Efectivo',
+      paymentRef: paymentMethod === 'pagomovil' ? paymentRef.trim() : undefined,
     });
   };
 
@@ -973,7 +975,42 @@ export function CartDrawer({
                     </div>
                   </div>
 
+                  {/* Payment method selector */}
                   {deliveryType === 'Delivery' && (
+                    <div className="space-y-2">
+                      <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
+                        <CheckCircle2 className="w-3 h-3 text-primary-vibrant" />
+                        Método de pago
+                      </label>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => { setPaymentMethod('efectivo'); setPaymentRef(''); }}
+                          className={`flex-1 py-4 rounded-[20px] text-[11px] font-bold uppercase tracking-[0.2em] transition-all duration-300 border-2 ${
+                            paymentMethod === 'efectivo'
+                              ? 'bg-primary-vibrant/20 border-primary-vibrant text-primary-vibrant'
+                              : 'bg-dark-surface border-white/10 text-zinc-400 hover:border-white/20'
+                          }`}
+                        >
+                          Efectivo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod('pagomovil')}
+                          className={`flex-1 py-4 rounded-[20px] text-[11px] font-bold uppercase tracking-[0.2em] transition-all duration-300 border-2 ${
+                            paymentMethod === 'pagomovil'
+                              ? 'bg-primary-vibrant/20 border-primary-vibrant text-primary-vibrant'
+                              : 'bg-dark-surface border-white/10 text-zinc-400 hover:border-white/20'
+                          }`}
+                        >
+                          Pago Móvil
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Pago Móvil section (only when method is Pago Móvil) */}
+                  {deliveryType === 'Delivery' && paymentMethod === 'pagomovil' && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
                       <div className="space-y-2">
                         <label className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">

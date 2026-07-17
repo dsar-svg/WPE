@@ -103,6 +103,7 @@ export interface CheckoutData {
   calculatedDistance?: number;
   calculatedDeliveryFee?: number;
   notes: string;
+  paymentMethod?: 'Efectivo' | 'Transferencia';
   paymentRef?: string;
 }
 

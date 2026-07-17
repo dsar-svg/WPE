@@ -44,8 +44,9 @@ export function generateWhatsAppLink(
   message += `*Subtotal:* $${subtotal.toFixed(2)}\n`;
   message += `*Delivery:* $${deliveryFee.toFixed(2)}\n`;
   message += `*TOTAL:* $${totalUSD.toFixed(2)}\n`;
+  message += `*Pago:* ${checkout.paymentMethod || 'Efectivo'}\n`;
   if (checkout.paymentRef) {
-    message += `*Ref. Pago:* ${checkout.paymentRef}\n`;
+    message += `*Ref:* ${checkout.paymentRef}\n`;
   }
 
   message += `----------------------------------\n`;

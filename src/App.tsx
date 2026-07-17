@@ -74,6 +74,7 @@ function MainView() {
         delivery_fee: deliveryFee,
         total: total + deliveryFee,
         notes: data.notes,
+        payment_method: data.paymentMethod || 'Efectivo',
         payment_ref: data.paymentRef || '',
         status: 'exitoso',
       });
