@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:admin": "vite build --mode admin && powershell -Command \"Copy-Item 'dist-admin/admin.html' 'dist-admin/index.html' -Force; Copy-Item 'vercel-admin.json' 'dist-admin/vercel.json' -Force\"",
+    "build:pos": "vite build --mode pos && powershell -Command \"Copy-Item 'dist-pos/pos.html' 'dist-pos/index.html' -Force; Copy-Item 'vercel-pos.json' 'dist-pos/vercel.json' -Force\"",
+    "build:all": "tsc && vite build && vite build --mode admin && vite build --mode pos && powershell -Command \"Copy-Item 'dist-admin/admin.html' 'dist-admin/index.html' -Force; Copy-Item 'vercel-admin.json' 'dist-admin/vercel.json' -Force; Copy-Item 'dist-pos/pos.html' 'dist-pos/index.html' -Force; Copy-Item 'vercel-pos.json' 'dist-pos/vercel.json' -Force\"",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 100",
     "preview": "vite preview"
   },
@@ -34,6 +37,7 @@
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "sharp": "^0.35.3",
     "tailwindcss": "^4.1.14",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"

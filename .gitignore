@@ -7,7 +7,11 @@ coverage/
 
 testsprite_tests/
 dist/
+dist-admin/
+dist-pos/
 docs/
 scripts/
 .impeccable/
 graphify-out/
+.vercel
+public/image combos/
