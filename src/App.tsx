@@ -13,6 +13,7 @@ import { RestaurantProvider, useRestaurant } from "./context/RestaurantContext";
 import { LanguageProvider } from "./context/LanguageContext";
 import { CartProvider } from "./context/CartContext";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
+import { UpdateBanner } from "./components/ui/UpdateBanner";
 
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const PosPage = lazy(() => import("./pages/PosPage"));
@@ -145,6 +146,7 @@ export default function App({ appMode }: { appMode?: 'public' | 'admin' | 'pos' 
         <RestaurantProvider>
           <CartProvider>
             <BrowserRouter>
+              <UpdateBanner />
               <Suspense fallback={<LoadingSpinner />}>
                 <Routes>
                   {(!appMode || appMode === 'public') && (
