@@ -5,6 +5,8 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { Product, Cashier, POSCartItem, PaymentMethod, Order } from '../types';
 import { supabase } from '../lib/supabase';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
+import { fetchBcvRate } from '../services/bcvRate';
+import { ChoiceSelectorModal } from '../components/ui/ChoiceSelectorModal';
 
 // ==============================
 // PIN Login
@@ -95,19 +97,31 @@ function PosLogin({ onLogin }: { onLogin: (cashier: Cashier) => void }) {
 // Payment Modal
 // ==============================
 function PaymentModal({
-  total, onConfirm, onClose,
+  total, onConfirm, onClose, exchangeRate,
 }: {
   total: number;
   onConfirm: (method: PaymentMethod, amountReceived: number, changeAmount: number) => void;
   onClose: () => void;
+  exchangeRate: number;
 }) {
   const [method, setMethod] = useState<PaymentMethod>('Efectivo');
   const [amountReceived, setAmountReceived] = useState('');
+  const [rate, setRate] = useState(exchangeRate);
+  const [rateLoading, setRateLoading] = useState(false);
+
+  useEffect(() => {
+    setRateLoading(true);
+    fetchBcvRate().then(r => {
+      if (r && r > 0) setRate(r);
+    }).finally(() => setRateLoading(false));
+  }, []);
+
   const cashTotal = method === 'Efectivo' ? Math.ceil(total) : total;
   const changeAmount = method === 'Efectivo'
     ? Math.max(0, (parseFloat(amountReceived) || 0) - cashTotal)
     : 0;
   const isCashEnough = method !== 'Efectivo' || (parseFloat(amountReceived) || 0) >= cashTotal;
+  const totalBs = total * rate;
 
   const handleConfirm = () => {
     if (!isCashEnough) return;
@@ -135,6 +149,18 @@ function PaymentModal({
         <div className="text-center py-4">
           <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1">Total a cobrar</p>
           <p className="text-5xl font-black text-white">${total.toFixed(2)}</p>
+          {method !== 'Efectivo' && (
+            <div className="mt-3 p-3 bg-primary-vibrant/10 rounded-xl border border-primary-vibrant/20 space-y-1">
+              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total en Bs.</p>
+              <p className="text-3xl font-black text-primary-vibrant">
+                {totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.
+              </p>
+              <div className="flex items-center justify-center gap-1.5">
+                <p className="text-[10px] text-zinc-500">Tasa BCV: {rate.toFixed(2)}</p>
+                {rateLoading && <Loader2 className="w-3 h-3 text-zinc-500 animate-spin" />}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -606,6 +632,7 @@ export function PosPage() {
     invoiceNumber: string;
   } | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState('');
+  const [choiceProduct, setChoiceProduct] = useState<Product | null>(null);
 
   const isFormValid =
     customerCedula.trim().length >= 6 &&
@@ -655,26 +682,45 @@ export function PosPage() {
   const cartTotal = useMemo(() => cart.reduce((s, i) => s + i.product.price * i.quantity, 0), [cart]);
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
 
-  const addToCart = useCallback((product: Product) => {
+  const addToCart = useCallback((product: Product, selectedChoices?: string[]) => {
     setCart(prev => {
-      const existing = prev.find(i => i.product.id === product.id);
+      const choices = selectedChoices && selectedChoices.length > 0 ? [...selectedChoices].sort() : [];
+      const key = product.id + '|' + choices.join(',');
+      const existing = prev.find(i => {
+        const ik = i.product.id + '|' + (i.selectedChoices ? [...i.selectedChoices].sort().join(',') : '');
+        return ik === key;
+      });
       if (existing) {
-        return prev.map(i => i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+        return prev.map(i => {
+          const ik = i.product.id + '|' + (i.selectedChoices ? [...i.selectedChoices].sort().join(',') : '');
+          return ik === key ? { ...i, quantity: i.quantity + 1 } : i;
+        });
       }
-      return [...prev, { product, quantity: 1 }];
+      return [...prev, { product, quantity: 1, selectedChoices: choices.length > 0 ? choices : undefined }];
     });
   }, []);
 
-  const updateQty = useCallback((productId: string, delta: number) => {
+  const handleProductClick = useCallback((product: Product) => {
+    if (product.choices && product.choices.length > 0) {
+      setChoiceProduct(product);
+    } else {
+      addToCart(product);
+    }
+  }, [addToCart]);
+
+  const getItemKey = (item: POSCartItem) =>
+    item.product.id + '|' + (item.selectedChoices ? [...item.selectedChoices].sort().join(',') : '');
+
+  const updateQty = useCallback((key: string, delta: number) => {
     setCart(prev => prev.map(i => {
-      if (i.product.id !== productId) return i;
+      if (getItemKey(i) !== key) return i;
       const newQty = i.quantity + delta;
       return newQty <= 0 ? null : { ...i, quantity: newQty };
     }).filter(Boolean) as POSCartItem[]);
   }, []);
 
-  const removeItem = useCallback((productId: string) => {
-    setCart(prev => prev.filter(i => i.product.id !== productId));
+  const removeItem = useCallback((key: string) => {
+    setCart(prev => prev.filter(i => getItemKey(i) !== key));
   }, []);
 
   const handlePayment = useCallback(async (method: PaymentMethod, amountReceived: number, changeAmount: number) => {
@@ -703,6 +749,7 @@ export function PosPage() {
         delivery_fee: 0,
         total: cartTotal,
         notes: '',
+        status: 'exitoso',
         payment_method: method,
         change_amount: changeAmount,
         cashier_id: cashier.id,
@@ -805,7 +852,7 @@ export function PosPage() {
           <div className="flex-1 overflow-y-auto p-3">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
               {filteredProducts.map(product => (
-                <button key={product.id} onClick={() => addToCart(product)}
+                <button key={product.id} onClick={() => handleProductClick(product)}
                   className="bg-dark-card border border-zinc-800 hover:border-primary-vibrant/50 rounded-2xl p-2 text-left transition-all active:scale-95 hover:shadow-lg hover:shadow-primary-vibrant/5 relative"
                 >
                   {product.code && (
@@ -860,7 +907,7 @@ export function PosPage() {
               <select value={deliveryType} onChange={e => setDeliveryType(e.target.value as any)}
                 className="bg-zinc-900 border border-zinc-800 rounded-xl px-2 py-2 text-xs font-bold text-zinc-400 outline-none"
               >
-                <option value="Pick-up">Para Llevar</option>
+                <option value="Pick-up">Pickup</option>
                 <option value="Delivery">Delivery</option>
               </select>
             </div>
@@ -870,32 +917,40 @@ export function PosPage() {
             {cart.length === 0 && (
               <div className="text-center py-12 text-zinc-600 text-sm">Carrito vacío</div>
             )}
-            {cart.map(item => (
-              <div key={item.product.id} className="bg-zinc-900 rounded-2xl p-3 flex items-center gap-3">
+            {cart.map(item => {
+              const key = getItemKey(item);
+              return (
+              <div key={key} className="bg-zinc-900 rounded-2xl p-3 flex items-center gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-sm text-white truncate">{item.product.name}</div>
+                  {item.selectedChoices && item.selectedChoices.length > 0 && (
+                    <div className="text-[10px] text-zinc-500 font-medium truncate">
+                      {item.selectedChoices.join(', ')}
+                    </div>
+                  )}
                   <div className="text-primary-vibrant font-black text-sm">${item.product.price.toFixed(2)}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => updateQty(item.product.id, -1)}
+                  <button onClick={() => updateQty(key, -1)}
                     className="w-7 h-7 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
                   >
                     <Minus className="w-3 h-3" />
                   </button>
                   <span className="font-black text-sm w-5 text-center">{item.quantity}</span>
-                  <button onClick={() => updateQty(item.product.id, 1)}
+                  <button onClick={() => updateQty(key, 1)}
                     className="w-7 h-7 bg-zinc-800 rounded-lg flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
                   >
                     <Plus className="w-3 h-3" />
                   </button>
-                  <button onClick={() => removeItem(item.product.id)}
+                  <button onClick={() => removeItem(key)}
                     className="w-7 h-7 bg-red-500/10 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-all"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="border-t border-zinc-800 p-4 space-y-3 flex-shrink-0">
@@ -929,7 +984,7 @@ export function PosPage() {
       {/* Payment modal */}
       <AnimatePresence>
         {showPayModal && (
-          <PaymentModal total={cartTotal} onConfirm={handlePayment} onClose={() => setShowPayModal(false)} />
+          <PaymentModal total={cartTotal} onConfirm={handlePayment} onClose={() => setShowPayModal(false)} exchangeRate={config.exchangeRate ?? 1} />
         )}
       </AnimatePresence>
 
@@ -972,6 +1027,20 @@ export function PosPage() {
             orders={orders}
             locationId={selectedLocationId}
             onClose={() => setShowInvoiceHistory(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Choice selector modal */}
+      <AnimatePresence>
+        {choiceProduct && (
+          <ChoiceSelectorModal
+            product={choiceProduct}
+            onClose={() => setChoiceProduct(null)}
+            onConfirm={(selectedChoices) => {
+              addToCart(choiceProduct, selectedChoices);
+              setChoiceProduct(null);
+            }}
           />
         )}
       </AnimatePresence>

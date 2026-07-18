@@ -87,7 +87,7 @@ function MainView() {
         notes: data.notes,
         payment_method: data.paymentMethod || 'Efectivo',
         payment_ref: data.paymentRef || '',
-        status: 'exitoso',
+        status: 'pendiente',
       });
       const link = generateWhatsAppLink(selectedLocation, items, data, config);
       window.open(link, "_blank");

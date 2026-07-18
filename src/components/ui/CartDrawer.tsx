@@ -741,7 +741,7 @@ export function CartDrawer({
                             required
                             type="tel"
                             inputMode="numeric"
-                            pattern="[0-9+\-\s()]*"
+                            pattern="[0-9+\s() -]*"
                             placeholder={t('cart.whatsapp')}
                             aria-describedby={formErrors.phone ? 'phone-error' : undefined}
                             aria-invalid={formErrors.phone ? 'true' : 'false'}

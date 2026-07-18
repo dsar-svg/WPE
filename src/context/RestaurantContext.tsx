@@ -448,6 +448,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
         delivery_coordinates: order.delivery_coordinates || null, items: order.items,
         subtotal: order.subtotal, delivery_fee: order.delivery_fee, total: order.total,
         notes: order.notes || '',
+        status: order.status || 'pendiente',
         payment_method: order.payment_method || 'Efectivo',
         change_amount: order.change_amount ?? 0,
         cashier_id: order.cashier_id || null,

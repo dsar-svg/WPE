@@ -90,7 +90,7 @@ export interface AddressSuggestion {
 }
 
 export type DeliveryType = 'Delivery' | 'Pick-up';
-export type OrderStatus = 'exitoso' | 'cancelado';
+export type OrderStatus = 'pendiente' | 'exitoso' | 'cancelado';
 
 export interface CheckoutData {
   name: string;
