@@ -636,6 +636,7 @@ export function PosPage() {
   const [orderCode, setOrderCode] = useState('');
   const [isLoadingOrder, setIsLoadingOrder] = useState(false);
   const [orderCodeError, setOrderCodeError] = useState('');
+  const [loadedOrderId, setLoadedOrderId] = useState<string | null>(null);
 
   const isFormValid =
     customerCedula.trim().length >= 6 &&
@@ -741,34 +742,50 @@ export function PosPage() {
     try {
       const invoiceNumber = await generateInvoiceNumber(selectedLocationId);
 
-      const { error } = await supabase.from('orders').insert({
-        location_id: selectedLocationId,
-        customer_name: customerName || 'Mostrador',
-        customer_phone: customerPhone || 'N/A',
-        cedula: customerCedula || '',
-        delivery_type: deliveryType,
-        items: orderItems,
-        subtotal: cartTotal,
-        delivery_fee: 0,
-        total: cartTotal,
-        notes: '',
-        status: 'exitoso',
-        payment_method: method,
-        change_amount: changeAmount,
-        cashier_id: cashier.id,
-        invoice_number: invoiceNumber,
-      });
-      if (error) throw error;
+      if (loadedOrderId) {
+        // UPDATE the original online order → mark as exitoso with invoice
+        const { error } = await supabase.from('orders').update({
+          status: 'exitoso',
+          payment_method: method,
+          change_amount: changeAmount,
+          cashier_id: cashier.id,
+          invoice_number: invoiceNumber,
+          items: orderItems,
+          subtotal: cartTotal,
+          total: cartTotal,
+        }).eq('id', loadedOrderId);
+        if (error) throw error;
+      } else {
+        // Manual POS sale (no online order) → INSERT new row
+        const { error } = await supabase.from('orders').insert({
+          location_id: selectedLocationId,
+          customer_name: customerName || 'Mostrador',
+          customer_phone: customerPhone || 'N/A',
+          cedula: customerCedula || '',
+          delivery_type: deliveryType,
+          items: orderItems,
+          subtotal: cartTotal,
+          delivery_fee: 0,
+          total: cartTotal,
+          notes: '',
+          status: 'exitoso',
+          payment_method: method,
+          change_amount: changeAmount,
+          cashier_id: cashier.id,
+          invoice_number: invoiceNumber,
+        });
+        if (error) throw error;
+      }
 
       await saveCustomer({ cedula: customerCedula, name: customerName || 'Mostrador', phone: customerPhone || 'N/A' });
 
       setShowPayModal(false);
       setShowReceipt({ items: cart, total: cartTotal, paymentMethod: method, changeAmount, invoiceNumber });
     } catch (err) {
-      console.error('Error creating order:', err);
+      console.error('Error processing payment:', err);
       alert('Error al procesar la venta');
     }
-  }, [cashier, selectedLocationId, cart, cartTotal, customerName, customerPhone, customerCedula, deliveryType, generateInvoiceNumber, saveCustomer]);
+  }, [cashier, selectedLocationId, cart, cartTotal, customerName, customerPhone, customerCedula, deliveryType, loadedOrderId, generateInvoiceNumber, saveCustomer]);
 
   const handleNewSale = () => {
     setCart([]);
@@ -777,6 +794,7 @@ export function PosPage() {
     setCustomerCedula('');
     setOrderCode('');
     setOrderCodeError('');
+    setLoadedOrderId(null);
     setShowReceipt(null);
   };
 
@@ -798,6 +816,9 @@ export function PosPage() {
         setIsLoadingOrder(false);
         return;
       }
+
+      // Store original order ID so handlePayment can UPDATE it instead of INSERT
+      setLoadedOrderId(data.id);
 
       // Fill customer data
       if (data.customer_name) setCustomerName(data.customer_name);
