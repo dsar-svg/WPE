@@ -97,14 +97,28 @@ function PosLogin({ onLogin }: { onLogin: (cashier: Cashier) => void }) {
 // Payment Modal
 // ==============================
 function PaymentModal({
-  total, onConfirm, onClose, exchangeRate,
+  total, onConfirm, onClose, exchangeRate, originalPaymentMethod,
 }: {
   total: number;
   onConfirm: (method: PaymentMethod, amountReceived: number, changeAmount: number) => void;
   onClose: () => void;
   exchangeRate: number;
+  originalPaymentMethod?: PaymentMethod | null;
 }) {
-  const [method, setMethod] = useState<PaymentMethod>('Efectivo');
+  const [method, setMethod] = useState<PaymentMethod>(originalPaymentMethod ?? 'Efectivo');
+  const [methodChanged, setMethodChanged] = useState(false);
+  const [confirmChange, setConfirmChange] = useState(false);
+
+  const handleMethodChange = (m: PaymentMethod) => {
+    setMethod(m);
+    if (originalPaymentMethod && m !== originalPaymentMethod) {
+      setMethodChanged(true);
+      setConfirmChange(false);
+    } else {
+      setMethodChanged(false);
+      setConfirmChange(false);
+    }
+  };
   const [amountReceived, setAmountReceived] = useState('');
   const [rate, setRate] = useState(exchangeRate);
   const [rateLoading, setRateLoading] = useState(false);
@@ -123,8 +137,10 @@ function PaymentModal({
   const isCashEnough = method !== 'Efectivo' || (parseFloat(amountReceived) || 0) >= cashTotal;
   const totalBs = total * rate;
 
+  const canConfirm = isCashEnough && (!methodChanged || confirmChange);
+
   const handleConfirm = () => {
-    if (!isCashEnough) return;
+    if (!canConfirm) return;
     onConfirm(method, method === 'Efectivo' ? parseFloat(amountReceived) || 0 : total, changeAmount);
   };
 
@@ -165,18 +181,35 @@ function PaymentModal({
 
         <div className="grid grid-cols-2 gap-3">
           {methods.map(m => (
-            <button key={m.key} onClick={() => setMethod(m.key)}
-              className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
+            <button key={m.key} onClick={() => handleMethodChange(m.key)}
+              className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all relative ${
                 method === m.key
                   ? 'border-primary-vibrant bg-primary-vibrant/10'
                   : 'border-zinc-800 bg-zinc-950 hover:border-zinc-700'
               }`}
             >
+              {originalPaymentMethod === m.key && (
+                <span className="absolute top-1.5 right-1.5 text-[9px] bg-green-500/20 text-green-400 font-bold px-1.5 py-0.5 rounded-full">Cliente</span>
+              )}
               <m.icon className={`w-6 h-6 ${method === m.key ? 'text-primary-vibrant' : 'text-zinc-500'}`} />
               <span className={`font-bold text-sm ${method === m.key ? 'text-white' : 'text-zinc-500'}`}>{m.label}</span>
             </button>
           ))}
         </div>
+
+        {methodChanged && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4 space-y-3">
+            <p className="text-yellow-400 text-sm font-bold">
+              ⚠️ El cliente eligió <span className="text-white">{originalPaymentMethod}</span> — ¿cambiar a <span className="text-white">{method}</span>?
+            </p>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" checked={confirmChange} onChange={e => setConfirmChange(e.target.checked)}
+                className="w-4 h-4 rounded accent-yellow-400"
+              />
+              <span className="text-yellow-300 text-xs font-bold">Sí, confirmo el cambio de método de pago</span>
+            </label>
+          </div>
+        )}
 
           {method === 'Efectivo' && (
           <div className="space-y-3">
@@ -215,7 +248,7 @@ function PaymentModal({
           </div>
         )}
 
-        <button onClick={handleConfirm} disabled={!isCashEnough}
+        <button onClick={handleConfirm} disabled={!canConfirm}
           className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
         >
           <DollarSign className="w-5 h-5" />
@@ -637,6 +670,7 @@ export function PosPage() {
   const [isLoadingOrder, setIsLoadingOrder] = useState(false);
   const [orderCodeError, setOrderCodeError] = useState('');
   const [loadedOrderId, setLoadedOrderId] = useState<string | null>(null);
+  const [loadedPaymentMethod, setLoadedPaymentMethod] = useState<PaymentMethod | null>(null);
 
   const isFormValid =
     customerCedula.trim().length >= 6 &&
@@ -795,6 +829,7 @@ export function PosPage() {
     setOrderCode('');
     setOrderCodeError('');
     setLoadedOrderId(null);
+    setLoadedPaymentMethod(null);
     setShowReceipt(null);
   };
 
@@ -817,8 +852,9 @@ export function PosPage() {
         return;
       }
 
-      // Store original order ID so handlePayment can UPDATE it instead of INSERT
+      // Store original order ID and payment method for POS validation
       setLoadedOrderId(data.id);
+      setLoadedPaymentMethod((data.payment_method as PaymentMethod) || null);
 
       // Fill customer data
       if (data.customer_name) setCustomerName(data.customer_name);
@@ -1100,7 +1136,7 @@ export function PosPage() {
       {/* Payment modal */}
       <AnimatePresence>
         {showPayModal && (
-          <PaymentModal total={cartTotal} onConfirm={handlePayment} onClose={() => setShowPayModal(false)} exchangeRate={config.exchangeRate ?? 1} />
+          <PaymentModal total={cartTotal} onConfirm={handlePayment} onClose={() => setShowPayModal(false)} exchangeRate={config.exchangeRate ?? 1} originalPaymentMethod={loadedPaymentMethod} />
         )}
       </AnimatePresence>
 
