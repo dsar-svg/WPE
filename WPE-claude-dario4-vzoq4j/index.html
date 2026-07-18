@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#cb2027" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Wallace Panda" />
+
+    <!-- SEO Meta Tags -->
+    <title>Wallace Panda Express - Menú Digital y Delivery de Comida China</title>
+    <meta name="description" content="Menú digital de Wallace Panda Express. Ordena tu comida china favorita: arroz chino, pollo agridulce, wonton, egg rolls y más. Delivery rápido a domicilio. Precios y ubicaciones." />
+    <meta name="keywords" content="comida china, delivery, menú digital, Wallace Panda Express, arroz chino, pollo agridulce, wonton, egg rolls, pedidos a domicilio, restaurante chino" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://wallacepanda.com/" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://wallacepanda.com/" />
+    <meta property="og:title" content="Wallace Panda Express - Menú Digital y Delivery" />
+    <meta property="og:description" content="Ordena tu comida china favorita. Delivery rápido a domicilio. Arroz chino, pollo agridulce, wonton y más." />
+    <meta property="og:image" content="https://wallacepanda.com/logo.png" />
+    <meta property="og:locale" content="es_ES" />
+    <meta property="og:site_name" content="Wallace Panda Express" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Wallace Panda Express - Menú Digital y Delivery" />
+    <meta name="twitter:description" content="Ordena tu comida china favorita. Delivery rápido a domicilio." />
+    <meta name="twitter:image" content="https://wallacepanda.com/logo.png" />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/icon-180.png" />
+    <link rel="apple-touch-icon" sizes="256x256" href="/icon-256.png" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet" />
+    <!-- Structured Data: Restaurant -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Restaurant",
+      "name": "Wallace Panda Express",
+      "description": "Restaurante de comida china con menú digital y delivery a domicilio.",
+      "url": "https://wallacepanda.com",
+      "logo": "https://wallacepanda.com/logo.png",
+      "image": "https://wallacepanda.com/logo.png",
+      "servesCuisine": "Chinese",
+      "priceRange": "$$",
+      "hasMenu": {
+        "@type": "Menu",
+        "url": "https://wallacepanda.com/menu"
+      },
+      "acceptsReservations": "false"
+    }
+    </script>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(err => {
+            console.log('SW registration failed: ', err);
+          });
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
