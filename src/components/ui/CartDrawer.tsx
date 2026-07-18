@@ -33,7 +33,7 @@ interface CartDrawerProps {
   updateQuantity: (id: string, qty: number) => void;
   updateNotes: (id: string, notes: string) => void;
   removeFromCart: (id: string) => void;
-  onCheckout: (data: CheckoutData) => void;
+  onCheckout: (data: CheckoutData) => void | Promise<void>;
   clearCart: () => void;
 }
 
@@ -479,7 +479,7 @@ export function CartDrawer({
       return;
     }
     setIsSubmitting(true);
-    onCheckout({
+    await onCheckout({
       ...formData,
       deliveryType,
       deliveryCoordinates: deliveryType === 'Delivery' ? deliveryCoordinates ?? undefined : undefined,

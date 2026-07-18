@@ -63,6 +63,8 @@ function MainView() {
 
   const handleCheckout = async (data: CheckoutData) => {
     if (!selectedLocation) return;
+    const link = generateWhatsAppLink(selectedLocation, items, data, config);
+    window.open(link, "_blank");
     try {
       const deliveryFee = data.calculatedDeliveryFee ?? config.deliveryFee ?? 0;
       await createOrder({
@@ -89,11 +91,8 @@ function MainView() {
         payment_ref: data.paymentRef || '',
         status: 'pendiente',
       });
-      const link = generateWhatsAppLink(selectedLocation, items, data, config);
-      window.open(link, "_blank");
     } catch (err) {
       console.error('Error saving order:', err);
-      alert('Error al guardar el pedido. Por favor intenta de nuevo.');
     }
   };
 
