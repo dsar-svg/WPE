@@ -47,7 +47,8 @@ export function ChoiceSelectorModal({ product, onClose, onConfirm }: ChoiceSelec
   };
 
   const handleConfirm = () => {
-    onConfirm(selected.length > 0 ? selected : []);
+    if (selected.length === 0) return;
+    onConfirm(selected);
   };
 
   return (
@@ -130,9 +131,10 @@ export function ChoiceSelectorModal({ product, onClose, onConfirm }: ChoiceSelec
         <div className="p-6 pt-6">
           <button
             onClick={handleConfirm}
-            className="w-full bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white py-4 rounded-2xl font-display uppercase tracking-[0.2em] text-sm shadow-xl shadow-primary-vibrant/30 flex items-center justify-center gap-3 hover:shadow-primary-vibrant/50 transition-shadow duration-300"
+            disabled={selected.length === 0}
+            className="w-full bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white py-4 rounded-2xl font-display uppercase tracking-[0.2em] text-sm shadow-xl shadow-primary-vibrant/30 flex items-center justify-center gap-3 hover:shadow-primary-vibrant/50 transition-shadow duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Agregar al carrito ${totalPrice().toFixed(2)}
+            {selected.length === 0 ? 'Selecciona una opción' : `Agregar al carrito $${totalPrice().toFixed(2)}`}
           </button>
         </div>
       </motion.div>
