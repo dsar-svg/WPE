@@ -46,8 +46,12 @@ export function ChoiceSelectorModal({ product, onClose, onConfirm }: ChoiceSelec
     return product.price + adjust;
   };
 
+  const isRequired = maxSelections > 0;
+  const isValid = !isRequired || selected.length > 0;
+
   const handleConfirm = () => {
-    onConfirm(selected.length > 0 ? selected : []);
+    if (!isValid) return;
+    onConfirm(selected);
   };
 
   return (
@@ -80,7 +84,7 @@ export function ChoiceSelectorModal({ product, onClose, onConfirm }: ChoiceSelec
             {product.name}
           </h3>
           <p className="text-zinc-400 text-sm">
-            Este {product.name} incluye una ración de:
+            {isRequired ? 'Selecciona una opción:' : `Este ${product.name} incluye una ración de:`}
           </p>
         </div>
 
@@ -126,11 +130,17 @@ export function ChoiceSelectorModal({ product, onClose, onConfirm }: ChoiceSelec
           })}
         </div>
 
+        {/* Hint when required */}
+        {isRequired && selected.length === 0 && (
+          <p className="text-[10px] text-zinc-500 text-center -mb-2">Selecciona una opción para continuar</p>
+        )}
+
         {/* Confirm button */}
         <div className="p-6 pt-6">
           <button
             onClick={handleConfirm}
-            className="w-full bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white py-4 rounded-2xl font-display uppercase tracking-[0.2em] text-sm shadow-xl shadow-primary-vibrant/30 flex items-center justify-center gap-3 hover:shadow-primary-vibrant/50 transition-shadow duration-300"
+            disabled={!isValid}
+            className="w-full bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white py-4 rounded-2xl font-display uppercase tracking-[0.2em] text-sm shadow-xl shadow-primary-vibrant/30 flex items-center justify-center gap-3 hover:shadow-primary-vibrant/50 transition-shadow duration-300 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none"
           >
             Agregar al carrito ${totalPrice().toFixed(2)}
           </button>

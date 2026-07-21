@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, Printer, DollarSign, CreditCard, Smartphone, Banknote, LogOut, User, IdCard, Calendar, History, Loader2, QrCode } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useRestaurant } from '../context/RestaurantContext';
-import { Product, Cashier, POSCartItem, PaymentMethod, Order } from '../types';
+import { Product, Cashier, POSCartItem, PaymentMethod, Order, OrderStatus, DeliveryType } from '../types';
 import { supabase } from '../lib/supabase';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
 import { fetchBcvRate } from '../services/bcvRate';
@@ -421,14 +422,41 @@ ${paymentMethod === 'Efectivo' ? `<p>Recibido: $${(total + changeAmount).toFixed
 // ==============================
 // Corte de Caja (Daily Closure)
 // ==============================
+interface CorteRecord {
+  id: string;
+  location_id: string;
+  cashier_id: string;
+  cashier_name: string;
+  date: string;
+  closed_at: string;
+  order_count: number;
+  total_efectivo: number;
+  total_tarjeta: number;
+  total_pagomovil: number;
+  grand_total: number;
+  from_date: string;
+  to_date: string;
+  created_at: string;
+}
+
 function CorteDeCajaModal({
-  orders, locationId, locationName, onClose,
+  orders, cortes, locationId, locationName, cashier, onCorteSaved, onClose,
 }: {
   orders: Order[];
+  cortes: CorteRecord[];
   locationId: string;
   locationName: string;
+  cashier: Cashier | null;
+  onCorteSaved: () => void;
   onClose: () => void;
 }) {
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState<CorteRecord | null>(null);
+  const [error, setError] = useState('');
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const existingCorte = useMemo(() => cortes.find(c => c.date === todayStr), [cortes, todayStr]);
+
   const todayOrders = useMemo(() => {
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -445,7 +473,102 @@ function CorteDeCajaModal({
   const granTotal = todayOrders.reduce((s, o) => s + o.total, 0);
   const count = todayOrders.length;
 
+  // Orders made after the existing corte (if any)
+  const ordersAfterCorte = useMemo(() => {
+    if (!existingCorte) return [];
+    const corteTime = new Date(existingCorte.closed_at);
+    return todayOrders.filter(o => new Date(o.created_at) > corteTime);
+  }, [todayOrders, existingCorte]);
+
   const dateStr = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const handleSaveCorte = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const { error: insertError } = await supabase.from('cortes').insert({
+        location_id: locationId,
+        cashier_id: cashier?.id || '',
+        cashier_name: cashier?.name || '',
+        date: todayStr,
+        closed_at: now.toISOString(),
+        order_count: count,
+        total_efectivo: totalEfectivo,
+        total_tarjeta: totalTarjeta,
+        total_pagomovil: totalPagoMovil,
+        grand_total: granTotal,
+        from_date: startOfDay.toISOString(),
+        to_date: now.toISOString(),
+      });
+      if (insertError) throw insertError;
+      const record: CorteRecord = {
+        id: '',
+        location_id: locationId,
+        cashier_id: cashier?.id || '',
+        cashier_name: cashier?.name || '',
+        date: todayStr,
+        closed_at: now.toISOString(),
+        order_count: count,
+        total_efectivo: totalEfectivo,
+        total_tarjeta: totalTarjeta,
+        total_pagomovil: totalPagoMovil,
+        grand_total: granTotal,
+        from_date: startOfDay.toISOString(),
+        to_date: now.toISOString(),
+        created_at: now.toISOString(),
+      };
+      setSaved(record);
+      onCorteSaved();
+    } catch (err) {
+      console.error('Error saving corte:', err);
+      setError('Error al guardar el corte. Intenta de nuevo.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePrint = () => {
+    const w = window.open('', '', 'width=380,height=700');
+    if (!w) return;
+    const displayRecord = saved || existingCorte;
+    w.document.write(`<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Corte de Caja</title>
+<style>
+body { font-family: 'Courier New', monospace; font-size: 11px; width: 290px; margin: 0 auto; padding: 8px; }
+h2 { text-align: center; margin: 0; font-size: 14px; text-transform: uppercase; }
+h3 { text-align: center; margin: 2px 0; font-size: 12px; }
+p { text-align: center; margin: 1px 0; font-size: 10px; }
+table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+td { padding: 2px 3px; font-size: 10px; }
+td.r { text-align: right; }
+hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
+.total td { font-weight: bold; font-size: 12px; }
+.footer { text-align: center; font-size: 9px; margin-top: 6px; }
+</style></head><body>
+<h2>${locationName}</h2>
+<h3>CORTE DE CAJA</h3>
+<p>${dateStr}</p>
+<hr>
+<p>Cajero/a: ${displayRecord?.cashier_name || cashier?.name || ''}</p>
+<hr>
+<table>
+<tr><td>Pedidos del día</td><td class="r">${displayRecord?.order_count || count}</td></tr>
+<tr><td>Total Efectivo</td><td class="r">$${(displayRecord?.total_efectivo || totalEfectivo).toFixed(2)}</td></tr>
+<tr><td>Total Tarjeta</td><td class="r">$${(displayRecord?.total_tarjeta || totalTarjeta).toFixed(2)}</td></tr>
+<tr><td>Total Pago Móvil</td><td class="r">$${(displayRecord?.total_pagomovil || totalPagoMovil).toFixed(2)}</td></tr>
+<hr>
+<tr class="total"><td>TOTAL GENERAL</td><td class="r">$${(displayRecord?.grand_total || granTotal).toFixed(2)}</td></tr>
+</table>
+<hr>
+<p>${displayRecord ? `Cerrado: ${new Date(displayRecord.closed_at).toLocaleString('es-VE')}` : ''}</p>
+<hr>
+<p class="footer">wallacepanda.com</p>
+<script>window.print();</script>
+</body></html>`);
+    w.document.close();
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -464,54 +587,151 @@ function CorteDeCajaModal({
           <p className="text-xs text-zinc-500">{dateStr}</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-zinc-950 rounded-2xl p-4 text-center">
-            <ShoppingCart className="w-5 h-5 text-primary-vibrant mx-auto mb-1" />
-            <p className="text-2xl font-black text-white">{count}</p>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Pedidos</p>
-          </div>
-          <div className="bg-zinc-950 rounded-2xl p-4 text-center">
-            <DollarSign className="w-5 h-5 text-green-400 mx-auto mb-1" />
-            <p className="text-2xl font-black text-green-400">${granTotal.toFixed(2)}</p>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total</p>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Desglose por método</p>
-          {[
-            { method: 'Efectivo', total: totalEfectivo, icon: Banknote, color: 'text-green-400' },
-            { method: 'Tarjeta', total: totalTarjeta, icon: CreditCard, color: 'text-blue-400' },
-            { method: 'Pago Móvil', total: totalPagoMovil, icon: Smartphone, color: 'text-purple-400' },
-          ].map(({ method, total: t, icon: Icon, color }) => (
-            <div key={method} className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl">
-              <div className="flex items-center gap-2">
-                <Icon className={`w-4 h-4 ${color}`} />
-                <span className="text-sm font-bold text-zinc-300">{method}</span>
+        {saved || existingCorte ? (
+          <>
+            {/* Existing corte banner */}
+            <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
+              <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Check className="w-5 h-5 text-green-400" />
               </div>
-              <span className={`font-black ${color}`}>${t.toFixed(2)}</span>
+              <div>
+                <p className="text-green-400 font-black text-sm">Corte realizado</p>
+                <p className="text-[10px] text-zinc-500">
+                  {existingCorte
+                    ? `Cerrado por ${existingCorte.cashier_name} — ${new Date(existingCorte.closed_at).toLocaleTimeString('es-VE')}`
+                    : 'Guardado exitosamente'}
+                </p>
+              </div>
             </div>
-          ))}
-        </div>
 
-        {todayOrders.length > 0 && (
-          <div className="space-y-1.5 max-h-40 overflow-y-auto">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 sticky top-0 bg-zinc-900 pb-1">Últimos pedidos</p>
-            {todayOrders.slice(0, 10).map(o => (
-              <div key={o.id} className="flex items-center justify-between text-xs text-zinc-400 bg-zinc-950 p-2 rounded-lg">
-                <span className="truncate flex-1">{o.customer_name}</span>
-                <span className="text-zinc-600 mx-2">{o.payment_method}</span>
-                <span className="font-bold text-white">${o.total.toFixed(2)}</span>
+            {/* Warning: orders after corte */}
+            {ordersAfterCorte.length > 0 && (
+              <div className="flex items-start gap-3 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4">
+                <div className="w-10 h-10 bg-yellow-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <Loader2 className="w-5 h-5 text-yellow-400" />
+                </div>
+                <div>
+                  <p className="text-yellow-400 font-black text-sm">¡Atención!</p>
+                  <p className="text-[10px] text-zinc-400">
+                    {ordersAfterCorte.length} pedido(s) después del corte.
+                    Realiza un nuevo corte para incluirlos.
+                  </p>
+                </div>
               </div>
-            ))}
-          </div>
-        )}
+            )}
 
-        <button onClick={onClose}
-          className="w-full bg-zinc-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-700 transition-all"
-        >
-          Cerrar
-        </button>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-zinc-950 rounded-2xl p-4 text-center">
+                <ShoppingCart className="w-5 h-5 text-primary-vibrant mx-auto mb-1" />
+                <p className="text-2xl font-black text-white">
+                  {(existingCorte?.order_count || count) + (saved ? 0 : ordersAfterCorte.length)}
+                </p>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Pedidos</p>
+              </div>
+              <div className="bg-zinc-950 rounded-2xl p-4 text-center">
+                <DollarSign className="w-5 h-5 text-green-400 mx-auto mb-1" />
+                <p className="text-2xl font-black text-green-400">
+                  ${(existingCorte?.grand_total || granTotal).toFixed(2)}
+                </p>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Desglose por método</p>
+              {[
+                { method: 'Efectivo', total: existingCorte?.total_efectivo || totalEfectivo, icon: Banknote, color: 'text-green-400' },
+                { method: 'Tarjeta', total: existingCorte?.total_tarjeta || totalTarjeta, icon: CreditCard, color: 'text-blue-400' },
+                { method: 'Pago Móvil', total: existingCorte?.total_pagomovil || totalPagoMovil, icon: Smartphone, color: 'text-purple-400' },
+              ].map(({ method, total: t, icon: Icon, color }) => (
+                <div key={method} className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <Icon className={`w-4 h-4 ${color}`} />
+                    <span className="text-sm font-bold text-zinc-300">{method}</span>
+                  </div>
+                  <span className={`font-black ${color}`}>${t.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              <button onClick={handlePrint}
+                className="flex-1 bg-zinc-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-700 transition-all flex items-center justify-center gap-2"
+              >
+                <Printer className="w-4 h-4" /> Imprimir
+              </button>
+              <button onClick={onClose}
+                className="flex-1 bg-zinc-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-700 transition-all"
+              >
+                Cerrar
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* No corte yet — show summary + save button */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-zinc-950 rounded-2xl p-4 text-center">
+                <ShoppingCart className="w-5 h-5 text-primary-vibrant mx-auto mb-1" />
+                <p className="text-2xl font-black text-white">{count}</p>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Pedidos</p>
+              </div>
+              <div className="bg-zinc-950 rounded-2xl p-4 text-center">
+                <DollarSign className="w-5 h-5 text-green-400 mx-auto mb-1" />
+                <p className="text-2xl font-black text-green-400">${granTotal.toFixed(2)}</p>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Desglose por método</p>
+              {[
+                { method: 'Efectivo', total: totalEfectivo, icon: Banknote, color: 'text-green-400' },
+                { method: 'Tarjeta', total: totalTarjeta, icon: CreditCard, color: 'text-blue-400' },
+                { method: 'Pago Móvil', total: totalPagoMovil, icon: Smartphone, color: 'text-purple-400' },
+              ].map(({ method, total: t, icon: Icon, color }) => (
+                <div key={method} className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <Icon className={`w-4 h-4 ${color}`} />
+                    <span className="text-sm font-bold text-zinc-300">{method}</span>
+                  </div>
+                  <span className={`font-black ${color}`}>${t.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+
+            {todayOrders.length > 0 && (
+              <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 sticky top-0 bg-zinc-900 pb-1">Últimos pedidos</p>
+                {todayOrders.slice(0, 8).map(o => (
+                  <div key={o.id} className="flex items-center justify-between text-xs text-zinc-400 bg-zinc-950 p-2 rounded-lg">
+                    <span className="truncate flex-1">{o.customer_name}</span>
+                    <span className="text-zinc-600 mx-2">{o.payment_method}</span>
+                    <span className="font-bold text-white">${o.total.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {error && (
+              <p className="text-red-400 text-xs font-bold text-center">{error}</p>
+            )}
+
+            <div className="flex gap-2">
+              <button onClick={onClose}
+                className="flex-1 bg-zinc-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-700 transition-all"
+              >
+                Cancelar
+              </button>
+              <button onClick={handleSaveCorte} disabled={saving}
+                className="flex-1 bg-primary-vibrant text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Realizar Corte
+              </button>
+            </div>
+          </>
+        )}
       </motion.div>
     </motion.div>
   );
@@ -641,10 +861,105 @@ ${order.change_amount && order.change_amount > 0 ? `<p>Vuelto: $${order.change_a
 }
 
 // ==============================
+// Corte History
+// ==============================
+function CorteHistoryModal({
+  cortes, locationName, onClose,
+}: {
+  cortes: CorteRecord[];
+  locationName: string;
+  onClose: () => void;
+}) {
+  const [selected, setSelected] = useState<CorteRecord | null>(null);
+
+  const formatDate = (d: string) => new Date(d).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+  const formatTime = (d: string) => new Date(d).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80"
+    >
+      <motion.div initial={{ scale: 0.9, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }}
+        className="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4 max-h-[90vh] flex flex-col"
+      >
+        <div className="flex justify-between items-center flex-shrink-0">
+          <h2 className="text-xl font-black text-white">Historial de Cortes</h2>
+          <button onClick={onClose} className="p-2 bg-zinc-800 rounded-xl text-zinc-500 hover:text-white"><X /></button>
+        </div>
+        <p className="text-[10px] text-zinc-500 -mt-3">{locationName}</p>
+
+        <div className="flex-1 overflow-y-auto space-y-1.5">
+          {cortes.length === 0 ? (
+            <div className="text-center py-12 text-zinc-600 text-sm">Sin cortes registrados</div>
+          ) : selected ? (
+            <div className="space-y-4">
+              <button onClick={() => setSelected(null)}
+                className="text-[10px] font-bold text-primary-vibrant hover:underline flex items-center gap-1"
+              >
+                ← Volver al listado
+              </button>
+              <div className="bg-zinc-950 rounded-2xl p-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-zinc-500">{formatDate(selected.date)}</span>
+                  <span className="text-[10px] text-zinc-600">{formatTime(selected.closed_at)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-zinc-500">Cajero/a</span>
+                  <span className="font-bold text-white">{selected.cashier_name}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-zinc-800">
+                  <div>
+                    <p className="text-[10px] text-zinc-500">Pedidos</p>
+                    <p className="text-lg font-black text-white">{selected.order_count}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-zinc-500">Total</p>
+                    <p className="text-lg font-black text-green-400">${selected.grand_total.toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="space-y-1 pt-2 border-t border-zinc-800">
+                  {[
+                    { label: 'Efectivo', total: selected.total_efectivo, color: 'text-green-400' },
+                    { label: 'Tarjeta', total: selected.total_tarjeta, color: 'text-blue-400' },
+                    { label: 'Pago Móvil', total: selected.total_pagomovil, color: 'text-purple-400' },
+                  ].map(({ label, total, color }) => (
+                    <div key={label} className="flex justify-between text-xs">
+                      <span className="text-zinc-500">{label}</span>
+                      <span className={`font-bold ${color}`}>${total.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            cortes.map(c => (
+              <button key={c.id} onClick={() => setSelected(c)}
+                className="w-full flex items-center justify-between bg-zinc-950 p-3 rounded-xl hover:bg-zinc-900 transition-colors text-left"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5 text-zinc-500" />
+                    <span className="text-sm font-bold text-white">{formatDate(c.date)}</span>
+                    <span className="text-[10px] text-zinc-600">{formatTime(c.closed_at)}</span>
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    {c.order_count} pedidos · ${c.grand_total.toFixed(2)} · {c.cashier_name}
+                  </p>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ==============================
 // Main POS Page
 // ==============================
 export function PosPage() {
-  const { menuItems, categories, locations, config, orders, findCustomer, saveCustomer, generateInvoiceNumber } = useRestaurant();
+  const { menuItems, categories, locations, config, findCustomer, saveCustomer, generateInvoiceNumber } = useRestaurant();
   const [cashier, setCashier] = useState<Cashier | null>(null);
   const [activeCategory, setActiveCategory] = useState('Todas');
   const [cart, setCart] = useState<POSCartItem[]>([]);
@@ -656,6 +971,7 @@ export function PosPage() {
   const [deliveryType, setDeliveryType] = useState<'Delivery' | 'Pick-up'>('Pick-up');
   const [showPayModal, setShowPayModal] = useState(false);
   const [showCorteDeCaja, setShowCorteDeCaja] = useState(false);
+  const [showCorteHistory, setShowCorteHistory] = useState(false);
   const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
   const [showReceipt, setShowReceipt] = useState<{
     items: POSCartItem[];
@@ -671,6 +987,78 @@ export function PosPage() {
   const [orderCodeError, setOrderCodeError] = useState('');
   const [loadedOrderId, setLoadedOrderId] = useState<string | null>(null);
   const [loadedPaymentMethod, setLoadedPaymentMethod] = useState<PaymentMethod | null>(null);
+
+  // Fetch orders for the POS location (separate from context query which requires Supabase auth)
+  const posOrdersQuery = useQuery({
+    queryKey: ['pos-orders', selectedLocationId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('location_id', selectedLocationId)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      return (data || []).map((row: any): Order => ({
+        id: row.id,
+        location_id: row.location_id,
+        customer_name: row.customer_name,
+        customer_phone: row.customer_phone,
+        cedula: row.cedula || '',
+        delivery_type: row.delivery_type as DeliveryType,
+        delivery_address: row.delivery_address,
+        delivery_coordinates: row.delivery_coordinates,
+        items: row.items,
+        subtotal: row.subtotal,
+        delivery_fee: row.delivery_fee,
+        total: row.total,
+        notes: row.notes || '',
+        status: (row.status === 'cancelado' ? 'cancelado' : 'exitoso') as OrderStatus,
+        payment_method: row.payment_method,
+        change_amount: row.change_amount ?? 0,
+        cashier_id: row.cashier_id,
+        invoice_number: row.invoice_number || '',
+        created_at: row.created_at,
+      }));
+    },
+    enabled: !!cashier && !!selectedLocationId,
+    staleTime: 10000,
+  });
+
+  // Fetch cortes for this location
+  const cortesQuery = useQuery({
+    queryKey: ['cortes', selectedLocationId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('cortes')
+        .select('*')
+        .eq('location_id', selectedLocationId)
+        .order('closed_at', { ascending: false })
+        .limit(50);
+      return (data || []).map((row: any) => ({
+        id: row.id,
+        location_id: row.location_id,
+        cashier_id: row.cashier_id,
+        cashier_name: row.cashier_name || '',
+        date: row.date,
+        closed_at: row.closed_at,
+        order_count: row.order_count,
+        total_efectivo: row.total_efectivo,
+        total_tarjeta: row.total_tarjeta,
+        total_pagomovil: row.total_pagomovil,
+        grand_total: row.grand_total,
+        from_date: row.from_date,
+        to_date: row.to_date,
+        created_at: row.created_at,
+      }));
+    },
+    enabled: !!cashier && !!selectedLocationId,
+    staleTime: 5000,
+  });
+  const cortes = cortesQuery.data || [];
+
+  // Today's corte (if exists)
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayCorte = useMemo(() => cortes.find(c => c.date === todayStr), [cortes, todayStr]);
 
   const isFormValid =
     customerCedula.trim().length >= 6 &&
@@ -813,13 +1201,15 @@ export function PosPage() {
 
       await saveCustomer({ cedula: customerCedula, name: customerName || 'Mostrador', phone: customerPhone || 'N/A' });
 
+      posOrdersQuery.refetch();
+
       setShowPayModal(false);
       setShowReceipt({ items: cart, total: cartTotal, paymentMethod: method, changeAmount, invoiceNumber });
     } catch (err) {
       console.error('Error processing payment:', err);
       alert('Error al procesar la venta');
     }
-  }, [cashier, selectedLocationId, cart, cartTotal, customerName, customerPhone, customerCedula, deliveryType, loadedOrderId, generateInvoiceNumber, saveCustomer]);
+  }, [cashier, selectedLocationId, cart, cartTotal, customerName, customerPhone, customerCedula, deliveryType, loadedOrderId, generateInvoiceNumber, saveCustomer, posOrdersQuery]);
 
   const handleNewSale = () => {
     setCart([]);
@@ -929,6 +1319,11 @@ export function PosPage() {
             className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 rounded-xl text-[10px] font-bold text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
           >
             <History className="w-3.5 h-3.5" /> Facturas
+          </button>
+          <button onClick={() => setShowCorteHistory(true)}
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 rounded-xl text-[10px] font-bold text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
+          >
+            <Calendar className="w-3.5 h-3.5" /> Historial
           </button>
           <span className="text-xs text-zinc-500 font-mono">{new Date().toLocaleTimeString('es-VE')}</span>
           <button onClick={() => setCashier(null)}
@@ -1164,10 +1559,24 @@ export function PosPage() {
       <AnimatePresence>
         {showCorteDeCaja && (
           <CorteDeCajaModal
-            orders={orders}
+            orders={posOrdersQuery.data || []}
+            cortes={cortes}
             locationId={selectedLocationId}
             locationName={locationName}
+            cashier={cashier}
+            onCorteSaved={() => cortesQuery.refetch()}
             onClose={() => setShowCorteDeCaja(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Corte History modal */}
+      <AnimatePresence>
+        {showCorteHistory && (
+          <CorteHistoryModal
+            cortes={cortes}
+            locationName={locationName}
+            onClose={() => setShowCorteHistory(false)}
           />
         )}
       </AnimatePresence>
@@ -1176,7 +1585,7 @@ export function PosPage() {
       <AnimatePresence>
         {showInvoiceHistory && (
           <InvoiceHistoryModal
-            orders={orders}
+            orders={posOrdersQuery.data || []}
             locationId={selectedLocationId}
             onClose={() => setShowInvoiceHistory(false)}
           />
