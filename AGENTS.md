@@ -23,7 +23,7 @@ No test suite. Validate via browser + lint. TestSprite MCP wired in `opencode.js
 VITE_SUPABASE_URL=https://<project>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon-key>
 ```
-Optional: `VITE_GRAPHOPPER_API_KEY` (road distance, falls back to OSRM → Haversine).
+(Estas mismas variables hay que configurarlas en cada proyecto Vercel: Settings → Environment Variables)
 
 ## Backend: Supabase
 
@@ -93,7 +93,15 @@ Realtime enabled on `orders` table.
 
 ## Deployment
 
-### 3 PWAs (public + admin + POS)
+### 3 PWAs instalables (public + admin + POS)
+
+Cada una tiene su propio `manifest.json` con nombre, iconos y scope independientes para instalación en escritorio/móvil:
+
+| PWA | Dominio | Nombre de instalación | Manifest fuente |
+|-----|---------|----------------------|-----------------|
+| Público | `wallacepandaexpress.com` | Wallace Panda Express | `public/manifest.json` |
+| Admin | `admin.wallacepandaexpress.com` | Admin - Wallace Panda Express | `public/manifest-admin.json` → renombrado a `manifest.json` |
+| POS | `pos.wallacepandaexpress.com` | POS - Wallace Panda Express | `public/manifest-pos.json` → renombrado a `manifest.json` |
 
 ```sh
 npm run build        # → dist/ (público, wallacepanda.com)
@@ -102,20 +110,34 @@ npm run build:pos    # → dist-pos/   (POS,   pos.wallacepanda.com)
 npm run build:all    # los 3 en secuencia
 ```
 
-Cada `dist-*/` incluye su propio `index.html` + `vercel.json` (SPA rewrites).
+Cada `dist-*/` incluye su propio `index.html` + `manifest.json` + `vercel.json` (SPA rewrites).
+
+### Env vars (configurar en cada proyecto Vercel)
+
+| Variable | Dónde obtener |
+|----------|--------------|
+| `VITE_SUPABASE_URL` | Supabase Dashboard → Project Settings → API → Project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase Dashboard → Project Settings → API → Anon Key |
 
 ### Primer deploy
 
 1. Instalar Vercel CLI: `npm i -g vercel`
 2. Crear 3 proyectos en vercel.com (o `vercel projects add`)
-3. Vincular cada carpeta:
+3. Asignar dominios:
    ```sh
-   vercel link --cwd dist --project pndaexpress
-   vercel link --cwd dist-admin --project pndaexpress-admin
-   vercel link --cwd dist-pos --project pndaexpress-pos
+   vercel domain add wallacepandaexpress.com --cwd dist
+   vercel domain add admin.wallacepandaexpress.com pndaexpress-admin
+   vercel domain add pos.wallacepandaexpress.com pndaexpress-pos
    ```
-4. Asignar dominios en Vercel dashboard
+4. Configurar env vars en cada proyecto desde Vercel Dashboard → Settings → Environment Variables
 5. `.\deploy-all.ps1` para build + deploy de los 3
+
+### Deployment diario
+
+```sh
+.\deploy-all.ps1
+```
+El script vincula automáticamente los proyectos después del build y despliega los 3.
 
 ### Backend
 
