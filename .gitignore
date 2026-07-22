@@ -15,3 +15,8 @@ scripts/
 graphify-out/
 .vercel
 public/image combos/
+
+.vercel
+.env*
+
+testsprite_tests\tmp\config.json

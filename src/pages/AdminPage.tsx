@@ -21,13 +21,34 @@ const formatTime12h = (time: string) => { if (!time) return ''; const [hours, mi
 const h = parseInt(hours);
 const ampm = h >= 12 ? 'PM' : 'AM'; const h12 = h % 12 || 12; return `${h12}:${minutes} ${ampm}`;};
 export function AdminPage() { const { locations, menuItems, categories, config, isAdmin, isLoading, isSuperAdmin, managedLocationId, userEmail, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, orders, signIn, signOut, createLocationAdmin } = useRestaurant(); const isSedesHidden = !isSuperAdmin;
-const [activeTab, setActiveTab] = useState<'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras' | 'finanzas'>('dashboard');
+const [activeTab, setActiveTab] = useState<'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras' | 'finanzas' | 'cortes'>('dashboard');
 const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
 const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
 useEffect(() => {
   if (isSedesHidden && (activeTab === 'sedes' || activeTab === 'cajeras' || activeTab === 'finanzas')) setActiveTab('dashboard');
 }, [isSedesHidden, activeTab]);
+
+const [cortesData, setCortesData] = useState<any[]>([]);
+const [cortesLoading, setCortesLoading] = useState(false);
+const [cortesFilterLoc, setCortesFilterLoc] = useState('');
+
+useEffect(() => {
+  if (activeTab !== 'cortes') return;
+  (async () => {
+    setCortesLoading(true);
+    let query = supabase.from('cortes').select('*').order('closed_at', { ascending: false }).limit(100);
+    if (!isSuperAdmin && managedLocationId) {
+      query = query.eq('location_id', managedLocationId);
+    }
+    if (cortesFilterLoc) {
+      query = query.eq('location_id', cortesFilterLoc);
+    }
+    const { data } = await query;
+    setCortesData(data || []);
+    setCortesLoading(false);
+  })();
+}, [activeTab, cortesFilterLoc, isSuperAdmin, managedLocationId]);
 
 const fetchCashiers = async () => {
   setCashiersLoading(true);
@@ -383,6 +404,80 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
 
         {activeTab === 'pedidos' && (
           <OrdersPage />
+        )}
+
+        {activeTab === 'cortes' && (
+          <div>
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h2 className="text-2xl font-black">Cortes de Caja</h2>
+                <p className="text-admin-text-muted text-sm">
+                  {cortesData.length} corte(s) registrados
+                </p>
+              </div>
+              {isSuperAdmin && locations.length > 1 && (
+                <select value={cortesFilterLoc} onChange={e => setCortesFilterLoc(e.target.value)}
+                  className="bg-admin-surface border border-admin-border rounded-xl px-4 py-3 text-sm font-bold text-admin-text outline-none"
+                >
+                  <option value="">Todas las sedes</option>
+                  {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+              )}
+            </div>
+            {cortesLoading ? (
+              <div className="text-center py-16 text-admin-muted text-sm animate-pulse">Cargando...</div>
+            ) : cortesData.length === 0 ? (
+              <div className="text-center py-16 text-admin-muted text-sm">No hay cortes registrados</div>
+            ) : (
+              <div className="space-y-3">
+                {cortesData.map(c => {
+                  const locName = locations.find(l => l.id === c.location_id)?.name;
+                  return (
+                    <div key={c.id}
+                      className="bg-admin-surface border border-admin-border rounded-2xl p-6 hover:border-admin-border/50 transition-colors"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-black text-white">
+                              {new Date(c.closed_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })}
+                            </span>
+                            <span className="text-[10px] text-zinc-600">
+                              {new Date(c.closed_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
+                            {isSuperAdmin && locName && <span className="font-bold text-white">{locName}</span>}
+                            <span>Cajero/a: <span className="font-bold text-zinc-300">{c.cashier_name}</span></span>
+                            <span>{c.order_count} pedido(s)</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6 flex-shrink-0">
+                          <div className="text-right">
+                            <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Efectivo</p>
+                            <p className="font-black text-green-400">${Number(c.total_efectivo).toFixed(2)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Tarjeta</p>
+                            <p className="font-black text-blue-400">${Number(c.total_tarjeta).toFixed(2)}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Pago Móvil</p>
+                            <p className="font-black text-purple-400">${Number(c.total_pagomovil).toFixed(2)}</p>
+                          </div>
+                          <div className="w-px h-10 bg-zinc-800" />
+                          <div className="text-right min-w-[90px]">
+                            <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Total</p>
+                            <p className="font-black text-white text-lg">${Number(c.grand_total).toFixed(2)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         )}
 
         {activeTab === 'cajeras' && (

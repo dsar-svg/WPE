@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import {
   LayoutDashboard, MapPin, Utensils, Settings, ShoppingBag,
-  LogOut, ChevronRight, User, Users, DollarSign
+  LogOut, ChevronRight, User, Users, DollarSign, Calendar
 } from 'lucide-react';
 import { RestaurantConfig } from '../../types';
 import { BrandName } from '../ui/BrandName';
 
-export type AdminPageTab = 'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras' | 'finanzas';
+export type AdminPageTab = 'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras' | 'finanzas' | 'cortes';
 
 interface AdminSidebarProps {
   activeTab: AdminPageTab;
@@ -27,6 +27,7 @@ const navItems: { id: AdminPageTab; label: string; icon: React.ComponentType<{ c
   { id: 'sedes', label: 'Sedes', icon: MapPin },
   { id: 'productos', label: 'Productos', icon: Utensils },
   { id: 'pedidos', label: 'Pedidos', icon: ShoppingBag },
+  { id: 'cortes', label: 'Cortes', icon: Calendar },
   { id: 'cajeras', label: 'Cajeras', icon: Users },
   { id: 'finanzas', label: 'Finanzas', icon: DollarSign },
   { id: 'ajustes', label: 'Ajustes', icon: Settings },

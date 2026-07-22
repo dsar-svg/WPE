@@ -1,9 +1,9 @@
 {
-  "name": "POS - Wallace Panda",
+  "name": "POS - Wallace Panda Express",
   "short_name": "POS Panda",
   "description": "Punto de venta de Wallace Panda Express",
-  "start_url": "/pos",
-  "scope": "/pos",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "landscape",
   "background_color": "#0c0c0f",

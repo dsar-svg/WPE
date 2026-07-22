@@ -13,7 +13,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <App appMode="public" />
       </QueryClientProvider>
     </HelmetProvider>
   </StrictMode>,

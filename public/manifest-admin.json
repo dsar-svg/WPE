@@ -1,9 +1,9 @@
 {
-  "name": "Admin - Wallace Panda",
+  "name": "Admin - Wallace Panda Express",
   "short_name": "Admin Panda",
   "description": "Panel de administración de Wallace Panda Express",
-  "start_url": "/admin",
-  "scope": "/admin",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "landscape",
   "background_color": "#0c0c0f",
