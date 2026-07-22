@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
 import { fetchBcvRate } from '../services/bcvRate';
 import { ChoiceSelectorModal } from '../components/ui/ChoiceSelectorModal';
+import { hashPin } from '../lib/hashPin';
 
 // ==============================
 // PIN Login
@@ -30,10 +31,11 @@ function PosLogin({ onLogin }: { onLogin: (cashier: Cashier) => void }) {
     if (pin.length !== 4) return;
     (async () => {
       setLoading(true);
+      const pinHash = await hashPin(pin);
       const { data } = await supabase
         .from('admins')
         .select('*')
-        .eq('pin', pin)
+        .eq('pin_hash', pinHash)
         .limit(1)
         .maybeSingle();
       if (data) {
@@ -1273,6 +1275,7 @@ export function PosPage() {
               category: '',
               image: '',
               inStock: true,
+              stockQuantity: 0,
               order: 0,
             },
             quantity: orderItem.quantity,

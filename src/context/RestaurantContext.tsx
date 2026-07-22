@@ -102,7 +102,8 @@ function rowToProduct(row: any): Product {
     price: row.price,
     category: row.category,
     image: row.image,
-    inStock: row.in_stock,
+    inStock: (row.stock_quantity ?? 0) > 0,
+    stockQuantity: row.stock_quantity ?? 0,
     order: row.sort_order,
     code: row.code || '',
     choices: row.choices || [],
@@ -408,6 +409,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
       if (prod.category !== undefined) dbRow.category = prod.category;
       if (prod.image !== undefined) dbRow.image = prod.image;
       if (prod.inStock !== undefined) dbRow.in_stock = prod.inStock;
+      if (prod.stockQuantity !== undefined) dbRow.stock_quantity = prod.stockQuantity;
       if (prod.order !== undefined) dbRow.sort_order = prod.order;
       if (prod.code !== undefined) dbRow.code = prod.code;
       if (prod.choices !== undefined) dbRow.choices = prod.choices;

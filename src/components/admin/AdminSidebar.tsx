@@ -1,12 +1,12 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   LayoutDashboard, MapPin, Utensils, Settings, ShoppingBag,
-  LogOut, ChevronRight, User, Users, DollarSign, Calendar
+  LogOut, ChevronRight, User, Users, DollarSign, Calendar, Search, History
 } from 'lucide-react';
 import { RestaurantConfig } from '../../types';
 import { BrandName } from '../ui/BrandName';
 
-export type AdminPageTab = 'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras' | 'finanzas' | 'cortes';
+export type AdminPageTab = 'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras' | 'finanzas' | 'cortes' | 'audit_log';
 
 interface AdminSidebarProps {
   activeTab: AdminPageTab;
@@ -28,6 +28,7 @@ const navItems: { id: AdminPageTab; label: string; icon: React.ComponentType<{ c
   { id: 'productos', label: 'Productos', icon: Utensils },
   { id: 'pedidos', label: 'Pedidos', icon: ShoppingBag },
   { id: 'cortes', label: 'Cortes', icon: Calendar },
+  { id: 'audit_log', label: 'Auditoría', icon: History },
   { id: 'cajeras', label: 'Cajeras', icon: Users },
   { id: 'finanzas', label: 'Finanzas', icon: DollarSign },
   { id: 'ajustes', label: 'Ajustes', icon: Settings },
@@ -42,10 +43,17 @@ export function AdminSidebar({
   isSuperAdmin = true,
   isOpen = false,
 }: AdminSidebarProps) {
-  const visibleNavItems = useMemo(
-    () => isSuperAdmin ? navItems : navItems.filter(item => item.id !== 'sedes' && item.id !== 'ajustes' && item.id !== 'cajeras' && item.id !== 'finanzas'),
-    [isSuperAdmin]
-  );
+  const [search, setSearch] = useState('');
+
+  const visibleNavItems = useMemo(() => {
+    let items = isSuperAdmin ? navItems : navItems.filter(item => item.id !== 'sedes' && item.id !== 'ajustes' && item.id !== 'cajeras' && item.id !== 'finanzas' && item.id !== 'audit_log');
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      items = items.filter(item => item.label.toLowerCase().includes(q));
+    }
+    return items;
+  }, [isSuperAdmin, search]);
+
   return (
     <aside className={`fixed left-0 top-0 bottom-0 w-64 bg-admin-surface border-r border-admin-border z-50 flex flex-col transition-transform duration-300 ease-out lg:translate-x-0 ${
       isOpen ? 'translate-x-0' : '-translate-x-full'
@@ -72,6 +80,17 @@ export function AdminSidebar({
         </div>
       </div>
 
+      {/* Global Search */}
+      <div className="px-4 pt-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-admin-muted" />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar sección..."
+            className="w-full pl-9 pr-3 py-2 bg-admin-bg border border-admin-border rounded-xl text-[11px] text-admin-text placeholder:text-admin-muted focus:border-primary-vibrant/50 outline-none transition-colors"
+          />
+        </div>
+      </div>
+
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {visibleNavItems.map((item) => {
           const Icon = item.icon;
@@ -83,7 +102,7 @@ export function AdminSidebar({
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
                 isActive
                   ? 'bg-white text-black shadow-lg shadow-white/10'
-                  : 'text-admin-muted hover:text-zinc-300 hover:bg-zinc-800/50'
+                  : 'text-admin-muted hover:text-admin-text hover:bg-zinc-800/50'
               }`}
             >
               <Icon className="w-4 h-4" />

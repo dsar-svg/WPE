@@ -2,7 +2,7 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { LogIn, MapPin, Clock, MessageCircle, Power, RefreshCcw, Plus, Trash2, Tag, Edit2, Eye, EyeOff, Menu, X, Key, AlertTriangle } from 'lucide-react';
 import { useRestaurant } from '../context/RestaurantContext';
-import { Product, Location } from '../types';
+import { Product, Location, Cashier } from '../types';
 import { Link } from 'react-router-dom';
 import { LocationForm } from '../components/admin/LocationForm';
 import { ProductForm } from '../components/admin/ProductForm';
@@ -13,15 +13,22 @@ import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { SettingsPage } from '../components/admin/SettingsPage';
 import { OrdersPage } from '../components/admin/OrdersPage';
 import { DashboardView } from '../components/admin/DashboardView';
+import { AuditLogView } from '../components/admin/AuditLogView';
 import { Pagination } from '../components/ui/Pagination';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
 import { supabase } from '../lib/supabase';
-import { Cashier } from '../types';
+import { useOrderNotification } from '../hooks/useOrderNotification';
+import { CardSkeleton } from '../components/ui/Skeleton';
+import { EmptyState } from '../components/ui/EmptyState';
 const formatTime12h = (time: string) => { if (!time) return ''; const [hours, minutes] = time.split(':');
 const h = parseInt(hours);
 const ampm = h >= 12 ? 'PM' : 'AM'; const h12 = h % 12 || 12; return `${h12}:${minutes} ${ampm}`;};
-export function AdminPage() { const { locations, menuItems, categories, config, isAdmin, isLoading, isSuperAdmin, managedLocationId, userEmail, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, orders, signIn, signOut, createLocationAdmin } = useRestaurant(); const isSedesHidden = !isSuperAdmin;
-const [activeTab, setActiveTab] = useState<'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras' | 'finanzas' | 'cortes'>('dashboard');
+export function AdminPage() { const { locations, menuItems, categories, config, isAdmin, isLoading, isSuperAdmin, managedLocationId, userEmail, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, orders, fetchOrders, signIn, signOut, createLocationAdmin } = useRestaurant(); const isSedesHidden = !isSuperAdmin;
+const [activeTab, setActiveTab] = useState<'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras' | 'finanzas' | 'cortes' | 'audit_log'>('dashboard');
+
+useOrderNotification(() => {
+  if (activeTab === 'pedidos') fetchOrders?.();
+});
 const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
 const closeSidebar = useCallback(() => setIsSidebarOpen(false), []);
@@ -345,13 +352,18 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
                             <p className="text-[11px] text-admin-text-muted line-clamp-1 mt-1">{item.description}</p>
                           </div>
                           <div className="flex justify-between items-center mt-3">
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 items-center">
                               {isSuperAdmin ? (
-                                <button onClick={() => updateProduct({ ...item, inStock: !item.inStock })}
-                                  className={'px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ' + (item.inStock ? 'bg-admin-border text-green-500/50 hover:text-green-500' : 'bg-red-500/10 text-red-500 shadow-lg')}
-                                >
-                                  {item.inStock ? 'En Stock' : 'Agotado'}
-                                </button>
+                                <>
+                                  <span className="text-[10px] text-admin-muted font-bold mr-1">
+                                    {item.stockQuantity} uds
+                                  </span>
+                                  <button onClick={() => updateProduct({ ...item, inStock: !item.inStock, stockQuantity: item.inStock ? 0 : 10 })}
+                                    className={'px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ' + (item.inStock ? 'bg-admin-border text-green-500/50 hover:text-green-500' : 'bg-red-500/10 text-red-500 shadow-lg')}
+                                  >
+                                    {item.inStock ? 'En Stock' : 'Agotado'}
+                                  </button>
+                                </>
                               ) : (
                                 <button onClick={() => toggleLocalAvailability(item.id)}
                                   className={'px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ' + (!isDiscontinuedLocally ? 'bg-admin-border text-green-500/50 hover:text-green-500' : 'bg-red-500/10 text-red-500 shadow-lg')}
@@ -478,6 +490,10 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
               </div>
             )}
           </div>
+        )}
+
+        {activeTab === 'audit_log' && (
+          <AuditLogView />
         )}
 
         {activeTab === 'cajeras' && (

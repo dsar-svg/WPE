@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { Cashier } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { useRestaurant } from '../../context/RestaurantContext';
+import { hashPin } from '../../lib/hashPin';
 
 interface CashierFormProps {
   cashier?: Cashier;
@@ -26,9 +27,11 @@ export function CashierForm({ cashier, onClose, onSaved }: CashierFormProps) {
     if (!form.name || !form.email || form.pin.length !== 4) return;
     setSaving(true);
     try {
+      const pinHash = await hashPin(form.pin);
       const record = {
         name: form.name,
         email: form.email,
+        pin_hash: pinHash,
         pin: form.pin,
         employee_id: form.employee_id || null,
         location_id: form.location_id || null,

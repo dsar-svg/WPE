@@ -63,6 +63,7 @@ export interface Product {
   category: string;
   image: string;
   inStock: boolean;
+  stockQuantity: number;
   order: number;
   code?: string;
   choices?: ProductChoice[];
@@ -158,6 +159,16 @@ export interface Customer {
   address?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  user_email: string;
+  action: string;
+  entity_type: string;
+  entity_id?: string;
+  details?: any;
+  created_at: string;
 }
 
 export interface POSCartItem {
