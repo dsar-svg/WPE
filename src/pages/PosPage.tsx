@@ -32,12 +32,24 @@ function PosLogin({ onLogin }: { onLogin: (cashier: Cashier) => void }) {
     (async () => {
       setLoading(true);
       const pinHash = await hashPin(pin);
-      const { data } = await supabase
+      let { data } = await supabase
         .from('admins')
         .select('*')
         .eq('pin_hash', pinHash)
         .limit(1)
         .maybeSingle();
+      if (!data) {
+        const { data: fallback } = await supabase
+          .from('admins')
+          .select('*')
+          .eq('pin', pin)
+          .limit(1)
+          .maybeSingle();
+        data = fallback;
+        if (fallback) {
+          supabase.from('admins').update({ pin_hash: pinHash }).eq('id', fallback.id).then();
+        }
+      }
       if (data) {
         onLogin({ id: data.id, name: data.name || data.email, email: data.email, employee_id: data.employee_id, location_id: data.location_id });
       } else {

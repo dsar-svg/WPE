@@ -1,8 +1,6 @@
-import { useState, useMemo } from 'react';
-import { MapPin, Utensils, ShoppingBag, DollarSign, Trophy, TrendingDown, Calendar, TrendingUp, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { useMemo } from 'react';
+import { MapPin, Utensils, ShoppingBag, DollarSign, Trophy, TrendingDown, Calendar, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Order, Location, Product } from '../../types';
-
-type DateRange = 'today' | 'week' | 'month' | 'all';
 
 interface DashboardViewProps {
   orders: Order[];
@@ -11,30 +9,19 @@ interface DashboardViewProps {
   totalFacturado: number;
 }
 
-function useDateFilter(orders: Order[], range: DateRange) {
+function useMonthFilter(orders: Order[]) {
   return useMemo(() => {
     const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfWeek = new Date(startOfDay);
-    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    let start: Date;
-    if (range === 'today') start = startOfDay;
-    else if (range === 'week') start = startOfWeek;
-    else if (range === 'month') start = startOfMonth;
-    else start = new Date(0);
-
-    const filtered = orders.filter(o => new Date(o.created_at) >= start);
+    const filtered = orders.filter(o => new Date(o.created_at) >= startOfMonth);
     const total = filtered.reduce((s, o) => s + o.total, 0);
     const count = filtered.length;
 
-    // Previous period for comparison
-    const periodMs = now.getTime() - start.getTime();
-    const prevStart = new Date(start.getTime() - periodMs);
+    const prevStart = new Date(startOfMonth.getTime() - (now.getTime() - startOfMonth.getTime()));
     const prevFiltered = orders.filter(o => {
       const d = new Date(o.created_at);
-      return d >= prevStart && d < start;
+      return d >= prevStart && d < startOfMonth;
     });
     const prevTotal = prevFiltered.reduce((s, o) => s + o.total, 0);
     const prevCount = prevFiltered.length;
@@ -42,65 +29,22 @@ function useDateFilter(orders: Order[], range: DateRange) {
     const totalChange = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : total > 0 ? 100 : 0;
     const countChange = prevCount > 0 ? ((count - prevCount) / prevCount) * 100 : count > 0 ? 100 : 0;
 
-    return { filtered, total, count, prevTotal, prevCount, totalChange, countChange, start };
-  }, [orders, range]);
+    return { filtered, total, count, prevTotal, prevCount, totalChange, countChange };
+  }, [orders]);
 }
 
-function buildChartData(orders: Order[], range: DateRange) {
+function buildMonthChart(orders: Order[]) {
   const now = new Date();
-  const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-
-  if (range === 'today') {
-    const hours: { label: string; total: number }[] = [];
-    for (let h = 8; h <= 23; h++) {
-      const label = `${h.toString().padStart(2, '0')}:00`;
-      const total = orders
-        .filter(o => { const d = new Date(o.created_at); return d.getHours() === h && d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); })
-        .reduce((s, o) => s + o.total, 0);
-      hours.push({ label, total });
-    }
-    return { labels: hours.map(h => h.label), values: hours.map(h => h.total), title: 'Hoy por hora' };
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const days: { label: string; total: number }[] = [];
+  for (let i = 1; i <= daysInMonth; i++) {
+    const total = orders
+      .filter(o => { const od = new Date(o.created_at); return od.getDate() === i && od.getMonth() === now.getMonth() && od.getFullYear() === now.getFullYear(); })
+      .reduce((s, o) => s + o.total, 0);
+    days.push({ label: `${i}`, total });
   }
-
-  if (range === 'week') {
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-    const days: { label: string; total: number }[] = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(startOfWeek);
-      d.setDate(d.getDate() + i);
-      const label = dayNames[d.getDay()];
-      const total = orders
-        .filter(o => { const od = new Date(o.created_at); return od.getDate() === d.getDate() && od.getMonth() === d.getMonth() && od.getFullYear() === d.getFullYear(); })
-        .reduce((s, o) => s + o.total, 0);
-      days.push({ label, total });
-    }
-    return { labels: days.map(d => d.label), values: days.map(d => d.total), title: 'Esta semana' };
-  }
-
-  if (range === 'month') {
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const days: { label: string; total: number }[] = [];
-    for (let i = 1; i <= daysInMonth; i++) {
-      const total = orders
-        .filter(o => { const od = new Date(o.created_at); return od.getDate() === i && od.getMonth() === now.getMonth() && od.getFullYear() === now.getFullYear(); })
-        .reduce((s, o) => s + o.total, 0);
-      days.push({ label: `${i}`, total });
-    }
-    return { labels: days.map(d => d.label), values: days.map(d => d.total), title: `${monthNames[now.getMonth()]} ${now.getFullYear()}` };
-  }
-
-  const months: { label: string; total: number }[] = [];
-  const map = new Map<string, number>();
-  orders.forEach(o => {
-    const d = new Date(o.created_at);
-    const key = `${monthNames[d.getMonth()]} ${d.getFullYear()}`;
-    map.set(key, (map.get(key) || 0) + o.total);
-  });
-  const sortedKeys = Array.from(map.keys()).reverse().slice(0, 12).reverse();
-  sortedKeys.forEach(k => months.push({ label: k, total: map.get(k) || 0 }));
-  return { labels: months.map(m => m.label), values: months.map(m => m.total), title: 'Histórico mensual' };
+  return { labels: days.map(d => d.label), values: days.map(d => d.total), title: `${monthNames[now.getMonth()]} ${now.getFullYear()}` };
 }
 
 function ChangeBadge({ value }: { value: number }) {
@@ -117,9 +61,8 @@ function ChangeBadge({ value }: { value: number }) {
 }
 
 export function DashboardView({ orders, locations, menuItems, totalFacturado: _totalFacturado }: DashboardViewProps) {
-  const [range, setRange] = useState<DateRange>('month');
-  const { filtered, total, count, prevTotal, prevCount, totalChange, countChange } = useDateFilter(orders, range);
-  const chart = useMemo(() => buildChartData(filtered, range), [filtered, range]);
+  const { filtered, total, count, prevTotal, prevCount, totalChange, countChange } = useMonthFilter(orders);
+  const chart = useMemo(() => buildMonthChart(filtered), [filtered]);
 
   const maxVal = Math.max(...chart.values, 1);
   const BAR_HEIGHT = 140;
@@ -136,29 +79,12 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
   const topSelling = Object.entries(productSales).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const leastSelling = Object.entries(productSales).sort((a, b) => a[1] - b[1]).slice(0, 5);
 
-  const ranges: { key: DateRange; label: string }[] = [
-    { key: 'today', label: 'Hoy' },
-    { key: 'week', label: 'Semana' },
-    { key: 'month', label: 'Mes' },
-    { key: 'all', label: 'Todo' },
-  ];
-
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-black">Dashboard</h2>
-          <p className="text-admin-muted text-sm">Resumen del restaurante</p>
-        </div>
-        <div className="flex gap-2 p-1 bg-admin-surface border border-admin-border rounded-2xl">
-          {ranges.map(r => (
-            <button key={r.key} onClick={() => setRange(r.key)}
-              className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
-                range === r.key ? 'bg-white text-black shadow-lg' : 'text-admin-muted hover:text-admin-text'
-              }`}>
-              {r.label}
-            </button>
-          ))}
+          <p className="text-admin-muted text-sm">Resumen mensual</p>
         </div>
       </div>
 
