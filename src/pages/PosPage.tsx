@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, Printer, DollarSign, CreditCard, Smartphone, Banknote, LogOut, User, IdCard, Calendar, History, Loader2, QrCode } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRestaurant } from '../context/RestaurantContext';
 import { Product, Cashier, POSCartItem, PaymentMethod, Order, OrderStatus, DeliveryType } from '../types';
 import { supabase } from '../lib/supabase';
@@ -1420,7 +1420,7 @@ function CorteHistoryModal({
 // Main POS Page
 // ==============================
 export function PosPage() {
-  const { menuItems, categories, locations, config, findCustomer, saveCustomer, generateInvoiceNumber, updateConfig } = useRestaurant();
+  const { menuItems, categories, locations, config, findCustomer, saveCustomer, generateInvoiceNumber } = useRestaurant();
   const [cashier, setCashier] = useState<Cashier | null>(null);
   const [activeCategory, setActiveCategory] = useState('Todas');
   const [cart, setCart] = useState<POSCartItem[]>([]);
@@ -1436,6 +1436,7 @@ export function PosPage() {
   const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
   const [editingRate, setEditingRate] = useState(false);
   const [editRateValue, setEditRateValue] = useState('');
+  const queryClient = useQueryClient();
   const [showReceipt, setShowReceipt] = useState<{
     items: POSCartItem[];
     total: number;
@@ -1480,6 +1481,7 @@ export function PosPage() {
         change_amount: row.change_amount ?? 0,
         cashier_id: row.cashier_id,
         invoice_number: row.invoice_number || '',
+        payment_currency: row.payment_currency || null,
         created_at: row.created_at,
       }));
     },
@@ -1789,10 +1791,11 @@ export function PosPage() {
               type="number" step="0.01" min="0"
               value={editRateValue}
               onChange={e => setEditRateValue(e.target.value)}
-              onBlur={() => {
+              onBlur={async () => {
                 const v = parseFloat(editRateValue);
                 if (v > 0 && v !== config.exchangeRate) {
-                  updateConfig({ exchangeRate: v });
+                  await supabase.rpc('update_exchange_rate', { rate: v });
+                  queryClient.invalidateQueries({ queryKey: ['config'] });
                 }
                 setEditingRate(false);
               }}

@@ -22,6 +22,7 @@ import { useLanguage } from '../../context/LanguageContext';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { useDistanceCalculation } from '../../hooks/useDistanceCalculation';
 import { fetchBcvRate, getRateSource } from '../../services/bcvRate';
+import { supabase } from '../../lib/supabase';
 import { OptimizedImage } from './OptimizedImage';
 
 interface CartDrawerProps {
@@ -51,7 +52,7 @@ export function CartDrawer({
   onCheckout,
   clearCart,
 }: CartDrawerProps) {
-  const { config, updateConfig, findCustomer } = useRestaurant();
+  const { config, findCustomer } = useRestaurant();
   const { t, language } = useLanguage();
   const {
     searchAddress,
@@ -116,11 +117,11 @@ export function CartDrawer({
       try {
         const rate = await fetchBcvRate();
         if (rate !== null && rate !== config.exchangeRate) {
-          await updateConfig({ exchangeRate: rate });
+          await supabase.rpc('update_exchange_rate', { rate });
         }
         } catch { /* BCV rate fetch failed */ }
       })();
-  }, [isOpen, updateConfig, config.exchangeRate]);
+  }, [isOpen, config.exchangeRate]);
 
   // ── Auto GPS geolocation when checkout opens (once) ──────────────────
   const gpsAttempted = useRef(false);
