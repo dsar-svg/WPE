@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, memo } from 'react';
-import { UtensilsCrossed } from 'lucide-react';
+import { useRestaurant } from '../../context/RestaurantContext';
 
 interface OptimizedImageProps {
   src: string | null;
@@ -12,6 +12,7 @@ export const OptimizedImage = memo(function OptimizedImage({
   alt,
   className = '',
 }: OptimizedImageProps) {
+  const { config } = useRestaurant();
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
   const imgRef = useRef<HTMLDivElement>(null);
@@ -35,12 +36,13 @@ export const OptimizedImage = memo(function OptimizedImage({
   }, []);
 
   const showPlaceholder = !src || hasError;
+  const logo = config?.logo || '/logo.png';
 
   return (
     <div ref={imgRef} className={`relative overflow-hidden bg-zinc-900/50 flex items-center justify-center ${className}`}>
       {showPlaceholder ? (
         <div className="w-full h-full flex items-center justify-center">
-          <UtensilsCrossed className="w-10 h-10 text-zinc-600" />
+          <img src={logo} alt="Logo" className="w-16 h-16 object-contain opacity-40" referrerPolicy="no-referrer" />
         </div>
       ) : (
         <>
