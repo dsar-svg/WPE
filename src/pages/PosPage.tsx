@@ -331,7 +331,7 @@ function ReceiptModal({
   @page { size: 80mm auto; margin: 0; }
   body { margin: 0; padding: 0; }
 }
-body { font-family: 'Courier New', 'Courier', monospace; font-size: 12px; width: 290px; margin: 0 auto; padding: 8px; color: #000; }
+body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; width: 290px; margin: 0 auto; padding: 8px; color: #000; }
 h2 { text-align: center; margin: 0; font-size: 16px; text-transform: uppercase; font-weight: 900; color: #000; }
 h3 { text-align: center; margin: 2px 0; font-size: 12px; font-weight: 700; color: #000; }
 p { text-align: center; margin: 1px 0; font-size: 11px; font-weight: 600; color: #000; }
@@ -358,7 +358,10 @@ ${config.businessPhone ? `<p>Tel: ${config.businessPhone}</p>` : ''}
 <hr>
 <table>
 <tr><th>Item</th><th class="c">Cant</th><th class="r">Precio</th></tr>
-${items.map(i => `<tr><td>${i.product.name}</td><td class="c">${i.quantity}</td><td class="r">$${(i.product.price * i.quantity).toFixed(2)}</td></tr>`).join('')}
+${items.map(i => {
+  const choices = i.selectedChoices?.length ? ` (${i.selectedChoices.join(', ')})` : '';
+  return `<tr><td>${i.product.name}${choices}</td><td class="c">${i.quantity}</td><td class="r">$${(i.product.price * i.quantity).toFixed(2)}</td></tr>`;
+}).join('')}
 </table>
 <hr>
 <table>
@@ -597,7 +600,7 @@ function CorteDeCajaModal({
     w.document.write(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Corte de Caja</title>
 <style>
-body { font-family: 'Courier New', 'Courier', monospace; font-size: 12px; width: 290px; margin: 0 auto; padding: 8px; color: #000; }
+body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; width: 290px; margin: 0 auto; padding: 8px; color: #000; }
 h2 { text-align: center; margin: 0; font-size: 15px; text-transform: uppercase; font-weight: 900; color: #000; }
 h3 { text-align: center; margin: 2px 0; font-size: 12px; font-weight: 700; color: #000; }
 p { text-align: center; margin: 1px 0; font-size: 11px; font-weight: 600; color: #000; }
@@ -828,11 +831,11 @@ function InvoiceHistoryModal({
   const handleReprint = (order: Order) => {
     const w = window.open('', '', 'width=380,height=700');
     if (!w) return;
-    const items = order.items as Array<{ name: string; quantity: number; price: number }>;
+    const items = order.items as Array<{ name: string; quantity: number; price: number; selectedChoices?: string[] }>;
     w.document.write(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Factura</title>
 <style>
-body { font-family: 'Courier New', 'Courier', monospace; font-size: 12px; width: 290px; margin: 0 auto; padding: 8px; color: #000; }
+body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; width: 290px; margin: 0 auto; padding: 8px; color: #000; }
 h2 { text-align: center; margin: 0; font-size: 14px; font-weight: 900; color: #000; }
 p { text-align: center; margin: 1px 0; font-size: 11px; font-weight: 600; color: #000; }
 table { width: 100%; border-collapse: collapse; margin: 6px 0; }
@@ -851,7 +854,10 @@ hr { border: none; border-top: 1px solid #000; margin: 4px 0; }
 <hr>
 <table>
 <tr><th>Item</th><th class="c">Cant</th><th class="r">Precio</th></tr>
-${items.map(i => `<tr><td>${i.name}</td><td class="c">${i.quantity}</td><td class="r">$${(i.price * i.quantity).toFixed(2)}</td></tr>`).join('')}
+${items.map(i => {
+  const choices = i.selectedChoices?.length ? ` (${i.selectedChoices.join(', ')})` : '';
+  return `<tr><td>${i.name}${choices}</td><td class="c">${i.quantity}</td><td class="r">$${(i.price * i.quantity).toFixed(2)}</td></tr>`;
+}).join('')}
 </table>
 <hr>
 <table>
