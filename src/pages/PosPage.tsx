@@ -331,18 +331,18 @@ function ReceiptModal({
   @page { size: 80mm auto; margin: 0; }
   body { margin: 0; padding: 0; }
 }
-body { font-family: 'Courier New', monospace; font-size: 11px; width: 290px; margin: 0 auto; padding: 8px; }
-h2 { text-align: center; margin: 0; font-size: 15px; text-transform: uppercase; }
-h3 { text-align: center; margin: 2px 0; font-size: 12px; }
-p { text-align: center; margin: 1px 0; font-size: 10px; }
+body { font-family: 'Courier New', 'Courier', monospace; font-size: 12px; width: 290px; margin: 0 auto; padding: 8px; color: #000; }
+h2 { text-align: center; margin: 0; font-size: 16px; text-transform: uppercase; font-weight: 900; color: #000; }
+h3 { text-align: center; margin: 2px 0; font-size: 12px; font-weight: 700; color: #000; }
+p { text-align: center; margin: 1px 0; font-size: 11px; font-weight: 600; color: #000; }
 table { width: 100%; border-collapse: collapse; margin: 8px 0; }
-th, td { text-align: left; padding: 2px 3px; font-size: 10px; }
-th { border-bottom: 1px dashed #000; }
+th, td { text-align: left; padding: 2px 3px; font-size: 11px; color: #000; }
+th { border-bottom: 1px solid #000; font-weight: 900; }
 td.r { text-align: right; }
 td.c { text-align: center; }
-.total td { border-top: 1px dashed #000; font-weight: bold; font-size: 12px; padding-top: 4px; }
-hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
-.footer { text-align: center; font-size: 9px; margin-top: 6px; }
+.total td { border-top: 1px solid #000; font-weight: 900; font-size: 13px; padding-top: 4px; color: #000; }
+hr { border: none; border-top: 1px solid #000; margin: 6px 0; }
+.footer { text-align: center; font-size: 10px; margin-top: 6px; font-weight: 600; color: #000; }
 .left { text-align: left; }
 </style></head><body>
 <h2>${config.name || 'Wallace Panda Express'}</h2>
@@ -597,16 +597,16 @@ function CorteDeCajaModal({
     w.document.write(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Corte de Caja</title>
 <style>
-body { font-family: 'Courier New', monospace; font-size: 11px; width: 290px; margin: 0 auto; padding: 8px; }
-h2 { text-align: center; margin: 0; font-size: 14px; text-transform: uppercase; }
-h3 { text-align: center; margin: 2px 0; font-size: 12px; }
-p { text-align: center; margin: 1px 0; font-size: 10px; }
+body { font-family: 'Courier New', 'Courier', monospace; font-size: 12px; width: 290px; margin: 0 auto; padding: 8px; color: #000; }
+h2 { text-align: center; margin: 0; font-size: 15px; text-transform: uppercase; font-weight: 900; color: #000; }
+h3 { text-align: center; margin: 2px 0; font-size: 12px; font-weight: 700; color: #000; }
+p { text-align: center; margin: 1px 0; font-size: 11px; font-weight: 600; color: #000; }
 table { width: 100%; border-collapse: collapse; margin: 6px 0; }
-td { padding: 2px 3px; font-size: 10px; }
+td { padding: 2px 3px; font-size: 11px; color: #000; }
 td.r { text-align: right; }
-hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
-.total td { font-weight: bold; font-size: 12px; }
-.footer { text-align: center; font-size: 9px; margin-top: 6px; }
+hr { border: none; border-top: 1px solid #000; margin: 6px 0; }
+.total td { font-weight: 900; font-size: 13px; color: #000; }
+.footer { text-align: center; font-size: 10px; margin-top: 6px; font-weight: 600; color: #000; }
 </style></head><body>
 <h2>${locationName}</h2>
 <h3>CORTE DE CAJA</h3>
@@ -832,17 +832,17 @@ function InvoiceHistoryModal({
     w.document.write(`<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Factura</title>
 <style>
-body { font-family: 'Courier New', monospace; font-size: 11px; width: 290px; margin: 0 auto; padding: 8px; }
-h2 { text-align: center; margin: 0; font-size: 14px; }
-p { text-align: center; margin: 1px 0; font-size: 10px; }
+body { font-family: 'Courier New', 'Courier', monospace; font-size: 12px; width: 290px; margin: 0 auto; padding: 8px; color: #000; }
+h2 { text-align: center; margin: 0; font-size: 14px; font-weight: 900; color: #000; }
+p { text-align: center; margin: 1px 0; font-size: 11px; font-weight: 600; color: #000; }
 table { width: 100%; border-collapse: collapse; margin: 6px 0; }
-th, td { text-align: left; padding: 2px 3px; font-size: 10px; }
-th { border-bottom: 1px dashed #000; }
+th, td { text-align: left; padding: 2px 3px; font-size: 11px; color: #000; }
+th { border-bottom: 1px solid #000; font-weight: 900; }
 td.r { text-align: right; }
 td.c { text-align: center; }
-.total td { border-top: 1px dashed #000; font-weight: bold; font-size: 12px; }
-hr { border: none; border-top: 1px dashed #000; margin: 4px 0; }
-.footer { text-align: center; font-size: 9px; }
+.total td { border-top: 1px solid #000; font-weight: 900; font-size: 13px; color: #000; }
+hr { border: none; border-top: 1px solid #000; margin: 4px 0; }
+.footer { text-align: center; font-size: 10px; font-weight: 600; color: #000; }
 </style></head><body>
 <h2>FACTURA ${order.invoice_number || ''}</h2>
 <p>${formatDate(order.created_at)}</p>
