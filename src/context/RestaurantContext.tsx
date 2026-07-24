@@ -187,17 +187,17 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   const locQuery = useQuery({
     queryKey: ['locations'],
     queryFn: async () => { const { data } = await supabase.from('locations').select('*'); return data || []; },
-    staleTime: 3600000,
+    staleTime: 15000,
   });
   const menuQuery = useQuery({
     queryKey: ['menu_items'],
     queryFn: async () => { const { data } = await supabase.from('menu_items').select('*').order('sort_order', { ascending: true }); return data || []; },
-    staleTime: 3600000,
+    staleTime: 15000,
   });
   const catQuery = useQuery({
     queryKey: ['categories'],
     queryFn: async () => { const { data } = await supabase.from('categories').select('*').order('sort_order', { ascending: true }); return data || []; },
-    staleTime: 3600000,
+    staleTime: 15000,
   });
   const configQuery = useQuery({
     queryKey: ['config'],
@@ -205,7 +205,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
       const { data } = await supabase.from('config').select('*').limit(1).maybeSingle();
       return data || null;
     },
-    staleTime: 3600000,
+    staleTime: 15000,
   });
   const adminsQuery = useQuery({
     queryKey: ['admins'],
@@ -213,7 +213,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
       const { data } = await supabase.from('admins').select('email, role, location_id');
       return data || [];
     },
-    staleTime: 3600000,
+    staleTime: 15000,
   });
 
   const dataFetched = locQuery.isFetched && menuQuery.isFetched && catQuery.isFetched && configQuery.isFetched && adminsQuery.isFetched;

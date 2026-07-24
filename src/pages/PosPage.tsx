@@ -315,6 +315,11 @@ function PaymentModal({
 // ==============================
 // Receipt (Modificado al Formato Fiscal SENIAT)
 // ==============================
+function getChoiceAdjust(product: Product, selectedChoices?: string[]): number {
+  if (!selectedChoices || !product.choices) return 0;
+  return product.choices.filter(c => selectedChoices.includes(c.name)).reduce((s, c) => s + (c.priceAdjust ?? 0), 0);
+}
+
 function ReceiptModal({
   items, total, paymentMethod, changeAmount, cashierName, customerName, customerCedula, invoiceNumber, config, locationName, exchangeRate, onClose: _onClose, onNewSale,
 }: {
@@ -465,7 +470,7 @@ function ReceiptModal({
     </thead>
     <tbody>
       ${items.map(i => {
-        const itemTotalBs = i.product.price * i.quantity * rate;
+        const itemTotalBs = (i.product.price + getChoiceAdjust(i.product, i.selectedChoices)) * i.quantity * rate;
         const choices = i.selectedChoices?.length ? ` (${i.selectedChoices.join(', ')})` : '';
         const desc = i.product.description ? ` — ${abbreviate(i.product.description)}` : '';
         return `
@@ -1556,7 +1561,12 @@ export function PosPage() {
     return items;
   }, [menuItems, activeCategory, search]);
 
-  const cartTotal = useMemo(() => cart.reduce((s, i) => s + i.product.price * i.quantity, 0), [cart]);
+  const getChoiceAdjust = useCallback((product: Product, selectedChoices?: string[]) => {
+    if (!selectedChoices || !product.choices) return 0;
+    return product.choices.filter(c => selectedChoices.includes(c.name)).reduce((s, c) => s + (c.priceAdjust ?? 0), 0);
+  }, []);
+
+  const cartTotal = useMemo(() => cart.reduce((s, i) => s + (i.product.price + getChoiceAdjust(i.product, i.selectedChoices)) * i.quantity, 0), [cart, getChoiceAdjust]);
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
 
   const addToCart = useCallback((product: Product, selectedChoices?: string[]) => {
@@ -1606,7 +1616,7 @@ export function PosPage() {
     const orderItems = cart.map(i => ({
       id: i.product.id,
       name: i.product.name,
-      price: i.product.price,
+      price: i.product.price + getChoiceAdjust(i.product, i.selectedChoices),
       quantity: i.quantity,
       notes: i.notes || '',
       selectedChoices: i.selectedChoices || [],
@@ -1955,7 +1965,7 @@ export function PosPage() {
                       {item.selectedChoices.join(', ')}
                     </div>
                   )}
-                  <div className="text-primary-vibrant font-black text-sm">${item.product.price.toFixed(2)}</div>
+                  <div className="text-primary-vibrant font-black text-sm">${(item.product.price + getChoiceAdjust(item.product, item.selectedChoices)).toFixed(2)}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button onClick={() => updateQty(key, -1)}
