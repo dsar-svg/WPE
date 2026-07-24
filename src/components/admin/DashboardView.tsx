@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { MapPin, Utensils, ShoppingBag, DollarSign, Trophy, TrendingDown, Calendar, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { MapPin, Utensils, ShoppingBag, DollarSign, Trophy, TrendingDown, Calendar, ArrowUpRight, ArrowDownRight, Truck, Store } from 'lucide-react';
 import { Order, Location, Product } from '../../types';
 
 interface DashboardViewProps {
@@ -10,6 +10,12 @@ interface DashboardViewProps {
 }
 
 const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+function isToday(dateStr: string) {
+  const d = new Date(dateStr);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+}
 
 function useMonthFilter(orders: Order[], year: number, month: number) {
   return useMemo(() => {
@@ -39,6 +45,17 @@ function useMonthFilter(orders: Order[], year: number, month: number) {
   }, [orders, year, month]);
 }
 
+function useTodayFilter(orders: Order[]) {
+  return useMemo(() => {
+    const filtered = orders.filter(o => isToday(o.created_at));
+    const total = filtered.reduce((s, o) => s + o.total, 0);
+    const delivery = filtered.filter(o => o.delivery_type === 'Delivery').reduce((s, o) => s + o.total, 0);
+    const pickup = filtered.filter(o => o.delivery_type === 'Pick-up').reduce((s, o) => s + o.total, 0);
+    const count = filtered.length;
+    return { filtered, total, delivery, pickup, count };
+  }, [orders]);
+}
+
 function buildMonthChart(orders: Order[], year: number, month: number) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const days: { label: string; total: number }[] = [];
@@ -66,9 +83,11 @@ function ChangeBadge({ value }: { value: number }) {
 
 export function DashboardView({ orders, locations, menuItems, totalFacturado: _totalFacturado }: DashboardViewProps) {
   const now = new Date();
+  const [view, setView] = useState<'month' | 'today'>('month');
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const { filtered, total, count, prevTotal, prevCount, totalChange, countChange } = useMonthFilter(orders, year, month);
+  const today = useTodayFilter(orders);
   const chart = useMemo(() => buildMonthChart(filtered, year, month), [filtered, year, month]);
 
   const maxVal = Math.max(...chart.values, 1);
@@ -91,178 +110,214 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-black">Dashboard</h2>
-          <p className="text-admin-muted text-sm">Resumen mensual</p>
+          <p className="text-admin-muted text-sm">{view === 'today' ? 'Resumen del día de hoy' : 'Resumen mensual'}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <select value={month} onChange={e => setMonth(Number(e.target.value))}
-            className="bg-admin-surface border border-admin-border rounded-xl px-3 py-2 text-sm font-bold text-admin-text outline-none focus:ring-2 focus:ring-primary-vibrant cursor-pointer"
-          >
-            {monthNames.map((name, i) => <option key={i} value={i}>{name}</option>)}
-          </select>
-          <select value={year} onChange={e => setYear(Number(e.target.value))}
-            className="bg-admin-surface border border-admin-border rounded-xl px-3 py-2 text-sm font-bold text-admin-text outline-none focus:ring-2 focus:ring-primary-vibrant cursor-pointer"
-          >
-            {Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+        <div className="flex items-center gap-3">
+          <div className="flex bg-admin-surface border border-admin-border rounded-xl p-1">
+            <button onClick={() => setView('today')}
+              className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${view === 'today' ? 'bg-primary-vibrant text-white' : 'text-admin-muted hover:text-admin-text'}`}
+            >Hoy</button>
+            <button onClick={() => setView('month')}
+              className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${view === 'month' ? 'bg-primary-vibrant text-white' : 'text-admin-muted hover:text-admin-text'}`}
+            >Mes</button>
+          </div>
+          {view === 'month' && (
+            <div className="flex items-center gap-2">
+              <select value={month} onChange={e => setMonth(Number(e.target.value))}
+                className="bg-admin-surface border border-admin-border rounded-xl px-3 py-2 text-sm font-bold text-admin-text outline-none focus:ring-2 focus:ring-primary-vibrant cursor-pointer"
+              >
+                {monthNames.map((name, i) => <option key={i} value={i}>{name}</option>)}
+              </select>
+              <select value={year} onChange={e => setYear(Number(e.target.value))}
+                className="bg-admin-surface border border-admin-border rounded-xl px-3 py-2 text-sm font-bold text-admin-text outline-none focus:ring-2 focus:ring-primary-vibrant cursor-pointer"
+              >
+                {Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
-          <MapPin className="w-8 h-8 text-primary-vibrant mb-4" />
-          <p className="text-3xl font-black">{locations.length}</p>
-          <p className="text-admin-muted text-sm mt-1">Sedes activas</p>
-        </div>
-        <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
-          <Utensils className="w-8 h-8 text-secondary-vibrant mb-4" />
-          <p className="text-3xl font-black">{menuItems.length}</p>
-          <p className="text-admin-muted text-sm mt-1">Productos en menú</p>
-        </div>
-        <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
-          <div className="flex items-center gap-3 mb-4">
-            <ShoppingBag className="w-8 h-8 text-green-500" />
-            <ChangeBadge value={countChange} />
+      {view === 'today' ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+            <DollarSign className="w-8 h-8 text-yellow-500 mb-4" />
+            <p className="text-3xl font-black">${today.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-admin-muted text-sm mt-1">Facturado hoy</p>
           </div>
-          <p className="text-3xl font-black">{count}</p>
-          <p className="text-admin-muted text-sm mt-1">Pedidos{prevCount > 0 ? ` (vs ${prevCount} anterior)` : ''}</p>
-        </div>
-        <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
-          <div className="flex items-center gap-3 mb-4">
-            <DollarSign className="w-8 h-8 text-yellow-500" />
-            <ChangeBadge value={totalChange} />
+          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+            <Truck className="w-8 h-8 text-blue-500 mb-4" />
+            <p className="text-3xl font-black">${today.delivery.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-admin-muted text-sm mt-1">Facturado Delivery</p>
           </div>
-          <p className="text-3xl font-black">${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-          <p className="text-admin-muted text-sm mt-1">Ventas{prevTotal > 0 ? ` (vs $${prevTotal.toFixed(0)} anterior)` : ''}</p>
-        </div>
-      </div>
-
-      {/* Sales Chart */}
-      <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
-        <div className="flex items-center gap-3 mb-8">
-          <Calendar className="w-6 h-6 text-primary-vibrant" />
-          <h3 className="text-lg font-black">{chart.title}</h3>
-        </div>
-        {filtered.length === 0 ? (
-          <p className="text-admin-muted text-sm text-center py-12">Sin ventas en este período</p>
-        ) : (
-          <div className="overflow-x-auto pb-2">
-            <svg width="100%" height={BAR_HEIGHT + 40} viewBox={`0 0 ${barCount * (28 + BAR_GAP) + 20} ${BAR_HEIGHT + 40}`} preserveAspectRatio="xMidYMid meet" className="min-w-full">
-              <defs>
-                <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#cb2027" stopOpacity="1" />
-                  <stop offset="100%" stopColor="#cb2027" stopOpacity="0.3" />
-                </linearGradient>
-              </defs>
-              {chart.values.map((val, i) => {
-                const barH = maxVal > 0 ? (val / maxVal) * BAR_HEIGHT : 0;
-                const x = i * (28 + BAR_GAP) + 10;
-                const y = BAR_HEIGHT - barH;
-                return (
-                  <g key={i}>
-                    <rect x={x} y={y} width={24} height={barH} rx={4} fill="url(#barGrad)" className="hover:opacity-80 transition-opacity">
-                      <title>${val.toFixed(2)}</title>
-                    </rect>
-                    {val > 0 && (
-                      <text x={x + 12} y={y - 6} textAnchor="middle" fill="#a1a1aa" fontSize="9" fontWeight="bold">
-                        ${val.toFixed(2)}
-                      </text>
-                    )}
-                    <text x={x + 12} y={BAR_HEIGHT + 16} textAnchor="middle" fill="#52525b" fontSize="9" fontWeight="bold">
-                      {chart.labels[i]}
-                    </text>
-                  </g>
-                );
-              })}
-              {[0, 0.25, 0.5, 0.75, 1].map(pct => (
-                <line key={pct} x1="0" y1={BAR_HEIGHT - pct * BAR_HEIGHT} x2={barCount * (28 + BAR_GAP) + 10} y2={BAR_HEIGHT - pct * BAR_HEIGHT}
-                  stroke="#352f2b" strokeWidth="1" strokeDasharray="4 4" />
-              ))}
-            </svg>
+          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+            <Store className="w-8 h-8 text-green-500 mb-4" />
+            <p className="text-3xl font-black">${today.pickup.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-admin-muted text-sm mt-1">Facturado Pick-up</p>
           </div>
-        )}
-      </div>
-
-      {/* Top / Bottom Selling */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <Trophy className="w-6 h-6 text-yellow-500" />
-            <h3 className="text-lg font-black">Top 5 Más Vendidos</h3>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+            <MapPin className="w-8 h-8 text-primary-vibrant mb-4" />
+            <p className="text-3xl font-black">{locations.length}</p>
+            <p className="text-admin-muted text-sm mt-1">Sedes activas</p>
           </div>
-          {topSelling.length === 0 ? (
-            <p className="text-admin-muted text-sm">Sin datos en este período</p>
-          ) : (
-            <div className="space-y-4">
-              {topSelling.map(([name, qty], i) => {
-                const maxQty = topSelling[0][1];
-                const pct = maxQty > 0 ? (qty / maxQty) * 100 : 0;
-                return (
-                  <div key={name} className="space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-bold text-zinc-300">{i + 1}. {name}</span>
-                      <span className="text-xs font-black text-primary-vibrant">{qty} uds</span>
-                    </div>
-                    <div className="w-full h-2 bg-admin-border rounded-full overflow-hidden">
-                      <div className="h-full bg-primary-vibrant rounded-full" style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
+          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+            <Utensils className="w-8 h-8 text-secondary-vibrant mb-4" />
+            <p className="text-3xl font-black">{menuItems.length}</p>
+            <p className="text-admin-muted text-sm mt-1">Productos en menú</p>
+          </div>
+          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <ShoppingBag className="w-8 h-8 text-green-500" />
+              <ChangeBadge value={countChange} />
             </div>
-          )}
-        </div>
-
-        <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <TrendingDown className="w-6 h-6 text-red-500" />
-            <h3 className="text-lg font-black">Top 5 Menos Vendidos</h3>
+            <p className="text-3xl font-black">{count}</p>
+            <p className="text-admin-muted text-sm mt-1">Pedidos{prevCount > 0 ? ` (vs ${prevCount} anterior)` : ''}</p>
           </div>
-          {leastSelling.length === 0 ? (
-            <p className="text-admin-muted text-sm">Sin datos en este período</p>
-          ) : (
-            <div className="space-y-4">
-              {leastSelling.map(([name, qty], i) => {
-                const maxQty = topSelling[0]?.[1] || 1;
-                const pct = maxQty > 0 ? (qty / maxQty) * 100 : 0;
-                return (
-                  <div key={name} className="space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-bold text-zinc-300">{i + 1}. {name}</span>
-                      <span className="text-xs font-black text-red-500">{qty} uds</span>
-                    </div>
-                    <div className="w-full h-2 bg-admin-border rounded-full overflow-hidden">
-                      <div className="h-full bg-red-500 rounded-full" style={{ width: `${pct}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
+          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+            <div className="flex items-center gap-3 mb-4">
+              <DollarSign className="w-8 h-8 text-yellow-500" />
+              <ChangeBadge value={totalChange} />
             </div>
-          )}
+            <p className="text-3xl font-black">${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-admin-muted text-sm mt-1">Ventas{prevTotal > 0 ? ` (vs $${prevTotal.toFixed(0)} anterior)` : ''}</p>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Recent Orders */}
-      <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
-        <h3 className="text-lg font-black mb-6">Últimos pedidos</h3>
-        {filtered.length === 0 ? (
-          <p className="text-admin-muted text-sm">Sin pedidos en este período</p>
-        ) : (
-          <div className="space-y-3">
-            {filtered.slice(0, 5).map(order => (
-              <div key={order.id} className="flex items-center justify-between bg-admin-bg p-4 rounded-2xl">
-                <div>
-                  <p className="font-bold text-sm text-admin-text">{order.customer_name}</p>
-                  <p className="text-[10px] text-admin-muted">${order.total.toFixed(2)} · {order.delivery_type}</p>
-                </div>
-                <span className="text-[10px] text-admin-muted">
-                  {new Date(order.created_at).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                </span>
+      {view === 'month' && (
+        <>
+          {/* Sales Chart */}
+          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+            <div className="flex items-center gap-3 mb-8">
+              <Calendar className="w-6 h-6 text-primary-vibrant" />
+              <h3 className="text-lg font-black">{chart.title}</h3>
+            </div>
+            {filtered.length === 0 ? (
+              <p className="text-admin-muted text-sm text-center py-12">Sin ventas en este período</p>
+            ) : (
+              <div className="overflow-x-auto pb-2">
+                <svg width="100%" height={BAR_HEIGHT + 40} viewBox={`0 0 ${barCount * (28 + BAR_GAP) + 20} ${BAR_HEIGHT + 40}`} preserveAspectRatio="xMidYMid meet" className="min-w-full">
+                  <defs>
+                    <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#cb2027" stopOpacity="1" />
+                      <stop offset="100%" stopColor="#cb2027" stopOpacity="0.3" />
+                    </linearGradient>
+                  </defs>
+                  {chart.values.map((val, i) => {
+                    const barH = maxVal > 0 ? (val / maxVal) * BAR_HEIGHT : 0;
+                    const x = i * (28 + BAR_GAP) + 10;
+                    const y = BAR_HEIGHT - barH;
+                    return (
+                      <g key={i}>
+                        <rect x={x} y={y} width={24} height={barH} rx={4} fill="url(#barGrad)" className="hover:opacity-80 transition-opacity">
+                          <title>${val.toFixed(2)}</title>
+                        </rect>
+                        {val > 0 && (
+                          <text x={x + 12} y={y - 6} textAnchor="middle" fill="#a1a1aa" fontSize="9" fontWeight="bold">
+                            ${val.toFixed(2)}
+                          </text>
+                        )}
+                        <text x={x + 12} y={BAR_HEIGHT + 16} textAnchor="middle" fill="#52525b" fontSize="9" fontWeight="bold">
+                          {chart.labels[i]}
+                        </text>
+                      </g>
+                    );
+                  })}
+                  {[0, 0.25, 0.5, 0.75, 1].map(pct => (
+                    <line key={pct} x1="0" y1={BAR_HEIGHT - pct * BAR_HEIGHT} x2={barCount * (28 + BAR_GAP) + 10} y2={BAR_HEIGHT - pct * BAR_HEIGHT}
+                      stroke="#352f2b" strokeWidth="1" strokeDasharray="4 4" />
+                  ))}
+                </svg>
               </div>
-            ))}
+            )}
           </div>
-        )}
-      </div>
+
+          {/* Top / Bottom Selling */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <Trophy className="w-6 h-6 text-yellow-500" />
+                <h3 className="text-lg font-black">Top 5 Más Vendidos</h3>
+              </div>
+              {topSelling.length === 0 ? (
+                <p className="text-admin-muted text-sm">Sin datos en este período</p>
+              ) : (
+                <div className="space-y-4">
+                  {topSelling.map(([name, qty], i) => {
+                    const maxQty = topSelling[0][1];
+                    const pct = maxQty > 0 ? (qty / maxQty) * 100 : 0;
+                    return (
+                      <div key={name} className="space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-bold text-zinc-300">{i + 1}. {name}</span>
+                          <span className="text-xs font-black text-primary-vibrant">{qty} uds</span>
+                        </div>
+                        <div className="w-full h-2 bg-admin-border rounded-full overflow-hidden">
+                          <div className="h-full bg-primary-vibrant rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <TrendingDown className="w-6 h-6 text-red-500" />
+                <h3 className="text-lg font-black">Top 5 Menos Vendidos</h3>
+              </div>
+              {leastSelling.length === 0 ? (
+                <p className="text-admin-muted text-sm">Sin datos en este período</p>
+              ) : (
+                <div className="space-y-4">
+                  {leastSelling.map(([name, qty], i) => {
+                    const maxQty = topSelling[0]?.[1] || 1;
+                    const pct = maxQty > 0 ? (qty / maxQty) * 100 : 0;
+                    return (
+                      <div key={name} className="space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-bold text-zinc-300">{i + 1}. {name}</span>
+                          <span className="text-xs font-black text-red-500">{qty} uds</span>
+                        </div>
+                        <div className="w-full h-2 bg-admin-border rounded-full overflow-hidden">
+                          <div className="h-full bg-red-500 rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Orders */}
+          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+            <h3 className="text-lg font-black mb-6">Últimos pedidos</h3>
+            {filtered.length === 0 ? (
+              <p className="text-admin-muted text-sm">Sin pedidos en este período</p>
+            ) : (
+              <div className="space-y-3">
+                {filtered.slice(0, 5).map(order => (
+                  <div key={order.id} className="flex items-center justify-between bg-admin-bg p-4 rounded-2xl">
+                    <div>
+                      <p className="font-bold text-sm text-admin-text">{order.customer_name}</p>
+                      <p className="text-[10px] text-admin-muted">${order.total.toFixed(2)} · {order.delivery_type}</p>
+                    </div>
+                    <span className="text-[10px] text-admin-muted">
+                      {new Date(order.created_at).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
