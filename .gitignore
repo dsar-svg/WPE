@@ -10,7 +10,7 @@ dist/
 dist-admin/
 dist-pos/
 docs/
-scripts/
+scripts/backup/
 .impeccable/
 graphify-out/
 .vercel
