@@ -7,6 +7,10 @@ export function UpdateBanner() {
   const regRef = useRef<ServiceWorkerRegistration | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const checkForUpdate = () => {
+    if (regRef.current) regRef.current.update();
+  };
+
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
 
@@ -31,9 +35,10 @@ export function UpdateBanner() {
           });
         });
 
-        intervalRef.current = setInterval(() => {
-          reg.update();
-        }, 30000);
+        intervalRef.current = setInterval(checkForUpdate, 15000);
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') checkForUpdate();
+        });
       } catch { /* SW registration failed */ }
     };
 

@@ -1,9 +1,7 @@
 // Version: __VERSION__
 const CACHE_NAME = 'w-panda-cache-__VERSION__';
 
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
-});
+self.addEventListener('install', () => {});
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
