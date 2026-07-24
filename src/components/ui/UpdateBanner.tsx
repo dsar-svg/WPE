@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { RefreshCw, RotateCcw } from 'lucide-react';
 
 export function UpdateBanner() {
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+  const regRef = useRef<ServiceWorkerRegistration | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
@@ -11,6 +13,7 @@ export function UpdateBanner() {
     const registerSW = async () => {
       try {
         const reg = await navigator.serviceWorker.register('/sw.js');
+        regRef.current = reg;
 
         if (reg.waiting) {
           setWaitingWorker(reg.waiting);
@@ -27,10 +30,18 @@ export function UpdateBanner() {
             }
           });
         });
+
+        intervalRef.current = setInterval(() => {
+          reg.update();
+        }, 30000);
       } catch { /* SW registration failed */ }
     };
 
     registerSW();
+
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, []);
 
   const handleUpdate = () => {
