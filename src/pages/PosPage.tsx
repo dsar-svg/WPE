@@ -472,10 +472,11 @@ function ReceiptModal({
       ${items.map(i => {
         const itemTotalBs = (i.product.price + getChoiceAdjust(i.product, i.selectedChoices)) * i.quantity * rate;
         const choices = i.selectedChoices?.length ? ` (${i.selectedChoices.join(', ')})` : '';
-        const desc = i.product.description ? ` — ${abbreviate(i.product.description)}` : '';
+        const isCombo = i.product.choices && i.product.choices.length > 0;
+        const desc = isCombo && i.product.description ? ` — ${abbreviate(i.product.description)}` : '';
         return `
           <tr>
-            <td class="text-left">${i.product.name}${desc}${choices}</td>
+            <td class="text-left">${i.product.name}${choices}${desc}</td>
             <td class="text-center">${i.quantity}</td>
             <td class="text-right">${formatBs(itemTotalBs)}</td>
           </tr>
