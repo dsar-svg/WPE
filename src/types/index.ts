@@ -145,6 +145,7 @@ export interface Order {
   cashier_id?: string;
   invoice_number?: string;
   payment_ref?: string;
+  payment_currency?: 'USD' | 'BS';
   code?: string;
   created_at: string;
 }

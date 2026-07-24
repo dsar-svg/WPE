@@ -115,7 +115,7 @@ function PaymentModal({
   total, onConfirm, onClose, exchangeRate, originalPaymentMethod,
 }: {
   total: number;
-  onConfirm: (method: PaymentMethod, amountReceived: number, changeAmount: number, paymentRef: string) => void;
+  onConfirm: (method: PaymentMethod, amountReceived: number, changeAmount: number, paymentRef: string, amountCurrency?: 'USD' | 'BS') => void;
   onClose: () => void;
   exchangeRate: number;
   originalPaymentMethod?: PaymentMethod | null;
@@ -136,6 +136,7 @@ function PaymentModal({
   };
   const [paymentRef, setPaymentRef] = useState('');
   const [amountReceived, setAmountReceived] = useState('');
+  const [amountCurrency, setAmountCurrency] = useState<'USD' | 'BS'>('USD');
   const [rate, setRate] = useState(exchangeRate);
   const [rateLoading, setRateLoading] = useState(false);
 
@@ -146,18 +147,22 @@ function PaymentModal({
     }).finally(() => setRateLoading(false));
   }, []);
 
+  const amountReceivedUsd = amountCurrency === 'BS'
+    ? (parseFloat(amountReceived) || 0) / rate
+    : (parseFloat(amountReceived) || 0);
+
   const cashTotal = method === 'Efectivo' ? Math.ceil(total) : total;
   const changeAmount = method === 'Efectivo'
-    ? Math.max(0, (parseFloat(amountReceived) || 0) - cashTotal)
+    ? Math.max(0, amountReceivedUsd - cashTotal)
     : 0;
-  const isCashEnough = method !== 'Efectivo' || (parseFloat(amountReceived) || 0) >= cashTotal;
+  const isCashEnough = method !== 'Efectivo' || amountReceivedUsd >= cashTotal;
   const totalBs = total * rate;
 
   const canConfirm = isCashEnough && (!methodChanged || confirmChange);
 
   const handleConfirm = () => {
     if (!canConfirm) return;
-    onConfirm(method, method === 'Efectivo' ? parseFloat(amountReceived) || 0 : total, changeAmount, paymentRef);
+    onConfirm(method, method === 'Efectivo' ? amountReceivedUsd : total, changeAmount, paymentRef, method === 'Efectivo' ? amountCurrency : undefined);
   };
 
   const methods: { key: PaymentMethod; icon: typeof DollarSign; label: string; color: string }[] = [
@@ -171,7 +176,7 @@ function PaymentModal({
       className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80"
     >
       <motion.div initial={{ scale: 0.9, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }}
-        className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-6"
+        className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-6 overflow-y-auto max-h-[90vh]"
       >
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-black text-white">Cerrar Venta</h2>
@@ -181,18 +186,16 @@ function PaymentModal({
         <div className="text-center py-4">
           <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1">Total a cobrar</p>
           <p className="text-5xl font-black text-white">${total.toFixed(2)}</p>
-          {method !== 'Efectivo' && (
-            <div className="mt-3 p-3 bg-primary-vibrant/10 rounded-xl border border-primary-vibrant/20 space-y-1">
-              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total en Bs.</p>
-              <p className="text-3xl font-black text-primary-vibrant">
-                {totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.
-              </p>
-              <div className="flex items-center justify-center gap-1.5">
-                <p className="text-[10px] text-zinc-500">Tasa BCV: {rate.toFixed(2)}</p>
-                {rateLoading && <Loader2 className="w-3 h-3 text-zinc-500 animate-spin" />}
-              </div>
+          <div className="mt-3 p-3 bg-primary-vibrant/10 rounded-xl border border-primary-vibrant/20 space-y-1">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total en Bs.</p>
+            <p className="text-3xl font-black text-primary-vibrant">
+              {totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.
+            </p>
+            <div className="flex items-center justify-center gap-1.5">
+              <p className="text-[10px] text-zinc-500">Tasa BCV: {rate.toFixed(2)}</p>
+              {rateLoading && <Loader2 className="w-3 h-3 text-zinc-500 animate-spin" />}
             </div>
-          )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -245,34 +248,61 @@ function PaymentModal({
             <div className="p-3 bg-primary-vibrant/10 rounded-xl border border-primary-vibrant/20 text-center">
               <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total redondeado</p>
               <p className="text-2xl font-black text-primary-vibrant">${cashTotal.toFixed(2)}</p>
+              <p className="text-sm text-zinc-400 font-bold mt-1">
+                {(cashTotal * rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.
+              </p>
             </div>
             <div className="space-y-1">
               <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Monto recibido</label>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-lg">$</span>
-                <input autoFocus type="number" step="0.01" min="0" value={amountReceived}
-                  onChange={e => setAmountReceived(e.target.value)}
-                  className="w-full bg-zinc-950 border border-zinc-800 p-4 pl-8 rounded-2xl text-2xl font-black text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
-                  placeholder="0.00"
-                />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold text-lg">
+                    {amountCurrency === 'USD' ? '$' : 'Bs'}
+                  </span>
+                  <input autoFocus type="number" step="0.01" min="0" value={amountReceived}
+                    onChange={e => setAmountReceived(e.target.value)}
+                    className="w-full bg-zinc-950 border border-zinc-800 p-4 pl-10 rounded-2xl text-2xl font-black text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
+                    placeholder="0.00"
+                  />
+                </div>
+                <button onClick={() => {
+                  setAmountCurrency(c => c === 'USD' ? 'BS' : 'USD');
+                  setAmountReceived('');
+                }}
+                  className="px-3 bg-zinc-800 rounded-2xl text-white font-bold text-sm hover:bg-zinc-700 transition-all flex items-center"
+                >
+                  {amountCurrency === 'USD' ? 'Bs' : '$'}
+                </button>
               </div>
             </div>
             {parseFloat(amountReceived) > 0 && (
               <div className={`p-4 rounded-2xl text-center ${isCashEnough ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
                 <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Vuelto</p>
                 <p className={`text-3xl font-black ${isCashEnough ? 'text-green-400' : 'text-red-400'}`}>
-                  ${changeAmount.toFixed(2)}
+                  {amountCurrency === 'USD'
+                    ? `$${changeAmount.toFixed(2)}`
+                    : `${(changeAmount * rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.`
+                  }
                 </p>
               </div>
             )}
             <div className="flex gap-2">
-              {[5, 10, 20, 50].map(n => (
-                <button key={n} onClick={() => setAmountReceived((parseFloat(amountReceived) + n).toFixed(2))}
-                  className="flex-1 py-2 bg-zinc-800 rounded-xl text-white font-bold text-sm hover:bg-zinc-700 transition-all"
-                >
-                  +${n}
-                </button>
-              ))}
+              {amountCurrency === 'USD'
+                ? [5, 10, 20, 50].map(n => (
+                    <button key={n} onClick={() => setAmountReceived((parseFloat(amountReceived || '0') + n).toFixed(2))}
+                      className="flex-1 py-2 bg-zinc-800 rounded-xl text-white font-bold text-sm hover:bg-zinc-700 transition-all"
+                    >
+                      +${n}
+                    </button>
+                  ))
+                : [500, 1000, 2000, 5000].map(n => (
+                    <button key={n} onClick={() => setAmountReceived((parseFloat(amountReceived || '0') + n).toFixed(2))}
+                      className="flex-1 py-2 bg-zinc-800 rounded-xl text-white font-bold text-sm hover:bg-zinc-700 transition-all"
+                    >
+                      +{n.toLocaleString('es-VE')} Bs
+                    </button>
+                  ))
+              }
             </div>
           </div>
         )}
@@ -291,8 +321,11 @@ function PaymentModal({
 // ==============================
 // Receipt
 // ==============================
+// ==============================
+// Receipt (Modificado al Formato Fiscal SENIAT)
+// ==============================
 function ReceiptModal({
-  items, total, paymentMethod, changeAmount, cashierName, customerName, customerCedula, invoiceNumber, config, locationName, onClose: _onClose, onNewSale,
+  items, total, paymentMethod, changeAmount, cashierName, customerName, customerCedula, invoiceNumber, config, locationName, exchangeRate, onClose: _onClose, onNewSale,
 }: {
   items: POSCartItem[];
   total: number;
@@ -302,16 +335,21 @@ function ReceiptModal({
   customerName: string;
   customerCedula?: string;
   invoiceNumber?: string;
-  config: { rif?: string; businessAddress?: string; businessPhone?: string; name?: string };
+  config: { rif?: string; businessAddress?: string; businessPhone?: string; name?: string; exchangeRate?: number };
   locationName: string;
+  exchangeRate: number;
   onClose: () => void;
   onNewSale: () => void;
 }) {
-  const subtotal = items.reduce((s, i) => s + i.product.price * i.quantity, 0);
-  const date = new Date().toLocaleString('es-VE');
-  const taxRate = 0.16; // 16% IVA / ITBMS
-  const taxAmount = subtotal * taxRate;
-  const subtotalWithoutTax = subtotal / (1 + taxRate);
+  const rate = exchangeRate || config.exchangeRate || 1;
+  const totalBs = total * rate;
+  const biBs = totalBs / 1.16;
+  const taxBs = biBs * 0.16;
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+  const formatBs = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const abbreviate = (text: string) => {
     const clean = text.replace(/[,;.]/g, '').toLowerCase();
@@ -331,59 +369,183 @@ function ReceiptModal({
 
   const handlePrint = () => {
     const receiptHtml = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Factura</title>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Factura Fiscal</title>
 <style>
-@media print {
-  @page { size: 80mm auto; margin: 0; }
-  body { margin: 0; padding: 0; }
-}
-body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; width: 290px; margin: 0 auto; padding: 8px; color: #000; }
-h2 { text-align: center; margin: 0; font-size: 16px; text-transform: uppercase; font-weight: 900; color: #000; }
-h3 { text-align: center; margin: 2px 0; font-size: 12px; font-weight: 700; color: #000; }
-p { text-align: center; margin: 1px 0; font-size: 11px; color: #000; }
-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
-th, td { text-align: left; padding: 2px 3px; font-size: 11px; color: #000; }
-th { border-bottom: 1px solid #000; font-weight: 900; }
-td.r { text-align: right; }
-td.c { text-align: center; }
-.total td { border-top: 1px solid #000; font-weight: 900; font-size: 13px; padding-top: 4px; color: #000; }
-hr { border: none; border-top: 1px solid #000; margin: 6px 0; }
-.footer { text-align: center; font-size: 10px; margin-top: 6px; color: #000; }
-.left { text-align: left; }
-</style></head><body>
-<h2>${config.name || 'Wallace Panda Express'}</h2>
-${config.rif ? `<p>RIF: ${config.rif}</p>` : ''}
-${config.businessAddress ? `<p>${config.businessAddress}</p>` : ''}
-${config.businessPhone ? `<p>Tel: ${config.businessPhone}</p>` : ''}
-<p>${locationName}</p>
-<hr>
-<p><strong>FACTURA</strong> ${invoiceNumber ? `N° ${invoiceNumber}` : ''}</p>
-<p>${date}</p>
-<p>Cajero/a: ${cashierName}</p>
-<p>Cliente: ${customerName}${customerCedula ? ` — C.I: V-${customerCedula}` : ''}</p>
-<hr>
-<table>
-<tr><th>Item</th><th class="c">Cant</th><th class="r">Precio</th></tr>
-${items.map(i => {
-  const choices = i.selectedChoices?.length ? ` (${i.selectedChoices.join(', ')})` : '';
-  const desc = i.product.description ? ` — ${abbreviate(i.product.description)}` : '';
-  return `<tr><td>${i.product.name}${desc}${choices}</td><td class="c">${i.quantity}</td><td class="r">$${(i.product.price * i.quantity).toFixed(2)}</td></tr>`;
-}).join('')}
-</table>
-<hr>
-<table>
-<tr><td>Subtotal (sin IVA)</td><td class="r">$${subtotalWithoutTax.toFixed(2)}</td></tr>
-<tr><td>IVA 16%</td><td class="r">$${taxAmount.toFixed(2)}</td></tr>
-<tr><td>Subtotal</td><td class="r">$${subtotal.toFixed(2)}</td></tr>
-<tr class="total"><td>TOTAL</td><td class="r">$${total.toFixed(2)}</td></tr>
-</table>
-<hr>
-<p>Método de pago: ${paymentMethod}</p>
-${paymentMethod === 'Efectivo' ? `<p>Recibido: $${(total + changeAmount).toFixed(2)}</p><p>Vuelto: $${changeAmount.toFixed(2)}</p>` : ''}
-<hr>
-<p class="footer">¡Gracias por su compra!</p>
-<p class="footer">wallacepanda.com</p>
-</body></html>`;
+  @media print {
+    @page { size: 80mm auto; margin: 0; }
+    body { margin: 0; padding: 0; }
+  }
+  * {
+    font-family: Arial, Helvetica, sans-serif !important;
+  }
+  body { 
+    font-family: Arial, Helvetica, sans-serif !important; 
+    font-size: 11px; 
+    width: 270px; 
+    margin: 0 auto; 
+    padding: 10px 5px; 
+    color: #000;
+    line-height: 1.25;
+  }
+  .text-center { text-align: center; }
+  .text-right { text-align: right; }
+  .text-left { text-align: left; }
+  .bold { font-weight: bold; }
+  
+  .header-title { font-size: 14px; font-weight: bold; margin-bottom: 2px; }
+  .header-sub { font-size: 10px; margin: 1px 0; }
+  
+  .divider { 
+    border-top: 1px dashed #000; 
+    margin: 6px 0; 
+  }
+  
+  .info-table, .items-table, .totals-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+  }
+  
+  .info-table td, .totals-table td { 
+    padding: 1px 0; 
+    font-size: 10px; 
+    font-family: Arial, Helvetica, sans-serif !important;
+  }
+  
+  .items-table th { 
+    border-top: 1px dashed #000; 
+    border-bottom: 1px dashed #000; 
+    padding: 3px 0; 
+    font-size: 10px; 
+    font-weight: bold;
+    font-family: Arial, Helvetica, sans-serif !important;
+  }
+  
+  .items-table td { 
+    padding: 3px 0; 
+    font-size: 10px; 
+    vertical-align: top;
+    font-family: Arial, Helvetica, sans-serif !important;
+  }
+  
+  .total-row { 
+    font-weight: bold; 
+    font-size: 11px;
+  }
+  
+  .footer-text { 
+    font-size: 9.5px; 
+    margin-top: 4px; 
+  }
+</style>
+</head>
+<body>
+
+  <!-- Encabezado SENIAT -->
+  <div class="text-center">
+    <div class="header-title">SENIAT</div>
+    <div class="header-sub bold">RIF: ${config.rif || 'J-302199232'}</div>
+    <div class="header-sub bold">${config.name || 'Wallace Panda Express'}</div>
+    <div class="header-sub">${config.businessAddress || 'Av. Bolivar Norte calle 133 Lopez Latouche, C.C las acacias Local 6, Valencia 2001, Carabobo'}</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Datos del Cliente -->
+  <div class="text-center bold" style="font-size: 10px; margin-bottom: 3px;">*** DATOS DE CLIENTE ***</div>
+  <table class="info-table">
+    <tr><td class="bold">R.SOCIAL:</td><td class="text-right">${customerName || 'CONTRIBUYENTE OCASIONAL'}</td></tr>
+    <tr><td class="bold">RIF/CI:</td><td class="text-right">${customerCedula ? `V-${customerCedula}` : 'V-00000000'}</td></tr>
+    <tr><td class="bold">VENDEDOR:</td><td class="text-right">0000</td></tr>
+    <tr><td class="bold">FACTURA:</td><td class="text-right">${invoiceNumber || 'FAC-20260724-0032'}</td></tr>
+    <tr><td class="bold">FECHA: ${dateStr}</td><td class="text-right bold">HORA: ${timeStr}</td></tr>
+  </table>
+
+  <!-- Tabla de Items -->
+  <table class="items-table" style="margin-top: 5px;">
+    <thead>
+      <tr>
+        <th class="text-left" style="width: 55%;">Item</th>
+        <th class="text-center" style="width: 15%;">Cant</th>
+        <th class="text-right" style="width: 30%;">Precio Bs.</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${items.map(i => {
+        const itemTotalBs = i.product.price * i.quantity * rate;
+        const choices = i.selectedChoices?.length ? ` (${i.selectedChoices.join(', ')})` : '';
+        const desc = i.product.description ? ` — ${abbreviate(i.product.description)}` : '';
+        return `
+          <tr>
+            <td class="text-left">${i.product.name}${desc}${choices}</td>
+            <td class="text-center">${i.quantity}</td>
+            <td class="text-right">${formatBs(itemTotalBs)}</td>
+          </tr>
+        `;
+      }).join('')}
+    </tbody>
+  </table>
+
+  <div class="divider"></div>
+
+  <!-- Totales e Impuestos -->
+  <table class="totals-table">
+    <tr>
+      <td>SUBTTL</td>
+      <td class="text-right">Bs ${formatBs(biBs)}</td>
+    </tr>
+    <tr>
+      <td>EXENTO (E)</td>
+      <td class="text-right">Bs 0,00</td>
+    </tr>
+    <tr>
+      <td>BI G (16,00%)</td>
+      <td class="text-right">Bs ${formatBs(biBs)}</td>
+    </tr>
+    <tr>
+      <td>IVA G (16,00%)</td>
+      <td class="text-right">Bs ${formatBs(taxBs)}</td>
+    </tr>
+  </table>
+
+  <div class="divider"></div>
+
+  <!-- Total Final y M�todo de Pago -->
+  <table class="totals-table">
+    <tr class="total-row">
+      <td>TOTAL</td>
+      <td class="text-right">Bs ${formatBs(totalBs)}</td>
+    </tr>
+  </table>
+
+  <div class="divider"></div>
+
+  <table class="totals-table">
+    <tr class="total-row">
+      <td>TOTAL ${paymentMethod.toUpperCase()}</td>
+      <td class="text-right">Bs ${formatBs(totalBs)}</td>
+    </tr>
+    ${paymentMethod === 'Efectivo' && changeAmount > 0 ? `
+      <tr>
+        <td>VUELTO</td>
+        <td class="text-right">Bs ${formatBs(changeAmount * rate)}</td>
+      </tr>
+    ` : ''}
+  </table>
+
+  <div class="divider"></div>
+
+  <!-- Pie Fiscal -->
+  <div class="text-center footer-text">
+    <div>GRA0000487 / MH</div>
+    <div style="margin-top: 3px;">¡Gracias por su compra!</div>
+    <div>wallacepanda.com</div>
+  </div>
+
+</body>
+</html>`;
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
@@ -422,7 +584,6 @@ ${paymentMethod === 'Efectivo' ? `<p>Recibido: $${(total + changeAmount).toFixed
           )}
         </div>
 
-        {/* Invoice details */}
         <div className="bg-zinc-950 rounded-2xl p-3 space-y-1.5 text-[11px]">
           {config.rif && (
             <div className="flex justify-between text-zinc-500">
@@ -438,34 +599,9 @@ ${paymentMethod === 'Efectivo' ? `<p>Recibido: $${(total + changeAmount).toFixed
             <span>Método</span>
             <span className="text-zinc-300 font-bold">{paymentMethod}</span>
           </div>
-          {paymentMethod === 'Efectivo' && changeAmount > 0 && (
-            <div className="flex justify-between text-zinc-500">
-              <span>Vuelto</span>
-              <span className="text-green-400 font-bold">${changeAmount.toFixed(2)}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Items */}
-        <div className="bg-zinc-950 rounded-2xl p-3 space-y-1.5 text-sm max-h-36 overflow-y-auto">
-          {items.map(i => (
-            <div key={i.product.id} className="flex justify-between text-zinc-400">
-              <span className="truncate flex-1">{i.quantity}x {i.product.name}</span>
-              <span className="text-white font-bold ml-2">${(i.product.price * i.quantity).toFixed(2)}</span>
-            </div>
-          ))}
-          <hr className="border-zinc-800" />
-          <div className="flex justify-between text-[11px] text-zinc-500">
-            <span>Subtotal</span>
-            <span>${subtotal.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between text-[11px] text-zinc-500">
-            <span>IVA 16%</span>
-            <span>${taxAmount.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between text-white font-black text-base border-t border-zinc-800 pt-1.5 mt-1.5">
-            <span>Total</span>
-            <span>${total.toFixed(2)}</span>
+          <div className="flex justify-between text-zinc-500">
+            <span>Total Bs.</span>
+            <span className="text-primary-vibrant font-bold">Bs. {formatBs(totalBs)}</span>
           </div>
         </div>
 
@@ -498,6 +634,8 @@ interface CorteRecord {
   closed_at: string;
   order_count: number;
   total_efectivo: number;
+  total_efectivo_usd: number;
+  total_efectivo_bs: number;
   total_tarjeta: number;
   total_pagomovil: number;
   grand_total: number;
@@ -507,13 +645,14 @@ interface CorteRecord {
 }
 
 function CorteDeCajaModal({
-  orders, cortes, locationId, locationName, cashier, onCorteSaved, onClose,
+  orders, cortes, locationId, locationName, cashier, exchangeRate, onCorteSaved, onClose,
 }: {
   orders: Order[];
   cortes: CorteRecord[];
   locationId: string;
   locationName: string;
   cashier: Cashier | null;
+  exchangeRate: number;
   onCorteSaved: () => void;
   onClose: () => void;
 }) {
@@ -543,11 +682,15 @@ function CorteDeCajaModal({
     return todayOrders.filter(o => new Date(o.created_at) > corteTime);
   }, [todayOrders, existingCorte, newCorteMode]);
 
-  const totalEfectivo = activeOrders.filter(o => o.payment_method === 'Efectivo').reduce((s, o) => s + o.total, 0);
+  const totalEfectivoUsd = activeOrders.filter(o => o.payment_method === 'Efectivo' && (!o.payment_currency || o.payment_currency === 'USD')).reduce((s, o) => s + o.total, 0);
+  const totalEfectivoBs = activeOrders.filter(o => o.payment_method === 'Efectivo' && o.payment_currency === 'BS').reduce((s, o) => s + o.total, 0);
+  const totalEfectivo = totalEfectivoUsd + totalEfectivoBs;
   const totalTarjeta = activeOrders.filter(o => o.payment_method === 'Tarjeta').reduce((s, o) => s + o.total, 0);
   const totalPagoMovil = activeOrders.filter(o => o.payment_method === 'PagoMóvil').reduce((s, o) => s + o.total, 0);
   const granTotal = activeOrders.reduce((s, o) => s + o.total, 0);
   const count = activeOrders.length;
+  const rate = exchangeRate || 1;
+  const formatBs = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const dateStr = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
 
@@ -566,6 +709,8 @@ function CorteDeCajaModal({
         closed_at: now.toISOString(),
         order_count: count,
         total_efectivo: totalEfectivo,
+        total_efectivo_usd: totalEfectivoUsd,
+        total_efectivo_bs: totalEfectivoBs,
         total_tarjeta: totalTarjeta,
         total_pagomovil: totalPagoMovil,
         grand_total: granTotal,
@@ -582,6 +727,8 @@ function CorteDeCajaModal({
         closed_at: now.toISOString(),
         order_count: count,
         total_efectivo: totalEfectivo,
+        total_efectivo_usd: totalEfectivoUsd,
+        total_efectivo_bs: totalEfectivoBs,
         total_tarjeta: totalTarjeta,
         total_pagomovil: totalPagoMovil,
         grand_total: granTotal,
@@ -601,44 +748,106 @@ function CorteDeCajaModal({
   };
 
   const handlePrint = () => {
-    const w = window.open('', '', 'width=380,height=700');
-    if (!w) return;
     const displayRecord = saved || existingCorte;
-    w.document.write(`<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Corte de Caja</title>
+    const efectivoUsd = displayRecord?.total_efectivo_usd ?? totalEfectivoUsd;
+    const efectivoBs = displayRecord?.total_efectivo_bs ?? totalEfectivoBs;
+    const tarjeta = displayRecord?.total_tarjeta ?? totalTarjeta;
+    const pagomovil = displayRecord?.total_pagomovil ?? totalPagoMovil;
+    const grand = displayRecord?.grand_total ?? granTotal;
+    const ordenes = displayRecord?.order_count ?? count;
+    const receiptHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Corte de Caja</title>
 <style>
-body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; width: 290px; margin: 0 auto; padding: 8px; color: #000; }
-h2 { text-align: center; margin: 0; font-size: 15px; text-transform: uppercase; font-weight: 900; color: #000; }
-h3 { text-align: center; margin: 2px 0; font-size: 12px; font-weight: 700; color: #000; }
-p { text-align: center; margin: 1px 0; font-size: 11px; color: #000; }
-table { width: 100%; border-collapse: collapse; margin: 6px 0; }
-td { padding: 2px 3px; font-size: 11px; color: #000; }
-td.r { text-align: right; }
-hr { border: none; border-top: 1px solid #000; margin: 6px 0; }
-.total td { font-weight: 900; font-size: 13px; color: #000; }
-.footer { text-align: center; font-size: 10px; margin-top: 6px; color: #000; }
-</style></head><body>
-<h2>${locationName}</h2>
-<h3>CORTE DE CAJA</h3>
-<p>${dateStr}</p>
-<hr>
-<p>Cajero/a: ${displayRecord?.cashier_name || cashier?.name || ''}</p>
-<hr>
+  @media print {
+    @page { size: 80mm auto; margin: 0; }
+    body { margin: 0; padding: 0; }
+  }
+  * { font-family: Arial, Helvetica, sans-serif !important; }
+  body {
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 11px;
+    width: 270px;
+    margin: 0 auto;
+    padding: 10px 5px;
+    color: #000;
+    line-height: 1.25;
+  }
+  .text-center { text-align: center; }
+  .text-right { text-align: right; }
+  .text-left { text-align: left; }
+  .bold { font-weight: bold; }
+  .header-title { font-size: 14px; font-weight: bold; margin-bottom: 2px; }
+  .header-sub { font-size: 10px; margin: 1px 0; }
+  .divider { border-top: 1px dashed #000; margin: 6px 0; }
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 2px 0; font-size: 10px; }
+  td.r { text-align: right; }
+  .total-row td { font-weight: bold; font-size: 11px; }
+  .footer-text { font-size: 9.5px; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="text-center">
+  <div class="header-title">CORTE DE CAJA</div>
+  <div class="header-sub bold">${locationName}</div>
+  <div class="header-sub">${dateStr}</div>
+</div>
+
+<div class="divider"></div>
+
 <table>
-<tr><td>Pedidos del día</td><td class="r">${displayRecord?.order_count || count}</td></tr>
-<tr><td>Total Efectivo</td><td class="r">$${(displayRecord?.total_efectivo || totalEfectivo).toFixed(2)}</td></tr>
-<tr><td>Total Tarjeta</td><td class="r">$${(displayRecord?.total_tarjeta || totalTarjeta).toFixed(2)}</td></tr>
-<tr><td>Total Pago Móvil</td><td class="r">$${(displayRecord?.total_pagomovil || totalPagoMovil).toFixed(2)}</td></tr>
-<hr>
-<tr class="total"><td>TOTAL GENERAL</td><td class="r">$${(displayRecord?.grand_total || granTotal).toFixed(2)}</td></tr>
+  <tr><td>Pedidos del d&iacute;a</td><td class="r bold">${ordenes}</td></tr>
 </table>
-<hr>
-<p>${displayRecord ? `Cerrado: ${new Date(displayRecord.closed_at).toLocaleString('es-VE')}` : ''}</p>
-<hr>
-<p class="footer">wallacepanda.com</p>
-<script>window.print();</script>
-</body></html>`);
-    w.document.close();
+
+<div class="divider"></div>
+
+<table>
+  <tr><td>Efectivo $</td><td class="r">Bs ${formatBs(efectivoUsd * rate)}</td></tr>
+  <tr><td>Efectivo Bs</td><td class="r">Bs ${formatBs(efectivoBs * rate)}</td></tr>
+  <tr><td>Total Tarjeta</td><td class="r">Bs ${formatBs(tarjeta * rate)}</td></tr>
+  <tr><td>Total Pago M&oacute;vil</td><td class="r">Bs ${formatBs(pagomovil * rate)}</td></tr>
+</table>
+
+<div class="divider"></div>
+
+<table>
+  <tr class="total-row"><td>TOTAL GENERAL</td><td class="r">Bs ${formatBs(grand * rate)}</td></tr>
+</table>
+
+<div class="divider"></div>
+
+${displayRecord ? `<p class="text-center">Cerrado: ${new Date(displayRecord.closed_at).toLocaleString('es-VE')}</p><div class="divider"></div>` : ''}
+
+<div class="text-center footer-text">
+  <div>¡Gracias por su trabajo!</div>
+  <div>wallacepanda.com</div>
+</div>
+
+</body>
+</html>`;
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(receiptHtml);
+      doc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(iframe), 2000);
+      }, 500);
+    }
   };
 
   return (
@@ -699,6 +908,9 @@ hr { border: none; border-top: 1px solid #000; margin: 6px 0; }
                 <p className="text-2xl font-black text-green-400">
                   ${(saved?.grand_total || existingCorte.grand_total).toFixed(2)}
                 </p>
+                <p className="text-xs text-zinc-500 font-bold">
+                  {formatBs((saved?.grand_total || existingCorte.grand_total) * rate)} Bs.
+                </p>
                 <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total</p>
               </div>
             </div>
@@ -706,7 +918,8 @@ hr { border: none; border-top: 1px solid #000; margin: 6px 0; }
             <div className="space-y-2">
               <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Desglose por método</p>
               {[
-                { method: 'Efectivo', total: saved?.total_efectivo || existingCorte.total_efectivo, icon: Banknote, color: 'text-green-400' },
+                { method: 'Efectivo $', total: saved?.total_efectivo_usd ?? existingCorte.total_efectivo_usd, icon: Banknote, color: 'text-green-400' },
+                { method: 'Efectivo Bs', total: saved?.total_efectivo_bs ?? existingCorte.total_efectivo_bs, icon: Banknote, color: 'text-yellow-400' },
                 { method: 'Tarjeta', total: saved?.total_tarjeta || existingCorte.total_tarjeta, icon: CreditCard, color: 'text-blue-400' },
                 { method: 'Pago Móvil', total: saved?.total_pagomovil || existingCorte.total_pagomovil, icon: Smartphone, color: 'text-purple-400' },
               ].map(({ method, total: t, icon: Icon, color }) => (
@@ -715,7 +928,10 @@ hr { border: none; border-top: 1px solid #000; margin: 6px 0; }
                     <Icon className={`w-4 h-4 ${color}`} />
                     <span className="text-sm font-bold text-zinc-300">{method}</span>
                   </div>
-                  <span className={`font-black ${color}`}>${t.toFixed(2)}</span>
+                  <div className="text-right">
+                    <span className={`font-black ${color}`}>${t.toFixed(2)}</span>
+                    <p className="text-[10px] text-zinc-500 font-bold">{formatBs(t * rate)} Bs.</p>
+                  </div>
                 </div>
               ))}
             </div>
@@ -757,7 +973,8 @@ hr { border: none; border-top: 1px solid #000; margin: 6px 0; }
             <div className="space-y-2">
               <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Desglose por método</p>
               {[
-                { method: 'Efectivo', total: totalEfectivo, icon: Banknote, color: 'text-green-400' },
+                { method: 'Efectivo $', total: totalEfectivoUsd, icon: Banknote, color: 'text-green-400' },
+                { method: 'Efectivo Bs', total: totalEfectivoBs, icon: Banknote, color: 'text-yellow-400' },
                 { method: 'Tarjeta', total: totalTarjeta, icon: CreditCard, color: 'text-blue-400' },
                 { method: 'Pago Móvil', total: totalPagoMovil, icon: Smartphone, color: 'text-purple-400' },
               ].map(({ method, total: t, icon: Icon, color }) => (
@@ -812,12 +1029,13 @@ hr { border: none; border-top: 1px solid #000; margin: 6px 0; }
 // Invoice History
 // ==============================
 function InvoiceHistoryModal({
-  orders, locationId, config, locationName, onClose,
+  orders, locationId, config, locationName, exchangeRate, onClose,
 }: {
   orders: Order[];
   locationId: string;
-  config: { rif?: string; businessAddress?: string; businessPhone?: string; name?: string };
+  config: { rif?: string; businessAddress?: string; businessPhone?: string; name?: string; exchangeRate?: number };
   locationName: string;
+  exchangeRate: number;
   onClose: () => void;
 }) {
   const [searchCedula, setSearchCedula] = useState('');
@@ -837,59 +1055,195 @@ function InvoiceHistoryModal({
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-const handleReprint = (order: Order) => {
-    const receiptHtml = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Factura</title>
+  const handleReprint = (order: Order) => {
+    try {
+      const raw = typeof order.items === 'string' ? JSON.parse(order.items) : order.items;
+      const items = raw as Array<{ name: string; quantity: number; price: number; selectedChoices?: string[] }>;
+      if (!Array.isArray(items) || items.length === 0) return;
+      const rate = exchangeRate || config?.exchangeRate || 1;
+      const totalBs = order.total * rate;
+      const biBs = totalBs / 1.16;
+      const taxBs = biBs * 0.16;
+      const formatBs = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const abbreviate = (text: string) => {
+        const clean = text.replace(/[,;.]/g, '').toLowerCase();
+        const stopWords = ['con', 'y', 'de', 'del', 'la', 'el', 'los', 'las', 'un', 'una'];
+        return clean.split(' ').map(w => stopWords.includes(w) ? '' : w.length > 5 ? w.slice(0, 4) + '.' : w).filter(Boolean).join(' ');
+      };
+      const now = new Date(order.created_at);
+      const dateStr = now.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const timeStr = now.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+      const receiptHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Factura Fiscal</title>
 <style>
-@media print {
-  @page { size: 80mm auto; margin: 0; }
-  body { margin: 0; padding: 0; }
-}
-body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; width: 290px; margin: 0 auto; padding: 8px; color: #000; }
-h2 { text-align: center; margin: 0; font-size: 16px; text-transform: uppercase; font-weight: 900; color: #000; }
-p { text-align: center; margin: 1px 0; font-size: 11px; color: #000; }
-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
-th, td { text-align: left; padding: 2px 3px; font-size: 11px; color: #000; }
-th { border-bottom: 1px solid #000; font-weight: 900; }
-td.r { text-align: right; }
-td.c { text-align: center; }
-.total td { border-top: 1px solid #000; font-weight: 900; font-size: 13px; padding-top: 4px; color: #000; }
-hr { border: none; border-top: 1px solid #000; margin: 6px 0; }
-.footer { text-align: center; font-size: 10px; margin-top: 6px; color: #000; }
-</style></head><body>
-<h2>${config?.name || 'Wallace Panda Express'}</h2>
-${config?.rif ? `<p>RIF: ${config.rif}</p>` : ''}
-${config?.businessAddress ? `<p>${config.businessAddress}</p>` : ''}
-${config?.businessPhone ? `<p>Tel: ${config.businessPhone}</p>` : ''}
-<p>${locationName}</p>
-<hr>
-<p><strong>FACTURA</strong>${order.invoice_number ? ` N° ${order.invoice_number}` : ''}</p>
-<p>${formatDate(order.created_at)}</p>
-<p>Cliente: ${order.customer_name}${order.cedula ? ` V-${order.cedula}` : ''}</p>
-${order.delivery_type === 'Delivery' ? `<p>Delivery${order.delivery_address ? ` — ${order.delivery_address}` : ''}</p>` : ''}
-<hr>
-<table>
-<tr><th>Item</th><th class="c">Cant</th><th class="r">Precio</th></tr>
-${items.map(i => {
-  const choices = i.selectedChoices?.length ? ` (${i.selectedChoices.join(', ')})` : '';
-  return `<tr><td>${i.name}${choices}</td><td class="c">${i.quantity}</td><td class="r">$${(i.price * i.quantity).toFixed(2)}</td></tr>`;
-}).join('')}
-</table>
-<hr>
-<table>
-<tr><td>Subtotal (sin IVA)</td><td class="r">$${(order.subtotal / 1.16).toFixed(2)}</td></tr>
-<tr><td>IVA 16%</td><td class="r">$${(order.subtotal - order.subtotal / 1.16).toFixed(2)}</td></tr>
-<tr><td>Subtotal</td><td class="r">$${order.subtotal.toFixed(2)}</td></tr>
-${order.delivery_fee > 0 ? `<tr><td>Delivery</td><td class="r">$${order.delivery_fee.toFixed(2)}</td></tr>` : ''}
-<tr class="total"><td>TOTAL</td><td class="r">$${order.total.toFixed(2)}</td></tr>
-</table>
-<hr>
-<p>Método: ${order.payment_method || 'N/A'}</p>
-${order.change_amount && order.change_amount > 0 ? `<p>Recibido: $${(order.total + order.change_amount).toFixed(2)}</p><p>Vuelto: $${order.change_amount.toFixed(2)}</p>` : ''}
-<hr>
-<p class="footer">¡Gracias por su compra!</p>
-<p class="footer">wallacepanda.com</p>
-</body></html>`;
+  @media print {
+    @page { size: 80mm auto; margin: 0; }
+    body { margin: 0; padding: 0; }
+  }
+  * {
+    font-family: Arial, Helvetica, sans-serif !important;
+  }
+  body { 
+    font-family: Arial, Helvetica, sans-serif !important; 
+    font-size: 11px; 
+    width: 270px; 
+    margin: 0 auto; 
+    padding: 10px 5px; 
+    color: #000;
+    line-height: 1.25;
+  }
+  .text-center { text-align: center; }
+  .text-right { text-align: right; }
+  .text-left { text-align: left; }
+  .bold { font-weight: bold; }
+  
+  .header-title { font-size: 14px; font-weight: bold; margin-bottom: 2px; }
+  .header-sub { font-size: 10px; margin: 1px 0; }
+  
+  .divider { 
+    border-top: 1px dashed #000; 
+    margin: 6px 0; 
+  }
+  
+  .info-table, .items-table, .totals-table { 
+    width: 100%; 
+    border-collapse: collapse; 
+  }
+  
+  .info-table td, .totals-table td { 
+    padding: 1px 0; 
+    font-size: 10px; 
+    font-family: Arial, Helvetica, sans-serif !important;
+  }
+  
+  .items-table th { 
+    border-top: 1px dashed #000; 
+    border-bottom: 1px dashed #000; 
+    padding: 3px 0; 
+    font-size: 10px; 
+    font-weight: bold;
+    font-family: Arial, Helvetica, sans-serif !important;
+  }
+  
+  .items-table td { 
+    padding: 3px 0; 
+    font-size: 10px; 
+    vertical-align: top;
+    font-family: Arial, Helvetica, sans-serif !important;
+  }
+  
+  .total-row { 
+    font-weight: bold; 
+    font-size: 11px;
+  }
+  
+  .footer-text { 
+    font-size: 9.5px; 
+    margin-top: 4px; 
+  }
+</style>
+</head>
+<body>
+
+  <div class="text-center">
+    <div class="header-title">SENIAT</div>
+    <div class="header-sub bold">RIF: ${config?.rif || 'J-302199232'}</div>
+    <div class="header-sub bold">${config?.name || 'Wallace Panda Express'}</div>
+    <div class="header-sub">${config?.businessAddress || 'Av. Bolivar Norte calle 133 Lopez Latouche, C.C las acacias Local 6, Valencia 2001, Carabobo'}</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="text-center bold" style="font-size: 10px; margin-bottom: 3px;">*** DATOS DE CLIENTE ***</div>
+  <table class="info-table">
+    <tr><td class="bold">R.SOCIAL:</td><td class="text-right">${order.customer_name || 'CONTRIBUYENTE OCASIONAL'}</td></tr>
+    <tr><td class="bold">RIF/CI:</td><td class="text-right">${order.cedula ? `V-${order.cedula}` : 'V-00000000'}</td></tr>
+    <tr><td class="bold">VENDEDOR:</td><td class="text-right">0000</td></tr>
+    <tr><td class="bold">FACTURA:</td><td class="text-right">${order.invoice_number || 'FAC-20260724-0032'}</td></tr>
+    <tr><td class="bold">FECHA: ${dateStr}</td><td class="text-right bold">HORA: ${timeStr}</td></tr>
+  </table>
+
+  <table class="items-table" style="margin-top: 5px;">
+    <thead>
+      <tr>
+        <th class="text-left" style="width: 55%;">Item</th>
+        <th class="text-center" style="width: 15%;">Cant</th>
+        <th class="text-right" style="width: 30%;">Precio Bs.</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${items.map(i => {
+        const itemTotalBs = i.price * i.quantity * rate;
+        const choices = i.selectedChoices?.length ? ` (${i.selectedChoices.join(', ')})` : '';
+        return `
+          <tr>
+            <td class="text-left">${i.name}${choices}</td>
+            <td class="text-center">${i.quantity}</td>
+            <td class="text-right">${formatBs(itemTotalBs)}</td>
+          </tr>
+        `;
+      }).join('')}
+    </tbody>
+  </table>
+
+  <div class="divider"></div>
+
+  <table class="totals-table">
+    <tr>
+      <td>SUBTTL</td>
+      <td class="text-right">Bs ${formatBs(biBs)}</td>
+    </tr>
+    <tr>
+      <td>EXENTO (E)</td>
+      <td class="text-right">Bs 0,00</td>
+    </tr>
+    <tr>
+      <td>BI G (16,00%)</td>
+      <td class="text-right">Bs ${formatBs(biBs)}</td>
+    </tr>
+    <tr>
+      <td>IVA G (16,00%)</td>
+      <td class="text-right">Bs ${formatBs(taxBs)}</td>
+    </tr>
+  </table>
+
+  <div class="divider"></div>
+
+  <table class="totals-table">
+    <tr class="total-row">
+      <td>TOTAL</td>
+      <td class="text-right">Bs ${formatBs(totalBs)}</td>
+    </tr>
+  </table>
+
+  <div class="divider"></div>
+
+  <table class="totals-table">
+    <tr class="total-row">
+      <td>TOTAL ${order.payment_method ? order.payment_method.toUpperCase() : 'N/A'}</td>
+      <td class="text-right">Bs ${formatBs(totalBs)}</td>
+    </tr>
+    ${order.payment_method === 'Efectivo' && order.change_amount && order.change_amount > 0 ? `
+      <tr>
+        <td>VUELTO</td>
+        <td class="text-right">Bs ${formatBs(order.change_amount * rate)}</td>
+      </tr>
+    ` : ''}
+  </table>
+
+  <div class="divider"></div>
+
+  <div class="text-center footer-text">
+    <div>GRA0000487 / MH</div>
+    <div style="margin-top: 3px;">¡Gracias por su compra!</div>
+    <div>wallacepanda.com</div>
+  </div>
+
+</body>
+</html>`;
     const iframe = document.createElement('iframe');
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
@@ -908,6 +1262,9 @@ ${order.change_amount && order.change_amount > 0 ? `<p>Recibido: $${(order.total
         iframe.contentWindow?.print();
         setTimeout(() => document.body.removeChild(iframe), 2000);
       }, 500);
+    }
+    } catch (e) {
+      console.error('Error al reimprimir factura:', e);
     }
   };
 
@@ -1022,7 +1379,8 @@ function CorteHistoryModal({
                 </div>
                 <div className="space-y-1 pt-2 border-t border-zinc-800">
                   {[
-                    { label: 'Efectivo', total: selected.total_efectivo, color: 'text-green-400' },
+                    { label: 'Efectivo $', total: selected.total_efectivo_usd, color: 'text-green-400' },
+                    { label: 'Efectivo Bs', total: selected.total_efectivo_bs, color: 'text-yellow-400' },
                     { label: 'Tarjeta', total: selected.total_tarjeta, color: 'text-blue-400' },
                     { label: 'Pago Móvil', total: selected.total_pagomovil, color: 'text-purple-400' },
                   ].map(({ label, total, color }) => (
@@ -1146,6 +1504,8 @@ export function PosPage() {
         closed_at: row.closed_at,
         order_count: row.order_count,
         total_efectivo: row.total_efectivo,
+        total_efectivo_usd: row.total_efectivo_usd ?? 0,
+        total_efectivo_bs: row.total_efectivo_bs ?? 0,
         total_tarjeta: row.total_tarjeta,
         total_pagomovil: row.total_pagomovil,
         grand_total: row.grand_total,
@@ -1244,7 +1604,7 @@ export function PosPage() {
     setCart(prev => prev.filter(i => getItemKey(i) !== key));
   }, []);
 
-  const handlePayment = useCallback(async (method: PaymentMethod, amountReceived: number, changeAmount: number, paymentRef: string) => {
+  const handlePayment = useCallback(async (method: PaymentMethod, amountReceived: number, changeAmount: number, paymentRef: string, paymentCurrency?: 'USD' | 'BS') => {
     if (!cashier || !locationId || cart.length === 0) return;
 
     const orderItems = cart.map(i => ({
@@ -1271,6 +1631,7 @@ export function PosPage() {
           items: orderItems,
           subtotal: cartTotal,
           total: cartTotal,
+          payment_currency: paymentCurrency || null,
         }).eq('id', loadedOrderId);
         if (error) throw error;
       } else {
@@ -1292,6 +1653,7 @@ export function PosPage() {
           change_amount: changeAmount,
           cashier_id: cashier.id,
           invoice_number: invoiceNumber,
+          payment_currency: paymentCurrency || null,
         });
         if (error) throw error;
       }
@@ -1537,7 +1899,7 @@ export function PosPage() {
                       value={orderCode}
                       onChange={e => { setOrderCode(e.target.value.toUpperCase()); setOrderCodeError(''); }}
                       onKeyDown={e => e.key === 'Enter' && handleLoadOrderByCode()}
-                      placeholder="Código de orden (PED-XXXXXX)"
+                      placeholder="Código de orden (ej: A3K9)"
                       className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-10 pr-3 py-2 text-sm font-mono font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant placeholder:text-zinc-600"
                     />
                   </div>
@@ -1643,8 +2005,9 @@ export function PosPage() {
             cashierName={cashier?.name || ''}
             customerName={customerName}
             customerCedula={customerCedula || undefined}
-            config={{ rif: config.rif, businessAddress: config.businessAddress, businessPhone: config.businessPhone, name: config.name }}
+            config={{ rif: config.rif, businessAddress: config.businessAddress, businessPhone: config.businessPhone, name: config.name, exchangeRate: config.exchangeRate }}
             locationName={locationName}
+            exchangeRate={config.exchangeRate ?? 1}
             onClose={() => setShowReceipt(null)}
             onNewSale={handleNewSale}
           />
@@ -1660,6 +2023,7 @@ export function PosPage() {
             locationId={locationId}
             locationName={locationName}
             cashier={cashier}
+            exchangeRate={config.exchangeRate ?? 1}
             onCorteSaved={() => cortesQuery.refetch()}
             onClose={() => setShowCorteDeCaja(false)}
           />
@@ -1683,8 +2047,9 @@ export function PosPage() {
           <InvoiceHistoryModal
             orders={posOrdersQuery.data || []}
             locationId={locationId}
-            config={config}
+            config={{ rif: config.rif, businessAddress: config.businessAddress, businessPhone: config.businessPhone, name: config.name, exchangeRate: config.exchangeRate }}
             locationName={locationName}
+            exchangeRate={config.exchangeRate ?? 1}
             onClose={() => setShowInvoiceHistory(false)}
           />
         )}
