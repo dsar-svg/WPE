@@ -6,7 +6,7 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { Product, Cashier, POSCartItem, PaymentMethod, Order, OrderStatus, DeliveryType } from '../types';
 import { supabase } from '../lib/supabase';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
-import { fetchBcvRate } from '../services/bcvRate';
+
 import { ChoiceSelectorModal } from '../components/ui/ChoiceSelectorModal';
 import { hashPin } from '../lib/hashPin';
 
@@ -137,15 +137,7 @@ function PaymentModal({
   const [paymentRef, setPaymentRef] = useState('');
   const [amountReceived, setAmountReceived] = useState('');
   const [amountCurrency, setAmountCurrency] = useState<'USD' | 'BS'>('USD');
-  const [rate, setRate] = useState(exchangeRate);
-  const [rateLoading, setRateLoading] = useState(false);
-
-  useEffect(() => {
-    setRateLoading(true);
-    fetchBcvRate().then(r => {
-      if (r && r > 0) setRate(r);
-    }).finally(() => setRateLoading(false));
-  }, []);
+  const rate = exchangeRate;
 
   const amountReceivedUsd = amountCurrency === 'BS'
     ? (parseFloat(amountReceived) || 0) / rate
@@ -192,8 +184,7 @@ function PaymentModal({
               {totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.
             </p>
             <div className="flex items-center justify-center gap-1.5">
-              <p className="text-[10px] text-zinc-500">Tasa BCV: {rate.toFixed(2)}</p>
-              {rateLoading && <Loader2 className="w-3 h-3 text-zinc-500 animate-spin" />}
+              <p className="text-[10px] text-zinc-500">Tasa: {rate.toFixed(2)}</p>
             </div>
           </div>
         </div>
