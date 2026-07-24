@@ -1416,9 +1416,30 @@ function CorteHistoryModal({
 // ==============================
 // Main POS Page
 // ==============================
+function loadCashier(): Cashier | null {
+  try {
+    const raw = localStorage.getItem('pos_cashier');
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (Date.now() - data.timestamp > 86400000) {
+      localStorage.removeItem('pos_cashier');
+      return null;
+    }
+    return data.cashier as Cashier;
+  } catch { return null; }
+}
+
+function saveCashier(c: Cashier) {
+  localStorage.setItem('pos_cashier', JSON.stringify({ cashier: c, timestamp: Date.now() }));
+}
+
+function clearCashier() {
+  localStorage.removeItem('pos_cashier');
+}
+
 export function PosPage() {
   const { menuItems, categories, locations, config, findCustomer, saveCustomer, generateInvoiceNumber } = useRestaurant();
-  const [cashier, setCashier] = useState<Cashier | null>(null);
+  const [cashier, setCashier] = useState<Cashier | null>(() => loadCashier());
   const [activeCategory, setActiveCategory] = useState('Todas');
   const [cart, setCart] = useState<POSCartItem[]>([]);
   const [search, setSearch] = useState('');
@@ -1448,7 +1469,21 @@ export function PosPage() {
   const [orderCodeError, setOrderCodeError] = useState('');
   const [loadedOrderId, setLoadedOrderId] = useState<string | null>(null);
   const [loadedPaymentMethod, setLoadedPaymentMethod] = useState<PaymentMethod | null>(null);
-  const [localRate, setLocalRate] = useState(config.exchangeRate ?? 1);
+  const [localRate, setLocalRate] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pos_local_rate');
+      if (saved) { const v = parseFloat(saved); if (v > 0) return v; }
+    } catch {}
+    return config.exchangeRate ?? 1;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('pos_local_rate', String(localRate));
+  }, [localRate]);
+
+  useEffect(() => {
+    if (cashier) saveCashier(cashier); else clearCashier();
+  }, [cashier]);
 
   // Fetch orders for the POS location (separate from context query which requires Supabase auth)
   const posOrdersQuery = useQuery({
