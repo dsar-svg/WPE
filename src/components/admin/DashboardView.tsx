@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { MapPin, Utensils, ShoppingBag, DollarSign, Trophy, TrendingDown, Calendar, ArrowUpRight, ArrowDownRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MapPin, Utensils, ShoppingBag, DollarSign, Trophy, TrendingDown, Calendar, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { Order, Location, Product } from '../../types';
 
 interface DashboardViewProps {
@@ -71,15 +71,6 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
   const { filtered, total, count, prevTotal, prevCount, totalChange, countChange } = useMonthFilter(orders, year, month);
   const chart = useMemo(() => buildMonthChart(filtered, year, month), [filtered, year, month]);
 
-  const prevMonth = () => {
-    if (month === 0) { setYear(y => y - 1); setMonth(11); }
-    else setMonth(m => m - 1);
-  };
-  const nextMonth = () => {
-    if (month === 11) { setYear(y => y + 1); setMonth(0); }
-    else setMonth(m => m + 1);
-  };
-
   const maxVal = Math.max(...chart.values, 1);
   const BAR_HEIGHT = 140;
   const BAR_GAP = 6;
@@ -102,16 +93,17 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
           <h2 className="text-2xl font-black">Dashboard</h2>
           <p className="text-admin-muted text-sm">Resumen mensual</p>
         </div>
-        <div className="flex items-center gap-3 bg-admin-surface border border-admin-border rounded-2xl px-4 py-2">
-          <button onClick={prevMonth} className="p-1.5 rounded-xl hover:bg-admin-border text-admin-muted hover:text-admin-text transition-all">
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="text-sm font-black text-admin-text min-w-[100px] text-center select-none">
-            {monthNames[month]} {year}
-          </span>
-          <button onClick={nextMonth} className="p-1.5 rounded-xl hover:bg-admin-border text-admin-muted hover:text-admin-text transition-all">
-            <ChevronRight className="w-4 h-4" />
-          </button>
+        <div className="flex items-center gap-2">
+          <select value={month} onChange={e => setMonth(Number(e.target.value))}
+            className="bg-admin-surface border border-admin-border rounded-xl px-3 py-2 text-sm font-bold text-admin-text outline-none focus:ring-2 focus:ring-primary-vibrant cursor-pointer"
+          >
+            {monthNames.map((name, i) => <option key={i} value={i}>{name}</option>)}
+          </select>
+          <select value={year} onChange={e => setYear(Number(e.target.value))}
+            className="bg-admin-surface border border-admin-border rounded-xl px-3 py-2 text-sm font-bold text-admin-text outline-none focus:ring-2 focus:ring-primary-vibrant cursor-pointer"
+          >
+            {Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
         </div>
       </div>
 
