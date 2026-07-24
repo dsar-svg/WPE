@@ -1420,7 +1420,7 @@ function CorteHistoryModal({
 // Main POS Page
 // ==============================
 export function PosPage() {
-  const { menuItems, categories, locations, config, findCustomer, saveCustomer, generateInvoiceNumber } = useRestaurant();
+  const { menuItems, categories, locations, config, findCustomer, saveCustomer, generateInvoiceNumber, updateConfig } = useRestaurant();
   const [cashier, setCashier] = useState<Cashier | null>(null);
   const [activeCategory, setActiveCategory] = useState('Todas');
   const [cart, setCart] = useState<POSCartItem[]>([]);
@@ -1434,6 +1434,8 @@ export function PosPage() {
   const [showCorteDeCaja, setShowCorteDeCaja] = useState(false);
   const [showCorteHistory, setShowCorteHistory] = useState(false);
   const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
+  const [editingRate, setEditingRate] = useState(false);
+  const [editRateValue, setEditRateValue] = useState('');
   const [showReceipt, setShowReceipt] = useState<{
     items: POSCartItem[];
     total: number;
@@ -1781,9 +1783,31 @@ export function PosPage() {
             <Calendar className="w-3.5 h-3.5" /> Historial
           </button>
           <span className="text-xs text-zinc-500 font-mono">{new Date().toLocaleTimeString('es-VE')}</span>
-          <span className="text-[10px] font-black text-primary-vibrant bg-primary-vibrant/10 px-2.5 py-1 rounded-lg flex items-center gap-1">
-            <DollarSign className="w-3 h-3" /> Bs. {config.exchangeRate?.toFixed(2) || 'N/A'}
-          </span>
+          {editingRate ? (
+            <input autoFocus
+              className="w-20 text-[10px] font-black text-primary-vibrant bg-zinc-800 px-2.5 py-1 rounded-lg text-center outline-none ring-2 ring-primary-vibrant"
+              type="number" step="0.01" min="0"
+              value={editRateValue}
+              onChange={e => setEditRateValue(e.target.value)}
+              onBlur={() => {
+                const v = parseFloat(editRateValue);
+                if (v > 0 && v !== config.exchangeRate) {
+                  updateConfig({ exchangeRate: v });
+                }
+                setEditingRate(false);
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                if (e.key === 'Escape') setEditingRate(false);
+              }}
+            />
+          ) : (
+            <button onClick={() => { setEditRateValue(String(config.exchangeRate ?? '')); setEditingRate(true); }}
+              className="text-[10px] font-black text-primary-vibrant bg-primary-vibrant/10 px-2.5 py-1 rounded-lg flex items-center gap-1 hover:bg-primary-vibrant/20 transition-all cursor-text"
+            >
+              <DollarSign className="w-3 h-3" /> Bs. {config.exchangeRate?.toFixed(2) || 'N/A'}
+            </button>
+          )}
           <button onClick={() => setCashier(null)}
             className="p-2 bg-zinc-800 rounded-xl text-zinc-500 hover:text-white hover:bg-zinc-700 transition-all"
           >
