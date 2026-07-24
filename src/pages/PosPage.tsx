@@ -332,7 +332,7 @@ function ReceiptModal({
   onClose: () => void;
   onNewSale: () => void;
 }) {
-  const rate = exchangeRate || config.exchangeRate || 1;
+  const rate = exchangeRate || 1;
   const totalBs = total * rate;
   const biBs = totalBs / 1.16;
   const taxBs = biBs * 0.16;
@@ -1442,6 +1442,7 @@ export function PosPage() {
   const [orderCodeError, setOrderCodeError] = useState('');
   const [loadedOrderId, setLoadedOrderId] = useState<string | null>(null);
   const [loadedPaymentMethod, setLoadedPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [localRate, setLocalRate] = useState(config.exchangeRate ?? 1);
 
   // Fetch orders for the POS location (separate from context query which requires Supabase auth)
   const posOrdersQuery = useQuery({
@@ -1784,9 +1785,12 @@ export function PosPage() {
               onChange={e => setEditRateValue(e.target.value)}
               onBlur={async () => {
                 const v = parseFloat(editRateValue);
-                if (v > 0 && v !== config.exchangeRate) {
-                  await supabase.rpc('update_exchange_rate', { rate: v });
-                  await queryClient.refetchQueries({ queryKey: ['config'] });
+                if (v > 0) {
+                  setLocalRate(v);
+                  if (v !== localRate) {
+                    await supabase.rpc('update_exchange_rate', { rate: v });
+                    queryClient.refetchQueries({ queryKey: ['config'] });
+                  }
                 }
                 setEditingRate(false);
               }}
@@ -1796,10 +1800,10 @@ export function PosPage() {
               }}
             />
           ) : (
-            <button onClick={() => { setEditRateValue(String(config.exchangeRate ?? '')); setEditingRate(true); }}
+            <button onClick={() => { setEditRateValue(String(localRate ?? '')); setEditingRate(true); }}
               className="text-[10px] font-black text-primary-vibrant bg-primary-vibrant/10 px-2.5 py-1 rounded-lg flex items-center gap-1 hover:bg-primary-vibrant/20 transition-all cursor-text"
             >
-              <DollarSign className="w-3 h-3" /> Bs. {config.exchangeRate?.toFixed(2) || 'N/A'}
+              <DollarSign className="w-3 h-3" /> Bs. {localRate?.toFixed(2) || 'N/A'}
             </button>
           )}
           <button onClick={() => setCashier(null)}
@@ -2007,7 +2011,7 @@ export function PosPage() {
       {/* Payment modal */}
       <AnimatePresence>
         {showPayModal && (
-          <PaymentModal total={cartTotal} onConfirm={handlePayment} onClose={() => setShowPayModal(false)} exchangeRate={config.exchangeRate ?? 1} originalPaymentMethod={loadedPaymentMethod} />
+          <PaymentModal total={cartTotal} onConfirm={handlePayment} onClose={() => setShowPayModal(false)} exchangeRate={localRate ?? 1} originalPaymentMethod={loadedPaymentMethod} />
         )}
       </AnimatePresence>
 
@@ -2023,9 +2027,9 @@ export function PosPage() {
             cashierName={cashier?.name || ''}
             customerName={customerName}
             customerCedula={customerCedula || undefined}
-            config={{ rif: config.rif, businessAddress: config.businessAddress, businessPhone: config.businessPhone, name: config.name, exchangeRate: config.exchangeRate }}
+            config={{ rif: config.rif, businessAddress: config.businessAddress, businessPhone: config.businessPhone, name: config.name, exchangeRate: localRate }}
             locationName={locationName}
-            exchangeRate={config.exchangeRate ?? 1}
+            exchangeRate={localRate ?? 1}
             onClose={() => setShowReceipt(null)}
             onNewSale={handleNewSale}
           />
@@ -2041,7 +2045,7 @@ export function PosPage() {
             locationId={locationId}
             locationName={locationName}
             cashier={cashier}
-            exchangeRate={config.exchangeRate ?? 1}
+            exchangeRate={localRate ?? 1}
             onCorteSaved={() => cortesQuery.refetch()}
             onClose={() => setShowCorteDeCaja(false)}
           />
@@ -2065,9 +2069,9 @@ export function PosPage() {
           <InvoiceHistoryModal
             orders={posOrdersQuery.data || []}
             locationId={locationId}
-            config={{ rif: config.rif, businessAddress: config.businessAddress, businessPhone: config.businessPhone, name: config.name, exchangeRate: config.exchangeRate }}
+            config={{ rif: config.rif, businessAddress: config.businessAddress, businessPhone: config.businessPhone, name: config.name, exchangeRate: localRate }}
             locationName={locationName}
-            exchangeRate={config.exchangeRate ?? 1}
+            exchangeRate={localRate ?? 1}
             onClose={() => setShowInvoiceHistory(false)}
           />
         )}
