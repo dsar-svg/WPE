@@ -1,5 +1,5 @@
-// Simple service worker for PWA installability — version bump to trigger update
-const CACHE_NAME = 'w-panda-cache-v2';
+// Version: __VERSION__
+const CACHE_NAME = 'w-panda-cache-__VERSION__';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

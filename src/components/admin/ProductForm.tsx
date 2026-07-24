@@ -173,16 +173,6 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="product-code" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Código POS</label>
-              <input
-                id="product-code"
-                className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-mono font-bold focus:ring-2 focus:ring-primary-vibrant outline-none uppercase"
-                value={data.code || ''}
-                onChange={e => setData({...data, code: e.target.value})}
-                placeholder="Ej: A001"
-              />
-            </div>
-            <div className="space-y-2">
               <label htmlFor="product-price" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Precio ($)</label>
               <input
                 id="product-price"
