@@ -812,10 +812,12 @@ hr { border: none; border-top: 1px solid #000; margin: 6px 0; }
 // Invoice History
 // ==============================
 function InvoiceHistoryModal({
-  orders, locationId, onClose,
+  orders, locationId, config, locationName, onClose,
 }: {
   orders: Order[];
   locationId: string;
+  config: { rif?: string; businessAddress?: string; businessPhone?: string; name?: string };
+  locationName: string;
   onClose: () => void;
 }) {
   const [searchCedula, setSearchCedula] = useState('');
@@ -835,29 +837,36 @@ function InvoiceHistoryModal({
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
-  const handleReprint = (order: Order) => {
-    const w = window.open('', '', 'width=380,height=700');
-    if (!w) return;
-    const items = order.items as Array<{ name: string; quantity: number; price: number; selectedChoices?: string[] }>;
-    w.document.write(`<!DOCTYPE html>
+const handleReprint = (order: Order) => {
+    const receiptHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Factura</title>
 <style>
+@media print {
+  @page { size: 80mm auto; margin: 0; }
+  body { margin: 0; padding: 0; }
+}
 body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; width: 290px; margin: 0 auto; padding: 8px; color: #000; }
-h2 { text-align: center; margin: 0; font-size: 14px; font-weight: 900; color: #000; }
+h2 { text-align: center; margin: 0; font-size: 16px; text-transform: uppercase; font-weight: 900; color: #000; }
 p { text-align: center; margin: 1px 0; font-size: 11px; color: #000; }
-table { width: 100%; border-collapse: collapse; margin: 6px 0; }
+table { width: 100%; border-collapse: collapse; margin: 8px 0; }
 th, td { text-align: left; padding: 2px 3px; font-size: 11px; color: #000; }
 th { border-bottom: 1px solid #000; font-weight: 900; }
 td.r { text-align: right; }
 td.c { text-align: center; }
-.total td { border-top: 1px solid #000; font-weight: 900; font-size: 13px; color: #000; }
-hr { border: none; border-top: 1px solid #000; margin: 4px 0; }
-.footer { text-align: center; font-size: 10px; color: #000; }
+.total td { border-top: 1px solid #000; font-weight: 900; font-size: 13px; padding-top: 4px; color: #000; }
+hr { border: none; border-top: 1px solid #000; margin: 6px 0; }
+.footer { text-align: center; font-size: 10px; margin-top: 6px; color: #000; }
 </style></head><body>
-<h2>FACTURA ${order.invoice_number || ''}</h2>
+<h2>${config?.name || 'Wallace Panda Express'}</h2>
+${config?.rif ? `<p>RIF: ${config.rif}</p>` : ''}
+${config?.businessAddress ? `<p>${config.businessAddress}</p>` : ''}
+${config?.businessPhone ? `<p>Tel: ${config.businessPhone}</p>` : ''}
+<p>${locationName}</p>
+<hr>
+<p><strong>FACTURA</strong>${order.invoice_number ? ` N° ${order.invoice_number}` : ''}</p>
 <p>${formatDate(order.created_at)}</p>
 <p>Cliente: ${order.customer_name}${order.cedula ? ` V-${order.cedula}` : ''}</p>
-<p>${order.delivery_type}${order.delivery_address ? ` — ${order.delivery_address}` : ''}</p>
+${order.delivery_type === 'Delivery' ? `<p>Delivery${order.delivery_address ? ` — ${order.delivery_address}` : ''}</p>` : ''}
 <hr>
 <table>
 <tr><th>Item</th><th class="c">Cant</th><th class="r">Precio</th></tr>
@@ -868,18 +877,38 @@ ${items.map(i => {
 </table>
 <hr>
 <table>
+<tr><td>Subtotal (sin IVA)</td><td class="r">$${(order.subtotal / 1.16).toFixed(2)}</td></tr>
+<tr><td>IVA 16%</td><td class="r">$${(order.subtotal - order.subtotal / 1.16).toFixed(2)}</td></tr>
 <tr><td>Subtotal</td><td class="r">$${order.subtotal.toFixed(2)}</td></tr>
-<tr><td>Delivery</td><td class="r">$${order.delivery_fee.toFixed(2)}</td></tr>
+${order.delivery_fee > 0 ? `<tr><td>Delivery</td><td class="r">$${order.delivery_fee.toFixed(2)}</td></tr>` : ''}
 <tr class="total"><td>TOTAL</td><td class="r">$${order.total.toFixed(2)}</td></tr>
 </table>
 <hr>
 <p>Método: ${order.payment_method || 'N/A'}</p>
-${order.change_amount && order.change_amount > 0 ? `<p>Vuelto: $${order.change_amount.toFixed(2)}</p>` : ''}
+${order.change_amount && order.change_amount > 0 ? `<p>Recibido: $${(order.total + order.change_amount).toFixed(2)}</p><p>Vuelto: $${order.change_amount.toFixed(2)}</p>` : ''}
 <hr>
+<p class="footer">¡Gracias por su compra!</p>
 <p class="footer">wallacepanda.com</p>
-<script>window.print();</script>
-</body></html>`);
-    w.document.close();
+</body></html>`;
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(receiptHtml);
+      doc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(iframe), 2000);
+      }, 500);
+    }
   };
 
   return (
@@ -1654,6 +1683,8 @@ export function PosPage() {
           <InvoiceHistoryModal
             orders={posOrdersQuery.data || []}
             locationId={locationId}
+            config={config}
+            locationName={locationName}
             onClose={() => setShowInvoiceHistory(false)}
           />
         )}
