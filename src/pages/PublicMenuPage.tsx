@@ -61,20 +61,6 @@ export function PublicMenuPage() {
         canonical="/menu"
       />
 
-      {/* Desktop sidebar */}
-      <aside className="w-56 bg-dark/95 backdrop-blur-2xl z-30 border-r border-white/10 overflow-y-auto p-5 space-y-1.5 pt-6 max-lg:hidden flex-shrink-0">
-        {categories.map((cat) => (
-          <button key={cat.id} onClick={() => setActiveCategory(cat.name)}
-            className={`w-full px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-[0.25em] text-left transition-all duration-200 ${
-              activeCategory === cat.name
-                ? 'bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-xl shadow-primary-vibrant/30'
-                : 'text-zinc-400 hover:bg-white/5 hover:text-white'
-            }`}>
-            {cat.name}
-          </button>
-        ))}
-      </aside>
-
       <div className="flex-1 flex flex-col min-w-0">
       {/* Header */}
       <header className="bg-dark p-10 md:p-16 text-white relative overflow-hidden border-b-2 border-primary-vibrant/20">
@@ -99,6 +85,22 @@ export function PublicMenuPage() {
           </div>
         </div>
       </header>
+
+      {/* Sticky category bar below header */}
+      <nav className="sticky top-0 z-30 bg-dark/90 backdrop-blur-2xl border-b border-white/10 overflow-x-auto flex-shrink-0">
+        <div className="flex gap-1.5 px-4 md:px-8 py-3 max-w-7xl mx-auto">
+          {categories.map((cat) => (
+            <button key={cat.id} onClick={() => setActiveCategory(cat.name)}
+              className={`whitespace-nowrap px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-[0.25em] transition-all duration-200 flex-shrink-0 ${
+                activeCategory === cat.name
+                  ? 'bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-xl shadow-primary-vibrant/30'
+                  : 'text-zinc-400 hover:bg-white/5 hover:text-white'
+              }`}>
+              {cat.name}
+            </button>
+          ))}
+        </div>
+      </nav>
 
       {/* Mobile toggle button */}
       <button

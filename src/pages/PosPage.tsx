@@ -1018,7 +1018,7 @@ export function PosPage() {
     changeAmount: number;
     invoiceNumber: string;
   } | null>(null);
-  const [selectedLocationId, setSelectedLocationId] = useState('');
+  const locationId = cashier?.location_id || '';
   const [choiceProduct, setChoiceProduct] = useState<Product | null>(null);
   const [orderCode, setOrderCode] = useState('');
   const [isLoadingOrder, setIsLoadingOrder] = useState(false);
@@ -1028,12 +1028,12 @@ export function PosPage() {
 
   // Fetch orders for the POS location (separate from context query which requires Supabase auth)
   const posOrdersQuery = useQuery({
-    queryKey: ['pos-orders', selectedLocationId],
+    queryKey: ['pos-orders', locationId],
     queryFn: async () => {
       const { data } = await supabase
         .from('orders')
         .select('*')
-        .eq('location_id', selectedLocationId)
+        .eq('location_id', locationId)
         .order('created_at', { ascending: false })
         .limit(100);
       return (data || []).map((row: any): Order => ({
@@ -1058,18 +1058,18 @@ export function PosPage() {
         created_at: row.created_at,
       }));
     },
-    enabled: !!cashier && !!selectedLocationId,
+    enabled: !!cashier && !!locationId,
     staleTime: 10000,
   });
 
   // Fetch cortes for this location
   const cortesQuery = useQuery({
-    queryKey: ['cortes', selectedLocationId],
+    queryKey: ['cortes', locationId],
     queryFn: async () => {
       const { data } = await supabase
         .from('cortes')
         .select('*')
-        .eq('location_id', selectedLocationId)
+        .eq('location_id', locationId)
         .order('closed_at', { ascending: false })
         .limit(50);
       return (data || []).map((row: any) => ({
@@ -1089,7 +1089,7 @@ export function PosPage() {
         created_at: row.created_at,
       }));
     },
-    enabled: !!cashier && !!selectedLocationId,
+    enabled: !!cashier && !!locationId,
     staleTime: 5000,
   });
   const cortes = cortesQuery.data || [];
@@ -1105,10 +1105,10 @@ export function PosPage() {
     customerPhone.replace(/\D/g, '').length >= 7;
 
   useEffect(() => {
-    if (!selectedLocationId && locations.length > 0) {
+    if (!locationId && locations.length > 0) {
       setSelectedLocationId(locations[0].id);
     }
-  }, [locations, selectedLocationId]);
+  }, [locations, locationId]);
 
   // Lookup customer by cedula
   const cedulaLookupRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1188,7 +1188,7 @@ export function PosPage() {
   }, []);
 
   const handlePayment = useCallback(async (method: PaymentMethod, amountReceived: number, changeAmount: number, paymentRef: string) => {
-    if (!cashier || !selectedLocationId || cart.length === 0) return;
+    if (!cashier || !locationId || cart.length === 0) return;
 
     const orderItems = cart.map(i => ({
       id: i.product.id,
@@ -1200,7 +1200,7 @@ export function PosPage() {
     }));
 
     try {
-      const invoiceNumber = await generateInvoiceNumber(selectedLocationId);
+      const invoiceNumber = await generateInvoiceNumber(locationId);
 
       if (loadedOrderId) {
         // UPDATE the original online order → mark as exitoso with invoice
@@ -1219,7 +1219,7 @@ export function PosPage() {
       } else {
         // Manual POS sale (no online order) → INSERT new row
         const { error } = await supabase.from('orders').insert({
-          location_id: selectedLocationId,
+          location_id: locationId,
           customer_name: customerName || 'Mostrador',
           customer_phone: customerPhone || 'N/A',
           cedula: customerCedula || '',
@@ -1249,7 +1249,7 @@ export function PosPage() {
       console.error('Error processing payment:', err);
       alert('Error al procesar la venta');
     }
-  }, [cashier, selectedLocationId, cart, cartTotal, customerName, customerPhone, customerCedula, deliveryType, loadedOrderId, generateInvoiceNumber, saveCustomer, posOrdersQuery]);
+  }, [cashier, locationId, cart, cartTotal, customerName, customerPhone, customerCedula, deliveryType, loadedOrderId, generateInvoiceNumber, saveCustomer, posOrdersQuery]);
 
   const handleNewSale = () => {
     setCart([]);
@@ -1331,7 +1331,7 @@ export function PosPage() {
 
   if (!cashier) return <PosLogin onLogin={setCashier} />;
 
-  const locationName = locations.find(l => l.id === selectedLocationId)?.name || 'Seleccionar sede';
+  const locationName = locations.find(l => l.id === locationId)?.name || 'Seleccionar sede';
 
   return (
     <div className="h-screen bg-dark text-white flex flex-col font-body overflow-hidden">
@@ -1343,11 +1343,7 @@ export function PosPage() {
             <User className="w-4 h-4 text-primary-vibrant" />
             <span className="font-bold text-zinc-300">{cashier.name}</span>
           </div>
-          <select value={selectedLocationId} onChange={e => setSelectedLocationId(e.target.value)}
-            className="bg-zinc-800 border border-zinc-700 rounded-xl px-3 py-1.5 text-xs font-bold text-zinc-300 outline-none"
-          >
-            {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{locationName}</span>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setShowCorteDeCaja(true)}
@@ -1601,7 +1597,7 @@ export function PosPage() {
           <CorteDeCajaModal
             orders={posOrdersQuery.data || []}
             cortes={cortes}
-            locationId={selectedLocationId}
+            locationId={locationId}
             locationName={locationName}
             cashier={cashier}
             onCorteSaved={() => cortesQuery.refetch()}
@@ -1626,7 +1622,7 @@ export function PosPage() {
         {showInvoiceHistory && (
           <InvoiceHistoryModal
             orders={posOrdersQuery.data || []}
-            locationId={selectedLocationId}
+            locationId={locationId}
             onClose={() => setShowInvoiceHistory(false)}
           />
         )}

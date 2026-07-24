@@ -15,25 +15,23 @@ interface CashierFormProps {
 export function CashierForm({ cashier, onClose, onSaved }: CashierFormProps) {
   const { locations } = useRestaurant();
   const [form, setForm] = useState({
-    name: cashier?.name || '',
-    email: cashier?.email || '',
+    box: cashier?.employee_id || '',
     pin: cashier?.pin || '',
-    employee_id: cashier?.employee_id || '',
     location_id: cashier?.location_id || '',
   });
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
-    if (!form.name || !form.email || form.pin.length !== 4) return;
+    if (!form.box || form.pin.length !== 4) return;
     setSaving(true);
     try {
       const pinHash = await hashPin(form.pin);
       const record = {
-        name: form.name,
-        email: form.email,
+        name: form.box,
+        email: `${form.box}@caja.local`,
+        employee_id: form.box,
         pin_hash: pinHash,
         pin: form.pin,
-        employee_id: form.employee_id || null,
         location_id: form.location_id || null,
         role: 'cashier',
       };
@@ -64,13 +62,9 @@ export function CashierForm({ cashier, onClose, onSaved }: CashierFormProps) {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Nombre</label>
-              <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary-vibrant" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Email</label>
-              <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Número de Caja</label>
+              <input value={form.box} onChange={e => setForm(f => ({ ...f, box: e.target.value }))}
+                placeholder="Ej: Caja 1"
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary-vibrant" />
             </div>
             <div className="space-y-1">
@@ -78,18 +72,13 @@ export function CashierForm({ cashier, onClose, onSaved }: CashierFormProps) {
               <input value={form.pin} maxLength={4} onChange={e => setForm(f => ({ ...f, pin: e.target.value.replace(/\D/g, '') }))}
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm font-bold font-mono tracking-widest outline-none focus:ring-2 focus:ring-primary-vibrant" inputMode="numeric" />
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">ID Empleado</label>
-              <input value={form.employee_id} onChange={e => setForm(f => ({ ...f, employee_id: e.target.value }))}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary-vibrant" />
-            </div>
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Sede</label>
             <select value={form.location_id} onChange={e => setForm(f => ({ ...f, location_id: e.target.value }))}
               className="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary-vibrant"
             >
-              <option value="">Todas las sedes</option>
+              <option value="">Seleccionar sede</option>
               {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
           </div>
@@ -100,7 +89,7 @@ export function CashierForm({ cashier, onClose, onSaved }: CashierFormProps) {
             className="flex-1 py-3 rounded-xl bg-zinc-800 text-zinc-400 font-bold text-sm hover:bg-zinc-700 transition-all">
             Cancelar
           </button>
-          <button onClick={handleSave} disabled={!form.name || !form.email || form.pin.length !== 4 || saving}
+          <button onClick={handleSave} disabled={!form.box || form.pin.length !== 4 || saving}
             className="flex-1 py-3 rounded-xl bg-primary-vibrant text-white font-bold text-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
             {saving ? 'Guardando...' : 'Guardar'}
           </button>
