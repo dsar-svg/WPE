@@ -26,9 +26,10 @@ export function CashierForm({ cashier, onClose, onSaved }: CashierFormProps) {
     setSaving(true);
     try {
       const pinHash = await hashPin(form.pin);
+      const email = `${form.box.replace(/\s+/g, '').toLowerCase()}@caja.local`;
       const record = {
         name: form.box,
-        email: `${form.box}@caja.local`,
+        email,
         employee_id: form.box,
         pin_hash: pinHash,
         pin: form.pin,

@@ -1,5 +1,5 @@
-// Version: __VERSION__
-const CACHE_NAME = 'w-panda-cache-__VERSION__';
+// Version: 1784861159184
+const CACHE_NAME = 'w-panda-cache-1784861159184';
 
 self.addEventListener('install', () => {});
 

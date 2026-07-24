@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { AnimatePresence } from 'motion/react';
-import { Utensils, ArrowLeft, HandPlatter, Tag, List, X } from 'lucide-react';
+import { Utensils, ArrowLeft, HandPlatter, Tag } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -22,7 +22,6 @@ export function PublicMenuPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [choiceProduct, setChoiceProduct] = useState<Product | null>(null);
   const [page, setPage] = useState(1);
-  const [showCategories, setShowCategories] = useState(false);
   const ITEMS_PER_PAGE = 12;
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -101,33 +100,6 @@ export function PublicMenuPage() {
           ))}
         </div>
       </nav>
-
-      {/* Mobile toggle button */}
-      <button
-        onClick={() => setShowCategories(!showCategories)}
-        className="fixed bottom-6 left-6 z-50 lg:hidden w-14 h-14 bg-gradient-to-r from-primary-vibrant to-secondary-vibrant rounded-2xl flex items-center justify-center shadow-2xl shadow-primary-vibrant/40 transition-all duration-200 active:scale-90"
-      >
-        {showCategories ? <X className="w-6 h-6" /> : <List className="w-6 h-6" />}
-      </button>
-
-      {/* Mobile sidebar overlay */}
-      {showCategories && (
-        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setShowCategories(false)} />
-      )}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-dark/95 backdrop-blur-2xl border-r border-white/10 overflow-y-auto p-5 space-y-1.5 pt-6 transition-transform duration-300 ease-out lg:hidden ${
-        showCategories ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        {categories.map((cat) => (
-          <button key={cat.id} onClick={() => { setActiveCategory(cat.name); setShowCategories(false); }}
-            className={`w-full px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-[0.25em] text-left transition-all duration-200 ${
-              activeCategory === cat.name
-                ? 'bg-gradient-to-r from-primary-vibrant to-secondary-vibrant text-white shadow-xl shadow-primary-vibrant/30'
-                : 'text-zinc-400 hover:bg-white/5 hover:text-white'
-            }`}>
-            {cat.name}
-          </button>
-        ))}
-      </aside>
 
       <main className="max-w-7xl mx-auto px-6 py-16 min-h-[60vh] bg-gradient-to-br from-primary-vibrant/[0.05] via-dark to-secondary-vibrant/[0.03]">
         {filteredItems.length === 0 ? (

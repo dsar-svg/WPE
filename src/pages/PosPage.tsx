@@ -1104,12 +1104,6 @@ export function PosPage() {
     customerPhone.startsWith('04') &&
     customerPhone.replace(/\D/g, '').length >= 7;
 
-  useEffect(() => {
-    if (!locationId && locations.length > 0) {
-      setSelectedLocationId(locations[0].id);
-    }
-  }, [locations, locationId]);
-
   // Lookup customer by cedula
   const cedulaLookupRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {

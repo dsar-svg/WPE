@@ -1,39 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Plus, Edit2, Trash2, Key, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { Cashier } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { useRestaurant } from '../../context/RestaurantContext';
+import { hashPin } from '../../lib/hashPin';
 
 export function CashierModal({ onClose }: { onClose: () => void }) {
   const { locations } = useRestaurant();
   const [cashiers, setCashiers] = useState<Cashier[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', email: '', pin: '', employee_id: '', location_id: '' });
+  const [form, setForm] = useState({ box: '', pin: '', location_id: '' });
   const [isAdding, setIsAdding] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [showPin, setShowPin] = useState<string | null>(null);
 
-  useState(() => {
-    supabase.from('admins').select('*').eq('role', 'cashier').then(({ data }) => {
-      if (data) setCashiers(data.map(r => ({ id: r.id, name: r.name, email: r.email, employee_id: r.employee_id, location_id: r.location_id, pin: r.pin })));
-      setLoading(false);
-    });
-  });
-
-  const refresh = async () => {
+  const fetch = async () => {
     const { data } = await supabase.from('admins').select('*').eq('role', 'cashier');
     if (data) setCashiers(data.map(r => ({ id: r.id, name: r.name, email: r.email, employee_id: r.employee_id, location_id: r.location_id, pin: r.pin })));
+    setLoading(false);
   };
 
+  useEffect(() => { fetch(); }, []);
+
   const handleSave = async () => {
-    if (!form.name || !form.email || form.pin.length !== 4) return;
-    const record: any = {
-      name: form.name,
-      email: form.email,
+    if (!form.box || form.pin.length !== 4) return;
+    const pinHash = await hashPin(form.pin);
+    const email = `${form.box.replace(/\s+/g, '').toLowerCase()}@caja.local`;
+    const record = {
+      name: form.box,
+      email,
+      employee_id: form.box,
+      pin_hash: pinHash,
       pin: form.pin,
-      employee_id: form.employee_id || null,
       location_id: form.location_id || null,
       role: 'cashier',
     };
@@ -44,19 +44,19 @@ export function CashierModal({ onClose }: { onClose: () => void }) {
     }
     setEditingId(null);
     setIsAdding(false);
-    setForm({ name: '', email: '', pin: '', employee_id: '', location_id: '' });
-    refresh();
+    setForm({ box: '', pin: '', location_id: '' });
+    fetch();
   };
 
   const startEdit = (c: Cashier) => {
     setEditingId(c.id);
-    setForm({ name: c.name, email: c.email, pin: c.pin || '', employee_id: c.employee_id || '', location_id: c.location_id || '' });
+    setForm({ box: c.employee_id || '', pin: c.pin || '', location_id: c.location_id || '' });
   };
 
   const handleDelete = async (id: string) => {
     await supabase.from('admins').delete().eq('id', id);
     setConfirmDelete(null);
-    refresh();
+    fetch();
   };
 
   return (
@@ -76,13 +76,9 @@ export function CashierModal({ onClose }: { onClose: () => void }) {
             <h3 className="font-black text-sm">{editingId ? 'Editar Cajera' : 'Nueva Cajera'}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Nombre</label>
-                <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary-vibrant" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Email</label>
-                <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Número de Caja</label>
+                <input value={form.box} onChange={e => setForm(f => ({ ...f, box: e.target.value }))}
+                  placeholder="Ej: Caja 1"
                   className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary-vibrant" />
               </div>
               <div className="space-y-1">
@@ -90,27 +86,22 @@ export function CashierModal({ onClose }: { onClose: () => void }) {
                 <input value={form.pin} maxLength={4} onChange={e => setForm(f => ({ ...f, pin: e.target.value.replace(/\D/g, '') }))}
                   className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm font-bold font-mono tracking-widest outline-none focus:ring-2 focus:ring-primary-vibrant" inputMode="numeric" />
               </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">ID Empleado</label>
-                <input value={form.employee_id} onChange={e => setForm(f => ({ ...f, employee_id: e.target.value }))}
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary-vibrant" />
-              </div>
               <div className="space-y-1 col-span-2">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Sede</label>
                 <select value={form.location_id} onChange={e => setForm(f => ({ ...f, location_id: e.target.value }))}
                   className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm font-bold outline-none focus:ring-2 focus:ring-primary-vibrant"
                 >
-                  <option value="">Todas las sedes</option>
+                  <option value="">Seleccionar sede</option>
                   {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                 </select>
               </div>
             </div>
             <div className="flex gap-3 pt-2">
-              <button onClick={() => { setEditingId(null); setIsAdding(false); setForm({ name: '', email: '', pin: '', employee_id: '', location_id: '' }); }}
+              <button onClick={() => { setEditingId(null); setIsAdding(false); setForm({ box: '', pin: '', location_id: '' }); }}
                 className="flex-1 py-3 rounded-xl bg-zinc-800 text-zinc-400 font-bold text-sm hover:bg-zinc-700 transition-all">
                 Cancelar
               </button>
-              <button onClick={handleSave} disabled={!form.name || !form.email || form.pin.length !== 4}
+              <button onClick={handleSave} disabled={!form.box || form.pin.length !== 4}
                 className="flex-1 py-3 rounded-xl bg-primary-vibrant text-white font-bold text-sm hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
                 Guardar
               </button>
@@ -136,10 +127,11 @@ export function CashierModal({ onClose }: { onClose: () => void }) {
                     <Key className="w-4 h-4 text-zinc-500" />
                   </div>
                   <div className="min-w-0">
-                    <div className="font-bold text-sm text-white truncate">{c.name}</div>
+                    <div className="font-bold text-sm text-white truncate">{c.employee_id}</div>
                     <div className="text-xs text-zinc-500 flex items-center gap-3 mt-0.5">
-                      <span>{c.email}</span>
-                      {c.employee_id && <span className="text-zinc-700">| ID: {c.employee_id}</span>}
+                      {locations.find(l => l.id === c.location_id)?.name && (
+                        <span>{locations.find(l => l.id === c.location_id)?.name}</span>
+                      )}
                       <button onClick={() => setShowPin(showPin === c.id ? null : c.id)}
                         className="text-zinc-600 hover:text-white transition-all">
                         {showPin === c.id ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
