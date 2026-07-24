@@ -313,6 +313,12 @@ function ReceiptModal({
   const taxAmount = subtotal * taxRate;
   const subtotalWithoutTax = subtotal / (1 + taxRate);
 
+  const abbreviate = (text: string) => {
+    const clean = text.replace(/[,;.]/g, '').toLowerCase();
+    const stopWords = ['con', 'y', 'de', 'del', 'la', 'el', 'los', 'las', 'un', 'una'];
+    return clean.split(' ').map(w => stopWords.includes(w) ? '' : w.length > 5 ? w.slice(0, 4) + '.' : w).filter(Boolean).join(' ');
+  };
+
   useEffect(() => {
     const t = setTimeout(() => handlePrint(), 300);
     return () => clearTimeout(t);
@@ -360,7 +366,8 @@ ${config.businessPhone ? `<p>Tel: ${config.businessPhone}</p>` : ''}
 <tr><th>Item</th><th class="c">Cant</th><th class="r">Precio</th></tr>
 ${items.map(i => {
   const choices = i.selectedChoices?.length ? ` (${i.selectedChoices.join(', ')})` : '';
-  return `<tr><td>${i.product.name}${choices}</td><td class="c">${i.quantity}</td><td class="r">$${(i.product.price * i.quantity).toFixed(2)}</td></tr>`;
+  const desc = i.product.description ? ` — ${abbreviate(i.product.description)}` : '';
+  return `<tr><td>${i.product.name}${desc}${choices}</td><td class="c">${i.quantity}</td><td class="r">$${(i.product.price * i.quantity).toFixed(2)}</td></tr>`;
 }).join('')}
 </table>
 <hr>
