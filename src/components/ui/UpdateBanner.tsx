@@ -7,42 +7,52 @@ export function UpdateBanner() {
   const regRef = useRef<ServiceWorkerRegistration | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const checkForUpdate = () => {
-    if (regRef.current) regRef.current.update();
-  };
-
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
 
-    const registerSW = async () => {
+    let reg: ServiceWorkerRegistration | null = null;
+
+    const check = async () => {
+      if (!reg) return;
+      await reg.update();
+      if (reg.waiting) {
+        setWaitingWorker(reg.waiting);
+      } else if (reg.installing) {
+        reg.installing.addEventListener('statechange', function handler() {
+          if (reg?.installing?.state === 'installed' && navigator.serviceWorker.controller) {
+            setWaitingWorker(reg.installing);
+          }
+        });
+      }
+    };
+
+    const register = async () => {
       try {
-        const reg = await navigator.serviceWorker.register('/sw.js');
+        reg = await navigator.serviceWorker.register('/sw.js');
         regRef.current = reg;
 
         if (reg.waiting) {
           setWaitingWorker(reg.waiting);
-          return;
         }
 
         reg.addEventListener('updatefound', () => {
-          const newWorker = reg.installing;
-          if (!newWorker) return;
-
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              setWaitingWorker(newWorker);
+          const w = reg?.installing;
+          if (!w) return;
+          w.addEventListener('statechange', () => {
+            if (w.state === 'installed' && navigator.serviceWorker.controller) {
+              setWaitingWorker(w);
             }
           });
         });
 
-        intervalRef.current = setInterval(checkForUpdate, 15000);
+        intervalRef.current = setInterval(check, 15000);
         document.addEventListener('visibilitychange', () => {
-          if (document.visibilityState === 'visible') checkForUpdate();
+          if (document.visibilityState === 'visible') check();
         });
       } catch { /* SW registration failed */ }
     };
 
-    registerSW();
+    register();
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);

@@ -115,7 +115,7 @@ function PaymentModal({
   total, onConfirm, onClose, exchangeRate, originalPaymentMethod,
 }: {
   total: number;
-  onConfirm: (method: PaymentMethod, amountReceived: number, changeAmount: number) => void;
+  onConfirm: (method: PaymentMethod, amountReceived: number, changeAmount: number, paymentRef: string) => void;
   onClose: () => void;
   exchangeRate: number;
   originalPaymentMethod?: PaymentMethod | null;
@@ -134,6 +134,7 @@ function PaymentModal({
       setConfirmChange(false);
     }
   };
+  const [paymentRef, setPaymentRef] = useState('');
   const [amountReceived, setAmountReceived] = useState('');
   const [rate, setRate] = useState(exchangeRate);
   const [rateLoading, setRateLoading] = useState(false);
@@ -156,7 +157,7 @@ function PaymentModal({
 
   const handleConfirm = () => {
     if (!canConfirm) return;
-    onConfirm(method, method === 'Efectivo' ? parseFloat(amountReceived) || 0 : total, changeAmount);
+    onConfirm(method, method === 'Efectivo' ? parseFloat(amountReceived) || 0 : total, changeAmount, paymentRef);
   };
 
   const methods: { key: PaymentMethod; icon: typeof DollarSign; label: string; color: string }[] = [
@@ -226,7 +227,20 @@ function PaymentModal({
           </div>
         )}
 
-          {method === 'Efectivo' && (
+          {method === 'PagoMóvil' && (
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Referencia</label>
+              <input autoFocus type="text" value={paymentRef}
+                onChange={e => setPaymentRef(e.target.value)}
+                className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl text-lg font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
+                placeholder="Número de referencia"
+              />
+            </div>
+          </div>
+        )}
+
+        {method === 'Efectivo' && (
           <div className="space-y-3">
             <div className="p-3 bg-primary-vibrant/10 rounded-xl border border-primary-vibrant/20 text-center">
               <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total redondeado</p>
@@ -1163,7 +1177,7 @@ export function PosPage() {
     setCart(prev => prev.filter(i => getItemKey(i) !== key));
   }, []);
 
-  const handlePayment = useCallback(async (method: PaymentMethod, amountReceived: number, changeAmount: number) => {
+  const handlePayment = useCallback(async (method: PaymentMethod, amountReceived: number, changeAmount: number, paymentRef: string) => {
     if (!cashier || !selectedLocationId || cart.length === 0) return;
 
     const orderItems = cart.map(i => ({
@@ -1183,6 +1197,7 @@ export function PosPage() {
         const { error } = await supabase.from('orders').update({
           status: 'exitoso',
           payment_method: method,
+          payment_ref: paymentRef || null,
           change_amount: changeAmount,
           cashier_id: cashier.id,
           invoice_number: invoiceNumber,
@@ -1206,6 +1221,7 @@ export function PosPage() {
           notes: '',
           status: 'exitoso',
           payment_method: method,
+          payment_ref: paymentRef || null,
           change_amount: changeAmount,
           cashier_id: cashier.id,
           invoice_number: invoiceNumber,
