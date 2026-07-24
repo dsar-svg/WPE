@@ -1795,7 +1795,7 @@ export function PosPage() {
                 const v = parseFloat(editRateValue);
                 if (v > 0 && v !== config.exchangeRate) {
                   await supabase.rpc('update_exchange_rate', { rate: v });
-                  queryClient.invalidateQueries({ queryKey: ['config'] });
+                  await queryClient.refetchQueries({ queryKey: ['config'] });
                 }
                 setEditingRate(false);
               }}
