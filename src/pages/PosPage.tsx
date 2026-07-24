@@ -324,11 +324,13 @@ function ReceiptModal({
   }, [onNewSale]);
 
   const handlePrint = () => {
-    const w = window.open('', '', 'width=380,height=700');
-    if (!w) return;
-    w.document.write(`<!DOCTYPE html>
+    const receiptHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Factura</title>
 <style>
+@media print {
+  @page { size: 80mm auto; margin: 0; }
+  body { margin: 0; padding: 0; }
+}
 body { font-family: 'Courier New', monospace; font-size: 11px; width: 290px; margin: 0 auto; padding: 8px; }
 h2 { text-align: center; margin: 0; font-size: 15px; text-transform: uppercase; }
 h3 { text-align: center; margin: 2px 0; font-size: 12px; }
@@ -371,9 +373,26 @@ ${paymentMethod === 'Efectivo' ? `<p>Recibido: $${(total + changeAmount).toFixed
 <hr>
 <p class="footer">¡Gracias por su compra!</p>
 <p class="footer">wallacepanda.com</p>
-<script>window.print();window.close();</script>
-</body></html>`);
-    w.document.close();
+</body></html>`;
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(receiptHtml);
+      doc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => document.body.removeChild(iframe), 2000);
+      }, 500);
+    }
   };
 
   return (
@@ -491,9 +510,11 @@ function CorteDeCajaModal({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<CorteRecord | null>(null);
   const [error, setError] = useState('');
+  const [newCorteMode, setNewCorteMode] = useState(false);
 
   const todayStr = new Date().toISOString().slice(0, 10);
-  const existingCorte = useMemo(() => cortes.find(c => c.date === todayStr), [cortes, todayStr]);
+  const todayCortes = useMemo(() => cortes.filter(c => c.date === todayStr).sort((a, b) => new Date(b.closed_at).getTime() - new Date(a.closed_at).getTime()), [cortes, todayStr]);
+  const existingCorte = todayCortes[0] || null;
 
   const todayOrders = useMemo(() => {
     const today = new Date();
@@ -505,18 +526,18 @@ function CorteDeCajaModal({
     );
   }, [orders, locationId]);
 
-  const totalEfectivo = todayOrders.filter(o => o.payment_method === 'Efectivo').reduce((s, o) => s + o.total, 0);
-  const totalTarjeta = todayOrders.filter(o => o.payment_method === 'Tarjeta').reduce((s, o) => s + o.total, 0);
-  const totalPagoMovil = todayOrders.filter(o => o.payment_method === 'PagoMóvil').reduce((s, o) => s + o.total, 0);
-  const granTotal = todayOrders.reduce((s, o) => s + o.total, 0);
-  const count = todayOrders.length;
-
-  // Orders made after the existing corte (if any)
-  const ordersAfterCorte = useMemo(() => {
-    if (!existingCorte) return [];
+  // When in new corte mode, only count orders AFTER the last corte
+  const activeOrders = useMemo(() => {
+    if (!newCorteMode || !existingCorte) return todayOrders;
     const corteTime = new Date(existingCorte.closed_at);
     return todayOrders.filter(o => new Date(o.created_at) > corteTime);
-  }, [todayOrders, existingCorte]);
+  }, [todayOrders, existingCorte, newCorteMode]);
+
+  const totalEfectivo = activeOrders.filter(o => o.payment_method === 'Efectivo').reduce((s, o) => s + o.total, 0);
+  const totalTarjeta = activeOrders.filter(o => o.payment_method === 'Tarjeta').reduce((s, o) => s + o.total, 0);
+  const totalPagoMovil = activeOrders.filter(o => o.payment_method === 'PagoMóvil').reduce((s, o) => s + o.total, 0);
+  const granTotal = activeOrders.reduce((s, o) => s + o.total, 0);
+  const count = activeOrders.length;
 
   const dateStr = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
 
@@ -526,10 +547,11 @@ function CorteDeCajaModal({
     try {
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const fromTime = newCorteMode && existingCorte ? existingCorte.closed_at : startOfDay.toISOString();
       const { error: insertError } = await supabase.from('cortes').insert({
         location_id: locationId,
         cashier_id: cashier?.id || '',
-        cashier_name: cashier?.name || '',
+        cashier_name: cashier?.employee_id || cashier?.name || '',
         date: todayStr,
         closed_at: now.toISOString(),
         order_count: count,
@@ -537,7 +559,7 @@ function CorteDeCajaModal({
         total_tarjeta: totalTarjeta,
         total_pagomovil: totalPagoMovil,
         grand_total: granTotal,
-        from_date: startOfDay.toISOString(),
+        from_date: fromTime,
         to_date: now.toISOString(),
       });
       if (insertError) throw insertError;
@@ -545,7 +567,7 @@ function CorteDeCajaModal({
         id: '',
         location_id: locationId,
         cashier_id: cashier?.id || '',
-        cashier_name: cashier?.name || '',
+        cashier_name: cashier?.employee_id || cashier?.name || '',
         date: todayStr,
         closed_at: now.toISOString(),
         order_count: count,
@@ -553,11 +575,12 @@ function CorteDeCajaModal({
         total_tarjeta: totalTarjeta,
         total_pagomovil: totalPagoMovil,
         grand_total: granTotal,
-        from_date: startOfDay.toISOString(),
+        from_date: fromTime,
         to_date: now.toISOString(),
         created_at: now.toISOString(),
       };
       setSaved(record);
+      setNewCorteMode(false);
       onCorteSaved();
     } catch (err) {
       console.error('Error saving corte:', err);
@@ -625,9 +648,8 @@ hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
           <p className="text-xs text-zinc-500">{dateStr}</p>
         </div>
 
-        {saved || existingCorte ? (
+        {saved || (existingCorte && !newCorteMode) ? (
           <>
-            {/* Existing corte banner */}
             <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
               <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Check className="w-5 h-5 text-green-400" />
@@ -635,26 +657,22 @@ hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
               <div>
                 <p className="text-green-400 font-black text-sm">Corte realizado</p>
                 <p className="text-[10px] text-zinc-500">
-                  {existingCorte
-                    ? `Cerrado por ${existingCorte.cashier_name} — ${new Date(existingCorte.closed_at).toLocaleTimeString('es-VE')}`
-                    : 'Guardado exitosamente'}
+                  {saved
+                    ? 'Guardado exitosamente'
+                    : `Cerrado por ${existingCorte.cashier_name} — ${new Date(existingCorte.closed_at).toLocaleTimeString('es-VE')}`}
                 </p>
               </div>
             </div>
 
-            {/* Warning: orders after corte */}
-            {ordersAfterCorte.length > 0 && (
-              <div className="flex items-start gap-3 bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-4">
-                <div className="w-10 h-10 bg-yellow-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Loader2 className="w-5 h-5 text-yellow-400" />
-                </div>
-                <div>
-                  <p className="text-yellow-400 font-black text-sm">¡Atención!</p>
-                  <p className="text-[10px] text-zinc-400">
-                    {ordersAfterCorte.length} pedido(s) después del corte.
-                    Realiza un nuevo corte para incluirlos.
-                  </p>
-                </div>
+            {todayCortes.length > 1 && (
+              <div className="bg-zinc-950 rounded-2xl p-3 space-y-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Cortes de hoy ({todayCortes.length})</p>
+                {todayCortes.map((c, i) => (
+                  <div key={c.id || i} className="flex items-center justify-between text-xs text-zinc-400 bg-zinc-900 p-2 rounded-lg">
+                    <span>{new Date(c.closed_at).toLocaleTimeString('es-VE')} — {c.cashier_name}</span>
+                    <span className="font-bold text-white">${c.grand_total.toFixed(2)}</span>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -662,14 +680,14 @@ hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
               <div className="bg-zinc-950 rounded-2xl p-4 text-center">
                 <ShoppingCart className="w-5 h-5 text-primary-vibrant mx-auto mb-1" />
                 <p className="text-2xl font-black text-white">
-                  {(existingCorte?.order_count || count) + (saved ? 0 : ordersAfterCorte.length)}
+                  {saved?.order_count || existingCorte.order_count}
                 </p>
                 <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Pedidos</p>
               </div>
               <div className="bg-zinc-950 rounded-2xl p-4 text-center">
                 <DollarSign className="w-5 h-5 text-green-400 mx-auto mb-1" />
                 <p className="text-2xl font-black text-green-400">
-                  ${(existingCorte?.grand_total || granTotal).toFixed(2)}
+                  ${(saved?.grand_total || existingCorte.grand_total).toFixed(2)}
                 </p>
                 <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total</p>
               </div>
@@ -678,9 +696,9 @@ hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
             <div className="space-y-2">
               <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Desglose por método</p>
               {[
-                { method: 'Efectivo', total: existingCorte?.total_efectivo || totalEfectivo, icon: Banknote, color: 'text-green-400' },
-                { method: 'Tarjeta', total: existingCorte?.total_tarjeta || totalTarjeta, icon: CreditCard, color: 'text-blue-400' },
-                { method: 'Pago Móvil', total: existingCorte?.total_pagomovil || totalPagoMovil, icon: Smartphone, color: 'text-purple-400' },
+                { method: 'Efectivo', total: saved?.total_efectivo || existingCorte.total_efectivo, icon: Banknote, color: 'text-green-400' },
+                { method: 'Tarjeta', total: saved?.total_tarjeta || existingCorte.total_tarjeta, icon: CreditCard, color: 'text-blue-400' },
+                { method: 'Pago Móvil', total: saved?.total_pagomovil || existingCorte.total_pagomovil, icon: Smartphone, color: 'text-purple-400' },
               ].map(({ method, total: t, icon: Icon, color }) => (
                 <div key={method} className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl">
                   <div className="flex items-center gap-2">
@@ -697,6 +715,11 @@ hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
                 className="flex-1 bg-zinc-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-700 transition-all flex items-center justify-center gap-2"
               >
                 <Printer className="w-4 h-4" /> Imprimir
+              </button>
+              <button onClick={() => { setNewCorteMode(true); setSaved(null); }}
+                className="flex-1 bg-primary-vibrant text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4" /> Nuevo Corte
               </button>
               <button onClick={onClose}
                 className="flex-1 bg-zinc-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-700 transition-all"
@@ -1096,8 +1119,6 @@ export function PosPage() {
 
   // Today's corte (if exists)
   const todayStr = new Date().toISOString().slice(0, 10);
-  const todayCorte = useMemo(() => cortes.find(c => c.date === todayStr), [cortes, todayStr]);
-
   const isFormValid =
     customerCedula.trim().length >= 6 &&
     customerName.trim().length > 0 &&
