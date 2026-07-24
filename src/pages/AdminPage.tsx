@@ -176,7 +176,7 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
       isOpen={isSidebarOpen}
     />
 
-    <main className="flex-1 min-h-screen p-4 pt-16 lg:pt-8 lg:pl-64 overflow-hidden">
+    <main className="flex-1 min-h-screen p-6 pt-20 lg:pt-10 lg:pl-80 overflow-hidden">
       <div className="max-w-6xl mx-auto">
         {activeTab === 'sedes' && (
           <div>
