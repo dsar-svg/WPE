@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { MapPin, Utensils, ShoppingBag, DollarSign, Trophy, TrendingDown, Calendar, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { MapPin, Utensils, ShoppingBag, DollarSign, Trophy, TrendingDown, Calendar, ArrowUpRight, ArrowDownRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Order, Location, Product } from '../../types';
 
 interface DashboardViewProps {
@@ -9,19 +9,25 @@ interface DashboardViewProps {
   totalFacturado: number;
 }
 
-function useMonthFilter(orders: Order[]) {
-  return useMemo(() => {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
-    const filtered = orders.filter(o => new Date(o.created_at) >= startOfMonth);
+function useMonthFilter(orders: Order[], year: number, month: number) {
+  return useMemo(() => {
+    const startOfMonth = new Date(year, month, 1);
+    const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+    const filtered = orders.filter(o => {
+      const d = new Date(o.created_at);
+      return d >= startOfMonth && d <= endOfMonth;
+    });
     const total = filtered.reduce((s, o) => s + o.total, 0);
     const count = filtered.length;
 
-    const prevStart = new Date(startOfMonth.getTime() - (now.getTime() - startOfMonth.getTime()));
+    const prevEnd = new Date(startOfMonth.getTime() - 1);
+    const prevStart = new Date(year, month - 1, 1);
     const prevFiltered = orders.filter(o => {
       const d = new Date(o.created_at);
-      return d >= prevStart && d < startOfMonth;
+      return d >= prevStart && d <= prevEnd;
     });
     const prevTotal = prevFiltered.reduce((s, o) => s + o.total, 0);
     const prevCount = prevFiltered.length;
@@ -30,21 +36,19 @@ function useMonthFilter(orders: Order[]) {
     const countChange = prevCount > 0 ? ((count - prevCount) / prevCount) * 100 : count > 0 ? 100 : 0;
 
     return { filtered, total, count, prevTotal, prevCount, totalChange, countChange };
-  }, [orders]);
+  }, [orders, year, month]);
 }
 
-function buildMonthChart(orders: Order[]) {
-  const now = new Date();
-  const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+function buildMonthChart(orders: Order[], year: number, month: number) {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
   const days: { label: string; total: number }[] = [];
   for (let i = 1; i <= daysInMonth; i++) {
     const total = orders
-      .filter(o => { const od = new Date(o.created_at); return od.getDate() === i && od.getMonth() === now.getMonth() && od.getFullYear() === now.getFullYear(); })
+      .filter(o => { const od = new Date(o.created_at); return od.getDate() === i && od.getMonth() === month && od.getFullYear() === year; })
       .reduce((s, o) => s + o.total, 0);
     days.push({ label: `${i}`, total });
   }
-  return { labels: days.map(d => d.label), values: days.map(d => d.total), title: `${monthNames[now.getMonth()]} ${now.getFullYear()}` };
+  return { labels: days.map(d => d.label), values: days.map(d => d.total), title: `${monthNames[month]} ${year}` };
 }
 
 function ChangeBadge({ value }: { value: number }) {
@@ -61,8 +65,20 @@ function ChangeBadge({ value }: { value: number }) {
 }
 
 export function DashboardView({ orders, locations, menuItems, totalFacturado: _totalFacturado }: DashboardViewProps) {
-  const { filtered, total, count, prevTotal, prevCount, totalChange, countChange } = useMonthFilter(orders);
-  const chart = useMemo(() => buildMonthChart(filtered), [filtered]);
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth());
+  const { filtered, total, count, prevTotal, prevCount, totalChange, countChange } = useMonthFilter(orders, year, month);
+  const chart = useMemo(() => buildMonthChart(filtered, year, month), [filtered, year, month]);
+
+  const prevMonth = () => {
+    if (month === 0) { setYear(y => y - 1); setMonth(11); }
+    else setMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (month === 11) { setYear(y => y + 1); setMonth(0); }
+    else setMonth(m => m + 1);
+  };
 
   const maxVal = Math.max(...chart.values, 1);
   const BAR_HEIGHT = 140;
@@ -85,6 +101,17 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
         <div>
           <h2 className="text-2xl font-black">Dashboard</h2>
           <p className="text-admin-muted text-sm">Resumen mensual</p>
+        </div>
+        <div className="flex items-center gap-3 bg-admin-surface border border-admin-border rounded-2xl px-4 py-2">
+          <button onClick={prevMonth} className="p-1.5 rounded-xl hover:bg-admin-border text-admin-muted hover:text-admin-text transition-all">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-sm font-black text-admin-text min-w-[100px] text-center select-none">
+            {monthNames[month]} {year}
+          </span>
+          <button onClick={nextMonth} className="p-1.5 rounded-xl hover:bg-admin-border text-admin-muted hover:text-admin-text transition-all">
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
 

@@ -313,6 +313,16 @@ function ReceiptModal({
   const taxAmount = subtotal * taxRate;
   const subtotalWithoutTax = subtotal / (1 + taxRate);
 
+  useEffect(() => {
+    const t = setTimeout(() => handlePrint(), 300);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => onNewSale(), 8000);
+    return () => clearTimeout(t);
+  }, [onNewSale]);
+
   const handlePrint = () => {
     const w = window.open('', '', 'width=380,height=700');
     if (!w) return;
