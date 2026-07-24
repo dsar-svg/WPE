@@ -352,18 +352,13 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
                             <p className="text-[11px] text-admin-text-muted line-clamp-1 mt-1">{item.description}</p>
                           </div>
                           <div className="flex justify-between items-center mt-3">
-                            <div className="flex gap-1 items-center">
+                            <div className="flex gap-1">
                               {isSuperAdmin ? (
-                                <>
-                                  <span className="text-[10px] text-admin-muted font-bold mr-1">
-                                    {item.stockQuantity} uds
-                                  </span>
-                                  <button onClick={() => updateProduct({ ...item, inStock: !item.inStock, stockQuantity: item.inStock ? 0 : 10 })}
-                                    className={'px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ' + (item.inStock ? 'bg-admin-border text-green-500/50 hover:text-green-500' : 'bg-red-500/10 text-red-500 shadow-lg')}
-                                  >
-                                    {item.inStock ? 'En Stock' : 'Agotado'}
-                                  </button>
-                                </>
+                                <button onClick={() => updateProduct({ ...item, inStock: !item.inStock })}
+                                  className={'px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ' + (item.inStock ? 'bg-admin-border text-green-500/50 hover:text-green-500' : 'bg-red-500/10 text-red-500 shadow-lg')}
+                                >
+                                  {item.inStock ? 'En Stock' : 'Agotado'}
+                                </button>
                               ) : (
                                 <button onClick={() => toggleLocalAvailability(item.id)}
                                   className={'px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ' + (!isDiscontinuedLocally ? 'bg-admin-border text-green-500/50 hover:text-green-500' : 'bg-red-500/10 text-red-500 shadow-lg')}

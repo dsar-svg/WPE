@@ -1275,7 +1275,6 @@ export function PosPage() {
               category: '',
               image: '',
               inStock: true,
-              stockQuantity: 0,
               order: 0,
             },
             quantity: orderItem.quantity,

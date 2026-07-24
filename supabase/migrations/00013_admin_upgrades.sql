@@ -1,7 +1,4 @@
--- Admin upgrades: stock quantity, PIN hashing, audit log
-
-ALTER TABLE public.menu_items
-  ADD COLUMN IF NOT EXISTS stock_quantity INT NOT NULL DEFAULT 0;
+-- Admin upgrades: PIN hashing, audit log
 
 ALTER TABLE public.admins
   ADD COLUMN IF NOT EXISTS pin_hash TEXT;

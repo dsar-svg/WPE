@@ -63,7 +63,6 @@ export interface Product {
   category: string;
   image: string;
   inStock: boolean;
-  stockQuantity: number;
   order: number;
   code?: string;
   choices?: ProductChoice[];

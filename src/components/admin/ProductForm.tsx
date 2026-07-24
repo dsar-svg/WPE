@@ -21,7 +21,6 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
     price: 0,
     image: '',
     inStock: true,
-    stockQuantity: 0,
     order: 0,
     choices: [],
     maxSelections: 0,
@@ -195,14 +194,6 @@ export function ProductForm({ product, categories, onClose, onSave }: ProductFor
                   const val = parseFloat(e.target.value);
                   setData({...data, price: isNaN(val) ? 0 : val});
                 }}
-              />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="product-stock" className="text-[11px] uppercase font-black tracking-widest text-zinc-500 ml-2">Stock (cantidad)</label>
-              <input id="product-stock" type="number" min="0"
-                className="w-full bg-zinc-950 border border-zinc-800 p-4 rounded-2xl font-bold focus:ring-2 focus:ring-primary-vibrant outline-none"
-                value={data.stockQuantity ?? 0}
-                onChange={e => { const val = parseInt(e.target.value); setData({...data, stockQuantity: isNaN(val) ? 0 : val, inStock: val > 0 }); }}
               />
             </div>
             <div className="space-y-2">
