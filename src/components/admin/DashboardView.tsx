@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
-import { MapPin, Utensils, ShoppingBag, DollarSign, Trophy, TrendingDown, Calendar, ArrowUpRight, ArrowDownRight, Truck, Store } from 'lucide-react';
-import { Order, Location, Product } from '../../types';
+import { MapPin, Utensils, ShoppingBag, DollarSign, Trophy, TrendingDown, Calendar, ArrowUpRight, ArrowDownRight, Banknote, CreditCard, Smartphone, Truck, Store } from 'lucide-react';
+import { Order, Location, Product, RestaurantConfig } from '../../types';
 
 interface DashboardViewProps {
   orders: Order[];
   locations: Location[];
   menuItems: Product[];
   totalFacturado: number;
+  config: RestaurantConfig;
 }
 
 const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -45,15 +46,21 @@ function useMonthFilter(orders: Order[], year: number, month: number) {
   }, [orders, year, month]);
 }
 
-function useTodayFilter(orders: Order[]) {
+function useTodayFilter(orders: Order[], rate: number) {
   return useMemo(() => {
     const filtered = orders.filter(o => isToday(o.created_at));
     const total = filtered.reduce((s, o) => s + o.total, 0);
     const delivery = filtered.filter(o => o.delivery_type === 'Delivery').reduce((s, o) => s + o.total, 0);
     const pickup = filtered.filter(o => o.delivery_type === 'Pick-up').reduce((s, o) => s + o.total, 0);
     const count = filtered.length;
-    return { filtered, total, delivery, pickup, count };
-  }, [orders]);
+
+    const efectivoUsd = filtered.filter(o => o.payment_method === 'Efectivo' && (!o.payment_currency || o.payment_currency === 'USD')).reduce((s, o) => s + o.total, 0);
+    const efectivoBs = filtered.filter(o => o.payment_method === 'Efectivo' && o.payment_currency === 'BS').reduce((s, o) => s + o.total, 0);
+    const tarjeta = filtered.filter(o => o.payment_method === 'Tarjeta').reduce((s, o) => s + o.total, 0);
+    const pagoMovil = filtered.filter(o => o.payment_method === 'PagoMóvil').reduce((s, o) => s + o.total, 0);
+
+    return { filtered, total, delivery, pickup, count, efectivoUsd, efectivoBs, tarjeta, pagoMovil, rate };
+  }, [orders, rate]);
 }
 
 function buildMonthChart(orders: Order[], year: number, month: number) {
@@ -81,13 +88,14 @@ function ChangeBadge({ value }: { value: number }) {
   );
 }
 
-export function DashboardView({ orders, locations, menuItems, totalFacturado: _totalFacturado }: DashboardViewProps) {
+export function DashboardView({ orders, locations, menuItems, totalFacturado: _totalFacturado, config }: DashboardViewProps) {
   const now = new Date();
+  const rate = config.exchangeRate ?? 1;
   const [view, setView] = useState<'month' | 'today'>('month');
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const { filtered, total, count, prevTotal, prevCount, totalChange, countChange } = useMonthFilter(orders, year, month);
-  const today = useTodayFilter(orders);
+  const today = useTodayFilter(orders, rate);
   const chart = useMemo(() => buildMonthChart(filtered, year, month), [filtered, year, month]);
 
   const maxVal = Math.max(...chart.values, 1);
@@ -140,21 +148,40 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
 
       {/* Summary Cards */}
       {view === 'today' ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8 col-span-full">
+            <div className="flex items-center gap-3 mb-6">
+              <DollarSign className="w-8 h-8 text-yellow-500" />
+              <h3 className="text-lg font-black">Facturado hoy</h3>
+            </div>
+            <p className="text-4xl font-black">${today.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <div className="flex gap-6 mt-4 text-sm">
+              <span className="text-admin-muted"><Truck className="w-4 h-4 inline mr-1" />Delivery: ${today.delivery.toFixed(2)}</span>
+              <span className="text-admin-muted"><Store className="w-4 h-4 inline mr-1" />Pick-up: ${today.pickup.toFixed(2)}</span>
+              <span className="text-admin-muted"><ShoppingBag className="w-4 h-4 inline mr-1" />{today.count} pedidos</span>
+            </div>
+          </div>
+
           <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
-            <DollarSign className="w-8 h-8 text-yellow-500 mb-4" />
-            <p className="text-3xl font-black">${today.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            <p className="text-admin-muted text-sm mt-1">Facturado hoy</p>
+            <Banknote className="w-8 h-8 text-green-500 mb-4" />
+            <p className="text-3xl font-black">${today.efectivoUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-admin-muted text-sm mt-1">Efectivo $</p>
+            <p className="text-xs text-zinc-500 mt-1">Bs {today.efectivoUsd.toFixed(2) === '0.00' ? '0,00' : (today.efectivoUsd * today.rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
           </div>
           <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
-            <Truck className="w-8 h-8 text-blue-500 mb-4" />
-            <p className="text-3xl font-black">${today.delivery.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            <p className="text-admin-muted text-sm mt-1">Facturado Delivery</p>
+            <Banknote className="w-8 h-8 text-yellow-500 mb-4" />
+            <p className="text-3xl font-black">${today.efectivoBs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-admin-muted text-sm mt-1">Efectivo Bs</p>
           </div>
           <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
-            <Store className="w-8 h-8 text-green-500 mb-4" />
-            <p className="text-3xl font-black">${today.pickup.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            <p className="text-admin-muted text-sm mt-1">Facturado Pick-up</p>
+            <Smartphone className="w-8 h-8 text-purple-500 mb-4" />
+            <p className="text-3xl font-black">${today.pagoMovil.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-admin-muted text-sm mt-1">PagoMóvil</p>
+          </div>
+          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+            <CreditCard className="w-8 h-8 text-blue-500 mb-4" />
+            <p className="text-3xl font-black">${today.tarjeta.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-admin-muted text-sm mt-1">Tarjeta</p>
           </div>
         </div>
       ) : (

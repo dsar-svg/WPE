@@ -588,6 +588,7 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
             locations={locations}
             menuItems={menuItems}
             totalFacturado={totalFacturado}
+            config={config}
           />
         )}
       </div>
