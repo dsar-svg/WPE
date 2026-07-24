@@ -1377,6 +1377,9 @@ export function PosPage() {
             <Calendar className="w-3.5 h-3.5" /> Historial
           </button>
           <span className="text-xs text-zinc-500 font-mono">{new Date().toLocaleTimeString('es-VE')}</span>
+          <span className="text-[10px] font-black text-primary-vibrant bg-primary-vibrant/10 px-2.5 py-1 rounded-lg flex items-center gap-1">
+            <DollarSign className="w-3 h-3" /> Bs. {config.exchangeRate?.toFixed(2) || 'N/A'}
+          </span>
           <button onClick={() => setCashier(null)}
             className="p-2 bg-zinc-800 rounded-xl text-zinc-500 hover:text-white hover:bg-zinc-700 transition-all"
           >
