@@ -55,7 +55,7 @@ function useTodayFilter(orders: Order[], rate: number, orderPaymentsMap: Record<
     const pickup = filtered.filter(o => o.delivery_type === 'Pick-up').reduce((s, o) => s + o.total, 0);
     const count = filtered.length;
 
-    let efectivoUsd = 0, efectivoBsRaw = 0, tarjeta = 0, pagoMovil = 0;
+    let efectivoUsd = 0, efectivoBsRaw = 0, tarjetaBs = 0, pagoMovilBs = 0;
     for (const o of filtered) {
       const splits = orderPaymentsMap[o.id];
       if (splits && splits.length > 0) {
@@ -63,20 +63,28 @@ function useTodayFilter(orders: Order[], rate: number, orderPaymentsMap: Record<
           if (sp.payment_method === 'Efectivo') {
             if (sp.currency === 'BS') efectivoBsRaw += sp.amount;
             else efectivoUsd += sp.amount;
-          } else if (sp.payment_method === 'Tarjeta') tarjeta += sp.amount;
-          else if (sp.payment_method === 'PagoMóvil') pagoMovil += sp.amount;
+          } else if (sp.payment_method === 'Tarjeta') {
+            // Tarjeta is always BS — convert USD amounts to BS
+            tarjetaBs += (sp.currency === 'BS') ? sp.amount : sp.amount * rate;
+          } else if (sp.payment_method === 'PagoMóvil') {
+            // PagoMóvil is always BS — convert USD amounts to BS
+            pagoMovilBs += (sp.currency === 'BS') ? sp.amount : sp.amount * rate;
+          }
         }
       } else {
         if (o.payment_method === 'Efectivo') {
-          if (o.payment_currency === 'BS') efectivoBsRaw += o.total;
+          if (o.payment_currency === 'BS') efectivoBsRaw += o.total * rate;
           else efectivoUsd += o.total;
-        } else if (o.payment_method === 'Tarjeta') tarjeta += o.total;
-        else if (o.payment_method === 'PagoMóvil') pagoMovil += o.total;
+        } else if (o.payment_method === 'Tarjeta') {
+          // Tarjeta is always BS — order.total is USD, convert to BS
+          tarjetaBs += o.total * rate;
+        } else if (o.payment_method === 'PagoMóvil') {
+          // PagoMóvil is always BS — order.total is USD, convert to BS
+          pagoMovilBs += o.total * rate;
+        }
       }
     }
 
-    const tarjetaBs = tarjeta * rate;
-    const pagoMovilBs = pagoMovil * rate;
     const efectivoBsConverted = efectivoBsRaw * rate;
 
     return { filtered, total, delivery, pickup, count, efectivoUsd, efectivoBs: efectivoBsConverted, tarjetaBs, pagoMovilBs, rate };

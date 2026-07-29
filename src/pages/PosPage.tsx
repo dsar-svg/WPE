@@ -841,8 +841,9 @@ function CorteDeCajaModal({
         }
       } else {
         // Legacy: no splits stored, use order-level fields
+        // NOTE: o.total is always in USD. Convert to BS when needed.
         if (o.payment_method === 'Efectivo') {
-          if (o.payment_currency === 'BS') eBs += o.total;
+          if (o.payment_currency === 'BS') eBs += o.total * rate;
           else eUsd += o.total;
         } else if (o.payment_method === 'Tarjeta') {
           // Tarjeta is always BS — order.total is USD, convert to BS
