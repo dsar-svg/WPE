@@ -1,8 +1,8 @@
 {
-  "outputDirectory": "dist-admin",
-  "framework": "vite",
-  "installCommand": "npm install",
-  "buildCommand": "npm run vercel-build",
+  "outputDirectory": ".",
+  "framework": null,
+  "installCommand": null,
+  "buildCommand": null,
   "rewrites": [
     { "source": "/((?!assets/|.*\\..*).*)", "destination": "/index.html" }
   ]

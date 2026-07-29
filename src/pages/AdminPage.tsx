@@ -462,18 +462,18 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
                         <div className="flex items-center gap-4 flex-shrink-0">
                           <div className="text-right">
                             <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Efectivo</p>
-                            <p className="font-black text-green-400 text-sm">${Number(c.total_efectivo).toFixed(2)}</p>
-                            <p className="text-[10px] text-zinc-600">{Number(c.total_efectivo_usd).toFixed(2)}$ / {Number(c.total_efectivo_bs).toFixed(2)}Bs</p>
+                            <p className="font-black text-green-400 text-sm">${Number(c.total_efectivo_usd ?? 0).toFixed(2)}</p>
+                            <p className="text-[10px] text-zinc-600">{Number(c.total_efectivo_bs ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs</p>
                           </div>
                           <div className="text-right">
                             <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Tarjeta</p>
-                            <p className="font-black text-blue-400 text-sm">${(Number(c.total_tarjeta_usd ?? 0) + Number(c.total_tarjeta_bs ?? 0) / (config.exchangeRate || 742.81)).toFixed(2)}</p>
-                            <p className="text-[10px] text-zinc-600">{Number(c.total_tarjeta_usd ?? 0).toFixed(2)}$ / {Number(c.total_tarjeta_bs ?? 0).toFixed(2)}Bs</p>
+                            <p className="font-black text-blue-400 text-sm">{Number(c.total_tarjeta_bs ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs</p>
+                            <p className="text-[10px] text-zinc-600">${Number(c.total_tarjeta ?? 0).toFixed(2)}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">P.Móvil</p>
-                            <p className="font-black text-purple-400 text-sm">${(Number(c.total_pagomovil_usd ?? 0) + Number(c.total_pagomovil_bs ?? 0) / (config.exchangeRate || 742.81)).toFixed(2)}</p>
-                            <p className="text-[10px] text-zinc-600">{Number(c.total_pagomovil_usd ?? 0).toFixed(2)}$ / {Number(c.total_pagomovil_bs ?? 0).toFixed(2)}Bs</p>
+                            <p className="font-black text-purple-400 text-sm">{Number(c.total_pagomovil_bs ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs</p>
+                            <p className="text-[10px] text-zinc-600">${Number(c.total_pagomovil ?? 0).toFixed(2)}</p>
                           </div>
                           <div className="w-px h-10 bg-zinc-800" />
                           <div className="text-right min-w-[90px]">

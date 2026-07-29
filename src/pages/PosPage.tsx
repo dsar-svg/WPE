@@ -778,7 +778,6 @@ function CorteDeCajaModal({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<CorteRecord | null>(null);
   const [error, setError] = useState('');
-  const [newCorteMode, setNewCorteMode] = useState(false);
   const [orderPaymentsMap, setOrderPaymentsMap] = useState<Record<string, { payment_method: string; amount: number; currency?: string }[]>>({});
 
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -796,12 +795,13 @@ function CorteDeCajaModal({
     );
   }, [orders, locationId, cashier?.id]);
 
-  // When in new corte mode, only count orders AFTER the last corte
+  // Always filter orders after the last corte (auto-reset after save)
   const activeOrders = useMemo(() => {
-    if (!newCorteMode || !existingCorte) return todayOrders;
-    const corteTime = new Date(existingCorte.closed_at);
+    const ref = saved || existingCorte;
+    if (!ref) return todayOrders;
+    const corteTime = new Date(ref.closed_at);
     return todayOrders.filter(o => new Date(o.created_at) > corteTime);
-  }, [todayOrders, existingCorte, newCorteMode]);
+  }, [todayOrders, existingCorte, saved]);
 
   // Fetch order_payments for active orders to handle split payments
   useEffect(() => {
@@ -820,8 +820,9 @@ function CorteDeCajaModal({
   }, [activeOrders]);
 
   // Aggregate totals: prefer order_payments (split-aware), fall back to order.payment_method
-  const { totalEfectivoUsd, totalEfectivoBs, totalTarjetaUsd, totalTarjetaBs, totalPagoMovilUsd, totalPagoMovilBs } = useMemo(() => {
-    let eUsd = 0, eBs = 0, tUsd = 0, tBs = 0, pmUsd = 0, pmBs = 0;
+  // RULE: Tarjeta and PagoMóvil are ALWAYS in BS. Convert USD amounts to BS using exchangeRate.
+  const { totalEfectivoUsd, totalEfectivoBs, totalTarjetaBs, totalPagoMovilBs } = useMemo(() => {
+    let eUsd = 0, eBs = 0, tBs = 0, pmBs = 0;
     const rate = exchangeRate || 1;
     for (const o of activeOrders) {
       const splits = orderPaymentsMap[o.id];
@@ -831,28 +832,32 @@ function CorteDeCajaModal({
             if (sp.currency === 'BS') eBs += sp.amount;
             else eUsd += sp.amount;
           } else if (sp.payment_method === 'Tarjeta') {
-            if (sp.currency === 'BS') tBs += sp.amount;
-            else tUsd += sp.amount;
+            // Tarjeta is always BS — convert USD amounts to BS
+            tBs += (sp.currency === 'BS') ? sp.amount : sp.amount * rate;
           } else if (sp.payment_method === 'PagoMóvil') {
-            if (sp.currency === 'BS') pmBs += sp.amount;
-            else pmUsd += sp.amount;
+            // PagoMóvil is always BS — convert USD amounts to BS
+            pmBs += (sp.currency === 'BS') ? sp.amount : sp.amount * rate;
           }
-          // 'Mixto' entries shouldn't exist in order_payments, each row is a single method
         }
       } else {
         // Legacy: no splits stored, use order-level fields
         if (o.payment_method === 'Efectivo') {
           if (o.payment_currency === 'BS') eBs += o.total;
           else eUsd += o.total;
-        } else if (o.payment_method === 'Tarjeta') tUsd += o.total;
-        else if (o.payment_method === 'PagoMóvil') pmUsd += o.total;
+        } else if (o.payment_method === 'Tarjeta') {
+          // Tarjeta is always BS — order.total is USD, convert to BS
+          tBs += o.total * rate;
+        } else if (o.payment_method === 'PagoMóvil') {
+          // PagoMóvil is always BS — order.total is USD, convert to BS
+          pmBs += o.total * rate;
+        }
       }
     }
-    return { totalEfectivoUsd: eUsd, totalEfectivoBs: eBs, totalTarjetaUsd: tUsd, totalTarjetaBs: tBs, totalPagoMovilUsd: pmUsd, totalPagoMovilBs: pmBs };
+    return { totalEfectivoUsd: eUsd, totalEfectivoBs: eBs, totalTarjetaBs: tBs, totalPagoMovilBs: pmBs };
   }, [activeOrders, orderPaymentsMap, exchangeRate]);
   const totalEfectivo = totalEfectivoUsd + (totalEfectivoBs / (exchangeRate || 1));
-  const totalTarjeta = totalTarjetaUsd + (totalTarjetaBs / (exchangeRate || 1));
-  const totalPagoMovil = totalPagoMovilUsd + (totalPagoMovilBs / (exchangeRate || 1));
+  const totalTarjeta = totalTarjetaBs / (exchangeRate || 1);
+  const totalPagoMovil = totalPagoMovilBs / (exchangeRate || 1);
   const granTotal = activeOrders.reduce((s, o) => s + o.total, 0);
   const count = activeOrders.length;
   const rate = exchangeRate || 1;
@@ -875,7 +880,7 @@ function CorteDeCajaModal({
     try {
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const fromTime = newCorteMode && existingCorte ? existingCorte.closed_at : startOfDay.toISOString();
+      const fromTime = existingCorte ? existingCorte.closed_at : startOfDay.toISOString();
       const { error: insertError } = await supabase.from('cortes').insert({
         location_id: locationId,
         cashier_id: cashier?.id || '',
@@ -887,10 +892,10 @@ function CorteDeCajaModal({
         total_efectivo_usd: totalEfectivoUsd,
         total_efectivo_bs: totalEfectivoBs,
         total_tarjeta: totalTarjeta,
-        total_tarjeta_usd: totalTarjetaUsd,
+        total_tarjeta_usd: 0,
         total_tarjeta_bs: totalTarjetaBs,
         total_pagomovil: totalPagoMovil,
-        total_pagomovil_usd: totalPagoMovilUsd,
+        total_pagomovil_usd: 0,
         total_pagomovil_bs: totalPagoMovilBs,
         grand_total: granTotal,
         from_date: fromTime,
@@ -909,10 +914,10 @@ function CorteDeCajaModal({
         total_efectivo_usd: totalEfectivoUsd,
         total_efectivo_bs: totalEfectivoBs,
         total_tarjeta: totalTarjeta,
-        total_tarjeta_usd: totalTarjetaUsd,
+        total_tarjeta_usd: 0,
         total_tarjeta_bs: totalTarjetaBs,
         total_pagomovil: totalPagoMovil,
-        total_pagomovil_usd: totalPagoMovilUsd,
+        total_pagomovil_usd: 0,
         total_pagomovil_bs: totalPagoMovilBs,
         grand_total: granTotal,
         from_date: fromTime,
@@ -920,8 +925,9 @@ function CorteDeCajaModal({
         created_at: now.toISOString(),
       };
       setSaved(record);
-      setNewCorteMode(false);
       onCorteSaved();
+      // Auto-reset after 3 seconds to show next batch of pending orders
+      setTimeout(() => setSaved(null), 3000);
     } catch (err) {
       console.error('Error saving corte:', err);
       setError('Error al guardar el corte. Intenta de nuevo.');
@@ -934,8 +940,10 @@ function CorteDeCajaModal({
     const displayRecord = saved || existingCorte;
     const efectivoUsd = displayRecord?.total_efectivo_usd ?? totalEfectivoUsd;
     const efectivoBs = displayRecord?.total_efectivo_bs ?? totalEfectivoBs;
-    const tarjeta = displayRecord?.total_tarjeta ?? totalTarjeta;
-    const pagomovil = displayRecord?.total_pagomovil ?? totalPagoMovil;
+    const tarjetaBs = displayRecord?.total_tarjeta_bs ?? totalTarjetaBs;
+    const pagomovilBs = displayRecord?.total_pagomovil_bs ?? totalPagoMovilBs;
+    const tarjetaUsd = tarjetaBs / rate;
+    const pagomovilUsd = pagomovilBs / rate;
     const grand = displayRecord?.grand_total ?? granTotal;
     const ordenes = displayRecord?.order_count ?? count;
     const ordersList = sortedOrders.length > 0 ? sortedOrders : activeOrders;
@@ -997,8 +1005,8 @@ function CorteDeCajaModal({
 <table>
   <tr><td>Efectivo $</td><td class="r">$${efectivoUsd.toFixed(2)} / Bs ${formatBs(efectivoUsd * rate)}</td></tr>
   <tr><td>Efectivo Bs</td><td class="r">Bs ${formatBs(efectivoBs)}</td></tr>
-  <tr><td>Tarjeta</td><td class="r">$${tarjeta.toFixed(2)} / Bs ${formatBs(tarjeta * rate)}</td></tr>
-  <tr><td>Pago M&oacute;vil</td><td class="r">Bs ${formatBs(pagomovil)}</td></tr>
+  <tr><td>Tarjeta</td><td class="r">$${tarjetaUsd.toFixed(2)} / Bs ${formatBs(tarjetaBs)}</td></tr>
+  <tr><td>Pago M&oacute;vil</td><td class="r">$${pagomovilUsd.toFixed(2)} / Bs ${formatBs(pagomovilBs)}</td></tr>
 </table>
 
 <div class="divider"></div>
@@ -1014,9 +1022,10 @@ function CorteDeCajaModal({
 <table>
 ${ordersList.slice(0, 30).map(o => {
   const t = new Date(o.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
-  const name = (o.customer_name || 'N/A').substring(0, 16);
+  const name = (o.customer_name || 'N/A').substring(0, 14);
   const type = o.delivery_type === 'Delivery' ? 'DEL' : 'LOC';
-  return `  <tr class="order-row"><td>${t}</td><td>${name}</td><td>${type}</td><td class="r">$${o.total.toFixed(2)}</td></tr>`;
+  const pay = (o.payment_method || '').substring(0, 4).toUpperCase();
+  return `  <tr class="order-row"><td>${t}</td><td>${name}</td><td>${type}</td><td>${pay}</td><td class="r">$${o.total.toFixed(2)}</td></tr>`;
 }).join('\n')}
 </table>
 
@@ -1069,98 +1078,24 @@ ${displayRecord ? `<div class="divider"></div><p class="text-center" style="font
           <p className="text-xs text-zinc-500">{dateStr}</p>
         </div>
 
-        {saved || (existingCorte && !newCorteMode) ? (
-          <>
-            <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
-              <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Check className="w-5 h-5 text-green-400" />
-              </div>
-              <div>
-                <p className="text-green-400 font-black text-sm">Corte realizado</p>
-                <p className="text-[10px] text-zinc-500">
-                  {saved
-                    ? 'Guardado exitosamente'
-                    : `Cerrado por ${existingCorte.cashier_name} — ${new Date(existingCorte.closed_at).toLocaleTimeString('es-VE')}`}
-                </p>
-              </div>
+        {saved ? (
+          <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
+            <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Check className="w-5 h-5 text-green-400" />
             </div>
-
-            {todayCortes.length > 1 && (
-              <div className="bg-zinc-950 rounded-2xl p-3 space-y-1.5">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-2">Cortes de hoy ({todayCortes.length})</p>
-                {todayCortes.map((c, i) => (
-                  <div key={c.id || i} className="flex items-center justify-between text-xs text-zinc-400 bg-zinc-900 p-2 rounded-lg">
-                    <span>{new Date(c.closed_at).toLocaleTimeString('es-VE')} — {c.cashier_name}</span>
-                    <span className="font-bold text-white">${c.grand_total.toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-zinc-950 rounded-2xl p-4 text-center">
-                <ShoppingCart className="w-5 h-5 text-primary-vibrant mx-auto mb-1" />
-                <p className="text-2xl font-black text-white">
-                  {saved?.order_count || existingCorte.order_count}
-                </p>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Pedidos</p>
-              </div>
-              <div className="bg-zinc-950 rounded-2xl p-4 text-center">
-                <DollarSign className="w-5 h-5 text-green-400 mx-auto mb-1" />
-                <p className="text-2xl font-black text-green-400">
-                  ${(saved?.grand_total || existingCorte.grand_total).toFixed(2)}
-                </p>
-                <p className="text-xs text-zinc-500 font-bold">
-                  {formatBs((saved?.grand_total || existingCorte.grand_total) * rate)} Bs.
-                </p>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total</p>
-              </div>
+            <div>
+              <p className="text-green-400 font-black text-sm">Corte guardado</p>
+              <p className="text-[10px] text-zinc-500">{saved.order_count} pedidos · ${saved.grand_total.toFixed(2)}</p>
             </div>
-
-            <div className="space-y-2">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Método de pago</p>
-              {[
-                { method: 'Efectivo $', total: saved?.total_efectivo_usd ?? existingCorte.total_efectivo_usd, icon: Banknote, color: 'text-green-400' },
-                { method: 'Efectivo Bs', total: saved?.total_efectivo_bs ?? existingCorte.total_efectivo_bs, icon: Banknote, color: 'text-yellow-400' },
-                { method: 'Tarjeta $', total: saved?.total_tarjeta_usd ?? existingCorte.total_tarjeta_usd ?? 0, icon: CreditCard, color: 'text-blue-400' },
-                { method: 'Tarjeta Bs', total: saved?.total_tarjeta_bs ?? existingCorte.total_tarjeta_bs ?? 0, icon: CreditCard, color: 'text-cyan-400' },
-                { method: 'P.Móvil $', total: saved?.total_pagomovil_usd ?? existingCorte.total_pagomovil_usd ?? 0, icon: Smartphone, color: 'text-purple-400' },
-                { method: 'P.Móvil Bs', total: saved?.total_pagomovil_bs ?? existingCorte.total_pagomovil_bs ?? 0, icon: Smartphone, color: 'text-pink-400' },
-              ].map(({ method, total: t, icon: Icon, color }) => (
-                <div key={method} className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <Icon className={`w-4 h-4 ${color}`} />
-                    <span className="text-sm font-bold text-zinc-300">{method}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className={`font-black ${color}`}>${(t / rate).toFixed(2)}</span>
-                    <p className="text-[10px] text-zinc-500">{formatBs(t)} Bs.</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex gap-2">
-              <button onClick={handlePrint}
-                className="flex-1 bg-zinc-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-700 transition-all flex items-center justify-center gap-2"
-              >
-                <Printer className="w-4 h-4" /> Imprimir
-              </button>
-              <button onClick={() => { setNewCorteMode(true); setSaved(null); }}
-                className="flex-1 bg-primary-vibrant text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
-              >
-                <Plus className="w-4 h-4" /> Nuevo Corte
-              </button>
-              <button onClick={onClose}
-                className="flex-1 bg-zinc-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-700 transition-all"
-              >
-                Cerrar
-              </button>
-            </div>
-          </>
+          </div>
+        ) : activeOrders.length === 0 ? (
+          <div className="text-center py-8">
+            <Check className="w-12 h-12 text-green-400/50 mx-auto mb-3" />
+            <p className="text-zinc-500 font-bold text-sm">No hay pedidos pendientes</p>
+            <p className="text-zinc-600 text-xs mt-1">Todos los pedidos ya fueron cortados</p>
+          </div>
         ) : (
           <>
-            {/* No corte yet — show summary + save button */}
             <div className="text-center text-[11px] text-zinc-500 font-bold">
               {timeFrom} — {timeTo} · Tasa: {formatBs(rate)} Bs/$
             </div>
@@ -1206,39 +1141,44 @@ ${displayRecord ? `<div class="divider"></div><p class="text-center" style="font
             <div className="space-y-2">
               <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Método de pago</p>
               {[
-                { method: 'Efectivo $', total: totalEfectivoUsd, icon: Banknote, color: 'text-green-400' },
-                { method: 'Efectivo Bs', total: totalEfectivoBs, icon: Banknote, color: 'text-yellow-400' },
-                { method: 'Tarjeta $', total: totalTarjetaUsd, icon: CreditCard, color: 'text-blue-400' },
-                { method: 'Tarjeta Bs', total: totalTarjetaBs, icon: CreditCard, color: 'text-cyan-400' },
-                { method: 'P.Móvil $', total: totalPagoMovilUsd, icon: Smartphone, color: 'text-purple-400' },
-                { method: 'P.Móvil Bs', total: totalPagoMovilBs, icon: Smartphone, color: 'text-pink-400' },
-              ].map(({ method, total: t, icon: Icon, color }) => (
+                { method: 'Efectivo $', total: totalEfectivoUsd, icon: Banknote, color: 'text-green-400', showAs: 'usd' as const },
+                { method: 'Efectivo Bs', total: totalEfectivoBs, icon: Banknote, color: 'text-yellow-400', showAs: 'bs' as const },
+                { method: 'Tarjeta', total: totalTarjetaBs, icon: CreditCard, color: 'text-blue-400', showAs: 'bs' as const },
+                { method: 'P.Móvil', total: totalPagoMovilBs, icon: Smartphone, color: 'text-purple-400', showAs: 'bs' as const },
+              ].map(({ method, total: t, icon: Icon, color, showAs }) => (
                 <div key={method} className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl">
                   <div className="flex items-center gap-2">
                     <Icon className={`w-4 h-4 ${color}`} />
                     <span className="text-sm font-bold text-zinc-300">{method}</span>
                   </div>
                   <div className="text-right">
-                    <span className={`font-black ${color}`}>${(t / rate).toFixed(2)}</span>
-                    <p className="text-[10px] text-zinc-500">{formatBs(t)} Bs.</p>
+                    {showAs === 'bs' ? (
+                      <>
+                        <span className={`font-black ${color}`}>${(t / rate).toFixed(2)}</span>
+                        <p className="text-[10px] text-zinc-500">{formatBs(t)} Bs.</p>
+                      </>
+                    ) : (
+                      <>
+                        <span className={`font-black ${color}`}>${t.toFixed(2)}</span>
+                        <p className="text-[10px] text-zinc-500">{formatBs(t * rate)} Bs.</p>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
 
-            {activeOrders.length > 0 && (
-              <div className="space-y-1 max-h-40 overflow-y-auto">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 sticky top-0 bg-zinc-900 pb-1">Pedidos ({activeOrders.length})</p>
-                {sortedOrders.map(o => (
-                  <div key={o.id} className="flex items-center justify-between text-[11px] text-zinc-400 bg-zinc-950 p-2 rounded-lg gap-2">
-                    <span className="text-zinc-600 w-12 flex-shrink-0">{new Date(o.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}</span>
-                    <span className="truncate flex-1">{o.customer_name}</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold flex-shrink-0 ${o.delivery_type === 'Delivery' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'}`}>{o.delivery_type === 'Delivery' ? 'DEL' : 'LOCAL'}</span>
-                    <span className="font-bold text-white w-16 text-right">${o.total.toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="space-y-1 max-h-40 overflow-y-auto">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 sticky top-0 bg-zinc-900 pb-1">Pedidos ({activeOrders.length})</p>
+              {sortedOrders.map(o => (
+                <div key={o.id} className="flex items-center justify-between text-[11px] text-zinc-400 bg-zinc-950 p-2 rounded-lg gap-2">
+                  <span className="text-zinc-600 w-12 flex-shrink-0">{new Date(o.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="truncate flex-1">{o.customer_name}</span>
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold flex-shrink-0 ${o.delivery_type === 'Delivery' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'}`}>{o.delivery_type === 'Delivery' ? 'DEL' : 'LOCAL'}</span>
+                  <span className="font-bold text-white w-16 text-right">${o.total.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
 
             {error && (
               <p className="text-red-400 text-xs font-bold text-center">{error}</p>
@@ -1250,14 +1190,29 @@ ${displayRecord ? `<div class="divider"></div><p class="text-center" style="font
               >
                 Cancelar
               </button>
-              <button onClick={handleSaveCorte} disabled={saving}
+              <button onClick={handleSaveCorte} disabled={saving || count === 0}
                 className="flex-1 bg-primary-vibrant text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                Realizar Corte
+                Hacer Corte
               </button>
             </div>
           </>
+        )}
+
+        {saved && (
+          <div className="flex gap-2">
+            <button onClick={handlePrint}
+              className="flex-1 bg-zinc-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-700 transition-all flex items-center justify-center gap-2"
+            >
+              <Printer className="w-4 h-4" /> Imprimir
+            </button>
+            <button onClick={onClose}
+              className="flex-1 bg-primary-vibrant text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all"
+            >
+              Cerrar
+            </button>
+          </div>
         )}
       </motion.div>
     </motion.div>
@@ -1563,16 +1518,87 @@ function InvoiceHistoryModal({
 // Corte History
 // ==============================
 function CorteHistoryModal({
-  cortes, locationName, onClose,
+  cortes, locationName, exchangeRate, onClose,
 }: {
   cortes: CorteRecord[];
   locationName: string;
+  exchangeRate: number;
   onClose: () => void;
 }) {
   const [selected, setSelected] = useState<CorteRecord | null>(null);
+  const [filterDate, setFilterDate] = useState('');
+  const [filterCashier, setFilterCashier] = useState('');
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
   const formatTime = (d: string) => new Date(d).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+  const formatBs = (v: number) => v.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const uniqueCashiers = [...new Set(cortes.map(c => c.cashier_name).filter(Boolean))];
+
+  const filtered = cortes.filter(c => {
+    if (filterDate && c.date !== filterDate) return false;
+    if (filterCashier && c.cashier_name !== filterCashier) return false;
+    return true;
+  });
+
+  const handleReprint = (c: CorteRecord) => {
+    const efectivoUsd = c.total_efectivo_usd;
+    const efectivoBs = c.total_efectivo_bs;
+    const tarjetaBs = c.total_tarjeta_bs;
+    const pagomovilBs = c.total_pagomovil_bs;
+    const tarjetaUsd = tarjetaBs / exchangeRate;
+    const pagomovilUsd = pagomovilBs / exchangeRate;
+    const grand = c.grand_total;
+
+    const receiptHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Corte de Caja</title>
+<style>
+  @media print { @page { size: 80mm auto; margin: 0; } body { margin: 0; padding: 0; } }
+  * { font-family: Arial, Helvetica, sans-serif !important; }
+  body { font-family: Arial, Helvetica, sans-serif !important; font-size: 10px; width: 270px; margin: 0 auto; padding: 8px 5px; color: #000; line-height: 1.2; }
+  .text-center { text-align: center; } .text-right { text-align: right; } .bold { font-weight: bold; }
+  .header-title { font-size: 13px; font-weight: bold; margin-bottom: 2px; }
+  .header-sub { font-size: 9px; margin: 1px 0; }
+  .divider { border-top: 1px dashed #000; margin: 5px 0; }
+  table { width: 100%; border-collapse: collapse; } td { padding: 1.5px 0; font-size: 9px; } td.r { text-align: right; }
+  .total-row td { font-weight: bold; font-size: 10px; }
+  .section-title { font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+</style>
+</head>
+<body>
+<div class="text-center">
+  <div class="header-title">CORTE DE CAJA</div>
+  <div class="header-sub bold">${locationName}</div>
+  <div class="header-sub">${formatDate(c.date)} ${formatTime(c.closed_at)}</div>
+  <div class="header-sub">Cajero: ${c.cashier_name}</div>
+  <div class="header-sub">Tasa: ${formatBs(exchangeRate)} Bs/$</div>
+</div>
+<div class="divider"></div>
+<table>
+  <tr><td>Pedidos</td><td class="r bold">${c.order_count}</td></tr>
+</table>
+<div class="divider"></div>
+<div class="section-title">M&Eacute;TODO DE PAGO</div>
+<table>
+  <tr><td>Efectivo $</td><td class="r">$${efectivoUsd.toFixed(2)} / Bs ${formatBs(efectivoUsd * exchangeRate)}</td></tr>
+  <tr><td>Efectivo Bs</td><td class="r">Bs ${formatBs(efectivoBs)}</td></tr>
+  <tr><td>Tarjeta</td><td class="r">$${tarjetaUsd.toFixed(2)} / Bs ${formatBs(tarjetaBs)}</td></tr>
+  <tr><td>Pago M&oacute;vil</td><td class="r">$${pagomovilUsd.toFixed(2)} / Bs ${formatBs(pagomovilBs)}</td></tr>
+</table>
+<div class="divider"></div>
+<table>
+  <tr class="total-row"><td>TOTAL</td><td class="r">$${grand.toFixed(2)}</td></tr>
+  <tr class="total-row"><td></td><td class="r">Bs ${formatBs(grand * exchangeRate)}</td></tr>
+</table>
+<div class="divider"></div>
+<p class="text-center" style="font-size:8px">Cerrado: ${new Date(c.closed_at).toLocaleString('es-VE')}</p>
+</body></html>`;
+    const w = window.open('', '_blank', 'width=320,height=600');
+    if (w) { w.document.write(receiptHtml); w.document.close(); setTimeout(() => { w.print(); w.close(); }, 400); }
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -1587,16 +1613,40 @@ function CorteHistoryModal({
         </div>
         <p className="text-[10px] text-zinc-500 -mt-3">{locationName}</p>
 
+        {!selected && (
+          <div className="flex gap-2 flex-shrink-0">
+            <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
+              className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary-vibrant"
+            />
+            <select value={filterCashier} onChange={e => setFilterCashier(e.target.value)}
+              className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary-vibrant"
+            >
+              <option value="">Todos los cajeros</option>
+              {uniqueCashiers.map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto space-y-1.5">
-          {cortes.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="text-center py-12 text-zinc-600 text-sm">Sin cortes registrados</div>
           ) : selected ? (
             <div className="space-y-4">
-              <button onClick={() => setSelected(null)}
-                className="text-[10px] font-bold text-primary-vibrant hover:underline flex items-center gap-1"
-              >
-                ← Volver al listado
-              </button>
+              <div className="flex items-center justify-between">
+                <button onClick={() => setSelected(null)}
+                  className="text-[10px] font-bold text-primary-vibrant hover:underline flex items-center gap-1"
+                >
+                  ← Volver al listado
+                </button>
+                <button onClick={() => handleReprint(selected)}
+                  className="p-2 bg-zinc-800 rounded-xl text-zinc-500 hover:text-white hover:bg-zinc-700 transition-all"
+                  title="Reimprimir"
+                >
+                  <Printer className="w-4 h-4" />
+                </button>
+              </div>
               <div className="bg-zinc-950 rounded-2xl p-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-zinc-500">{formatDate(selected.date)}</span>
@@ -1614,25 +1664,31 @@ function CorteHistoryModal({
                   <div>
                     <p className="text-[10px] text-zinc-500">Total</p>
                     <p className="text-lg font-black text-green-400">${selected.grand_total.toFixed(2)}</p>
+                    <p className="text-[10px] text-zinc-500">{formatBs(selected.grand_total * exchangeRate)} Bs.</p>
                   </div>
                 </div>
                 <div className="space-y-1 pt-2 border-t border-zinc-800">
                   {[
-                    { label: 'Efectivo $', total: selected.total_efectivo_usd, color: 'text-green-400' },
-                    { label: 'Efectivo Bs', total: selected.total_efectivo_bs, color: 'text-yellow-400' },
-                    { label: 'Tarjeta', total: selected.total_tarjeta, color: 'text-blue-400' },
-                    { label: 'Pago Móvil', total: selected.total_pagomovil, color: 'text-purple-400' },
-                  ].map(({ label, total, color }) => (
+                    { label: 'Efectivo $', usd: selected.total_efectivo_usd, bs: selected.total_efectivo_bs, color: 'text-green-400', showUsd: true },
+                    { label: 'Efectivo Bs', usd: null, bs: selected.total_efectivo_bs, color: 'text-yellow-400', showUsd: false },
+                    { label: 'Tarjeta', usd: selected.total_tarjeta_bs / exchangeRate, bs: selected.total_tarjeta_bs, color: 'text-blue-400', showUsd: true },
+                    { label: 'Pago Móvil', usd: selected.total_pagomovil_bs / exchangeRate, bs: selected.total_pagomovil_bs, color: 'text-purple-400', showUsd: true },
+                  ].map(({ label, usd, bs, color, showUsd }) => (
                     <div key={label} className="flex justify-between text-xs">
                       <span className="text-zinc-500">{label}</span>
-                      <span className={`font-bold ${color}`}>${total.toFixed(2)}</span>
+                      <div className="text-right">
+                        {showUsd && usd !== null && (
+                          <span className={`font-bold ${color}`}>${usd.toFixed(2)}</span>
+                        )}
+                        <span className={`font-bold ${color} ${showUsd ? 'text-[10px] ml-1' : ''}`}>Bs {formatBs(bs)}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
           ) : (
-            cortes.map(c => (
+            filtered.map(c => (
               <button key={c.id} onClick={() => setSelected(c)}
                 className="w-full flex items-center justify-between bg-zinc-950 p-3 rounded-xl hover:bg-zinc-900 transition-colors text-left"
               >
@@ -1646,6 +1702,12 @@ function CorteHistoryModal({
                     {c.order_count} pedidos · ${c.grand_total.toFixed(2)} · {c.cashier_name}
                   </p>
                 </div>
+                <button onClick={(e) => { e.stopPropagation(); handleReprint(c); }}
+                  className="p-2 bg-zinc-800 rounded-xl text-zinc-500 hover:text-white hover:bg-zinc-700 transition-all flex-shrink-0"
+                  title="Reimprimir"
+                >
+                  <Printer className="w-4 h-4" />
+                </button>
               </button>
             ))
           )}
@@ -2373,6 +2435,7 @@ export function PosPage() {
           <CorteHistoryModal
             cortes={cortes}
             locationName={locationName}
+            exchangeRate={localRate ?? 1}
             onClose={() => setShowCorteHistory(false)}
           />
         )}
