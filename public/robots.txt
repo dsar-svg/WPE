@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /menu
+Allow: /pedir
+Disallow: /admin
+
+Sitemap: https://wallacepanda.com/sitemap.xml
