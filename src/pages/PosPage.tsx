@@ -781,7 +781,7 @@ function CorteDeCajaModal({
   const [orderPaymentsMap, setOrderPaymentsMap] = useState<Record<string, { payment_method: string; amount: number; currency?: string }[]>>({});
 
   const todayStr = new Date().toISOString().slice(0, 10);
-  const todayCortes = useMemo(() => cortes.filter(c => c.date === todayStr).sort((a, b) => new Date(b.closed_at).getTime() - new Date(a.closed_at).getTime()), [cortes, todayStr]);
+  const todayCortes = useMemo(() => cortes.filter(c => c.date === todayStr && c.cashier_id === cashier?.id).sort((a, b) => new Date(b.closed_at).getTime() - new Date(a.closed_at).getTime()), [cortes, todayStr, cashier?.id]);
   const existingCorte = todayCortes[0] || null;
 
   const todayOrders = useMemo(() => {
