@@ -23,3 +23,6 @@ testsprite_tests\tmp\config.json
 
 .vercel
 .env*
+
+.vercel
+.env*
