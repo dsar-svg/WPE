@@ -370,24 +370,41 @@ export function OrdersPage() {
       )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-4">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-admin-surface text-admin-muted hover:text-admin-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-            Anterior
-          </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-            <button key={p} onClick={() => setPage(p)}
-              className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
-                p === page ? 'bg-white text-black shadow-lg' : 'bg-admin-surface text-admin-muted hover:text-admin-text'
-              }`}>{p}</button>
-          ))}
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-admin-surface text-admin-muted hover:text-admin-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-            Siguiente
-          </button>
-        </div>
-      )}
+      {totalPages > 1 && (() => {
+        const pages: (number | '...')[] = [];
+        const maxVisible = 7;
+        if (totalPages <= maxVisible) {
+          for (let i = 1; i <= totalPages; i++) pages.push(i);
+        } else {
+          pages.push(1);
+          const start = Math.max(2, page - 1);
+          const end = Math.min(totalPages - 1, page + 1);
+          if (start > 2) pages.push('...');
+          for (let i = start; i <= end; i++) pages.push(i);
+          if (end < totalPages - 1) pages.push('...');
+          pages.push(totalPages);
+        }
+        return (
+          <div className="flex items-center justify-center gap-1.5 pt-4">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-admin-surface text-admin-muted hover:text-admin-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+              Anterior
+            </button>
+            {pages.map((p, i) => p === '...' ? (
+              <span key={`e${i}`} className="w-8 h-8 flex items-center justify-center text-xs text-admin-muted">…</span>
+            ) : (
+              <button key={p} onClick={() => setPage(p)}
+                className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                  p === page ? 'bg-white text-black shadow-lg' : 'bg-admin-surface text-admin-muted hover:text-admin-text'
+                }`}>{p}</button>
+            ))}
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-admin-surface text-admin-muted hover:text-admin-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+              Siguiente
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
