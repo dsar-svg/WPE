@@ -13,7 +13,6 @@ import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { SettingsPage } from '../components/admin/SettingsPage';
 import { OrdersPage } from '../components/admin/OrdersPage';
 import { DashboardView } from '../components/admin/DashboardView';
-import { ReporteDiario } from '../components/admin/ReporteDiario';
 import { AuditLogView } from '../components/admin/AuditLogView';
 import { Pagination } from '../components/ui/Pagination';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
@@ -25,7 +24,7 @@ const formatTime12h = (time: string) => { if (!time) return ''; const [hours, mi
 const h = parseInt(hours);
 const ampm = h >= 12 ? 'PM' : 'AM'; const h12 = h % 12 || 12; return `${h12}:${minutes} ${ampm}`;};
 export function AdminPage() { const { locations, menuItems, categories, config, isAdmin, isLoading, isSuperAdmin, managedLocationId, userEmail, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, orders, fetchOrders, signIn, signOut, createLocationAdmin } = useRestaurant(); const isSedesHidden = !isSuperAdmin;
-const [activeTab, setActiveTab] = useState<'dashboard' | 'reporte' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras' | 'finanzas' | 'cortes' | 'audit_log'>('dashboard');
+const [activeTab, setActiveTab] = useState<'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras' | 'finanzas' | 'cortes' | 'audit_log'>('dashboard');
 
 useOrderNotification(() => {
   if (activeTab === 'pedidos') fetchOrders?.();
@@ -66,7 +65,7 @@ const fetchCashiers = async () => {
 };
 
 useEffect(() => {
-  if (activeTab === 'cajeras' || activeTab === 'reporte') fetchCashiers();
+  if (activeTab === 'cajeras' || activeTab === 'dashboard') fetchCashiers();
 }, [activeTab]);
 
 const handleDeleteCashier = async (id: string) => {
@@ -593,14 +592,6 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
             menuItems={menuItems}
             totalFacturado={totalFacturado}
             config={config}
-          />
-        )}
-
-        {activeTab === 'reporte' && (
-          <ReporteDiario
-            orders={orders}
-            locations={locations}
-            menuItems={menuItems}
             cashiers={cashiers}
           />
         )}

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { MapPin, Utensils, ShoppingBag, DollarSign, Trophy, TrendingDown, Calendar, ArrowUpRight, ArrowDownRight, Banknote, CreditCard, Smartphone, Truck, Store } from 'lucide-react';
-import { Order, Location, Product, RestaurantConfig } from '../../types';
+import { MapPin, Utensils, ShoppingBag, DollarSign, Trophy, TrendingDown, Calendar, ArrowUpRight, ArrowDownRight, Banknote, CreditCard, Smartphone, Truck, Store, User, Clock } from 'lucide-react';
+import { Order, Location, Product, RestaurantConfig, Cashier } from '../../types';
 import { supabase } from '../../lib/supabase';
 
 interface DashboardViewProps {
@@ -9,6 +9,7 @@ interface DashboardViewProps {
   menuItems: Product[];
   totalFacturado: number;
   config: RestaurantConfig;
+  cashiers: Cashier[];
 }
 
 const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
@@ -116,7 +117,7 @@ function ChangeBadge({ value }: { value: number }) {
   );
 }
 
-export function DashboardView({ orders, locations, menuItems, totalFacturado: _totalFacturado, config }: DashboardViewProps) {
+export function DashboardView({ orders, locations, menuItems, totalFacturado: _totalFacturado, config, cashiers }: DashboardViewProps) {
   const now = new Date();
   const rate = config.exchangeRate ?? 1;
   const [view, setView] = useState<'month' | 'today'>('month');
@@ -144,6 +145,106 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
   const { filtered, total, count, prevTotal, prevCount, totalChange, countChange } = useMonthFilter(orders, year, month);
   const today = useTodayFilter(orders, rate, orderPaymentsMap);
   const chart = useMemo(() => buildMonthChart(filtered, year, month), [filtered, year, month]);
+
+  const todayOrders = useMemo(
+    () => orders.filter(o => isToday(o.created_at) && o.status === 'exitoso'),
+    [orders]
+  );
+
+  const hourlyData = useMemo(() => {
+    const buckets = Array.from({ length: 24 }, () => 0);
+    todayOrders.forEach(o => { buckets[new Date(o.created_at).getHours()]++; });
+    const max = Math.max(...buckets, 1);
+    return { buckets, max };
+  }, [todayOrders]);
+
+  const productSalesToday = useMemo(() => {
+    const map: Record<string, { name: string; category: string; qty: number; revenue: number }> = {};
+    todayOrders.forEach(order => {
+      order.items.forEach(item => {
+        const menuItem = menuItems.find(m => m.name === item.name);
+        const category = menuItem?.category || 'Sin categoría';
+        if (!map[item.id]) map[item.id] = { name: item.name, category, qty: 0, revenue: 0 };
+        map[item.id].qty += item.quantity;
+        map[item.id].revenue += item.quantity * item.price;
+      });
+    });
+    return Object.values(map).sort((a, b) => b.qty - a.qty);
+  }, [todayOrders, menuItems]);
+
+  const categorySalesToday = useMemo(() => {
+    const map: Record<string, { qty: number; revenue: number }> = {};
+    todayOrders.forEach(order => {
+      order.items.forEach(item => {
+        const menuItem = menuItems.find(m => m.name === item.name);
+        const cat = menuItem?.category || 'Sin categoría';
+        if (!map[cat]) map[cat] = { qty: 0, revenue: 0 };
+        map[cat].qty += item.quantity;
+        map[cat].revenue += item.quantity * item.price;
+      });
+    });
+    return Object.entries(map)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.revenue - a.revenue);
+  }, [todayOrders, menuItems]);
+
+  const paymentBreakdownToday = useMemo(() => {
+    const result: Record<string, number> = { Efectivo: 0, Tarjeta: 0, PagoMóvil: 0, Mixto: 0, Otro: 0 };
+    todayOrders.forEach(order => {
+      const splits = orderPaymentsMap[order.id];
+      if (splits && splits.length > 0) {
+        splits.forEach(sp => { result[sp.payment_method] = (result[sp.payment_method] || 0) + sp.amount; });
+      } else if (order.payment_method) {
+        result[order.payment_method] = (result[order.payment_method] || 0) + order.total;
+      }
+    });
+    return Object.entries(result)
+      .filter(([, v]) => v > 0)
+      .map(([method, amount]) => ({ method, amount }))
+      .sort((a, b) => b.amount - a.amount);
+  }, [todayOrders, orderPaymentsMap]);
+
+  const locationSummaryToday = useMemo(() => {
+    const map: Record<string, { name: string; count: number; total: number }> = {};
+    todayOrders.forEach(order => {
+      const loc = locations.find(l => l.id === order.location_id);
+      const name = loc?.name || 'Desconocida';
+      if (!map[order.location_id]) map[order.location_id] = { name, count: 0, total: 0 };
+      map[order.location_id].count++;
+      map[order.location_id].total += order.total;
+    });
+    return Object.values(map).sort((a, b) => b.total - a.total);
+  }, [todayOrders, locations]);
+
+  const cashierSummaryToday = useMemo(() => {
+    const map: Record<string, { name: string; orders: number; total: number; cash: number; card: number; other: number }> = {};
+    todayOrders.forEach(order => {
+      const cid = order.cashier_id || 'online';
+      if (!map[cid]) {
+        const cashier = cashiers.find(c => c.id === cid);
+        map[cid] = {
+          name: cid === 'online' ? 'Pedidos Online' : (cashier?.name || cashier?.employee_id || 'Cajero/a'),
+          orders: 0, total: 0, cash: 0, card: 0, other: 0,
+        };
+      }
+      map[cid].orders++;
+      map[cid].total += order.total;
+      if (order.payment_method === 'Efectivo') map[cid].cash += order.total;
+      else if (order.payment_method === 'Tarjeta' || order.payment_method === 'PagoMóvil') map[cid].card += order.total;
+      else map[cid].other += order.total;
+    });
+    return Object.values(map).sort((a, b) => b.total - a.total);
+  }, [todayOrders, cashiers]);
+
+  const avgMinutesToday = useMemo(() => {
+    if (todayOrders.length < 2) return 0;
+    const sorted = [...todayOrders].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    let sumDiff = 0;
+    for (let i = 1; i < sorted.length; i++) {
+      sumDiff += new Date(sorted[i].created_at).getTime() - new Date(sorted[i - 1].created_at).getTime();
+    }
+    return sumDiff / (sorted.length - 1) / 60000;
+  }, [todayOrders]);
 
   const maxVal = Math.max(...chart.values, 1);
   const BAR_HEIGHT = 140;
@@ -195,41 +296,203 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
 
       {/* Summary Cards */}
       {view === 'today' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8 col-span-full">
-            <div className="flex items-center gap-3 mb-6">
-              <DollarSign className="w-8 h-8 text-yellow-500" />
-              <h3 className="text-lg font-black">Facturado hoy</h3>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            <div className="bg-admin-surface border border-admin-border rounded-2xl p-8 col-span-full">
+              <div className="flex items-center gap-3 mb-6">
+                <DollarSign className="w-8 h-8 text-yellow-500" />
+                <h3 className="text-lg font-black">Facturado hoy</h3>
+              </div>
+              <p className="text-4xl font-black">${today.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <div className="flex flex-wrap gap-6 mt-4 text-sm">
+                <span className="text-admin-muted"><Truck className="w-4 h-4 inline mr-1" />Delivery: ${today.delivery.toFixed(2)}</span>
+                <span className="text-admin-muted"><Store className="w-4 h-4 inline mr-1" />Pick-up: ${today.pickup.toFixed(2)}</span>
+                <span className="text-admin-muted"><ShoppingBag className="w-4 h-4 inline mr-1" />{today.count} pedidos</span>
+                <span className="text-admin-muted"><Clock className="w-4 h-4 inline mr-1" />{todayOrders.length < 2 ? '—' : `${Math.floor(avgMinutesToday)}m ${Math.round((avgMinutesToday % 1) * 60)}s`}</span>
+              </div>
             </div>
-            <p className="text-4xl font-black">${today.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            <div className="flex gap-6 mt-4 text-sm">
-              <span className="text-admin-muted"><Truck className="w-4 h-4 inline mr-1" />Delivery: ${today.delivery.toFixed(2)}</span>
-              <span className="text-admin-muted"><Store className="w-4 h-4 inline mr-1" />Pick-up: ${today.pickup.toFixed(2)}</span>
-              <span className="text-admin-muted"><ShoppingBag className="w-4 h-4 inline mr-1" />{today.count} pedidos</span>
+
+            <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+              <Banknote className="w-8 h-8 text-green-500 mb-4" />
+              <p className="text-3xl font-black">${today.efectivoUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-admin-muted text-sm mt-1">Efectivo $</p>
+              <p className="text-xs text-zinc-500 mt-1">Bs {(today.efectivoUsd * today.rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            </div>
+            <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+              <Banknote className="w-8 h-8 text-yellow-500 mb-4" />
+              <p className="text-3xl font-black">Bs {today.efectivoBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-admin-muted text-sm mt-1">Efectivo Bs</p>
+            </div>
+            <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+              <Smartphone className="w-8 h-8 text-purple-500 mb-4" />
+              <p className="text-3xl font-black">Bs {today.pagoMovilBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-admin-muted text-sm mt-1">PagoMóvil</p>
+            </div>
+            <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
+              <CreditCard className="w-8 h-8 text-blue-500 mb-4" />
+              <p className="text-3xl font-black">Bs {today.tarjetaBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-admin-muted text-sm mt-1">Tarjeta</p>
             </div>
           </div>
 
-          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
-            <Banknote className="w-8 h-8 text-green-500 mb-4" />
-            <p className="text-3xl font-black">${today.efectivoUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            <p className="text-admin-muted text-sm mt-1">Efectivo $</p>
-            <p className="text-xs text-zinc-500 mt-1">Bs {(today.efectivoUsd * today.rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          {/* Hourly Heatmap */}
+          <div className="bg-admin-surface border border-admin-border rounded-2xl p-6">
+            <h3 className="text-sm font-black text-admin-text uppercase tracking-widest mb-4">Mapa de Calor por Hora</h3>
+            <div className="grid grid-cols-6 sm:grid-cols-8 lg:grid-cols-12 gap-2">
+              {hourlyData.buckets.map((cnt, hour) => {
+                const intensity = cnt / hourlyData.max;
+                const bgClass = cnt === 0
+                  ? 'bg-admin-bg'
+                  : intensity < 0.25 ? 'bg-green-900/40'
+                    : intensity < 0.5 ? 'bg-green-700/50'
+                      : intensity < 0.75 ? 'bg-green-500/60'
+                        : 'bg-green-400/80';
+                return (
+                  <div key={hour} className={`relative group aspect-square rounded-xl flex flex-col items-center justify-center ${bgClass} border border-admin-border transition-all hover:scale-105`}>
+                    <span className="text-[10px] font-black text-admin-text">{hour.toString().padStart(2, '0')}</span>
+                    <span className="text-[8px] text-admin-text-muted">{cnt}</span>
+                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-[9px] px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                      {hour.toString().padStart(2, '0')}:00 — {cnt} pedidos
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
-            <Banknote className="w-8 h-8 text-yellow-500 mb-4" />
-            <p className="text-3xl font-black">Bs {today.efectivoBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            <p className="text-admin-muted text-sm mt-1">Efectivo Bs</p>
+
+          {/* Products + Categories */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-admin-surface border border-admin-border rounded-2xl p-6">
+              <h3 className="text-sm font-black text-admin-text uppercase tracking-widest mb-4">Top Productos Hoy</h3>
+              {productSalesToday.length === 0 ? (
+                <p className="text-xs text-admin-text-muted">Sin ventas hoy</p>
+              ) : (
+                <div className="space-y-3">
+                  {productSalesToday.slice(0, 10).map((p, i) => (
+                    <div key={p.name} className="flex items-center gap-3">
+                      <span className="text-[10px] font-black text-admin-muted w-5 text-right">{i + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-admin-text truncate">{p.name}</span>
+                          <span className="text-[10px] text-admin-text-muted shrink-0">{p.qty}x · ${p.revenue.toFixed(2)}</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-admin-bg rounded-full mt-1 overflow-hidden">
+                          <div className="h-full bg-primary-vibrant rounded-full" style={{ width: `${(p.qty / productSalesToday[0].qty) * 100}%` }} />
+                        </div>
+                        <span className="text-[9px] text-admin-text-muted">{p.category}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-admin-surface border border-admin-border rounded-2xl p-6">
+              <h3 className="text-sm font-black text-admin-text uppercase tracking-widest mb-4">Ventas por Categoría</h3>
+              {categorySalesToday.length === 0 ? (
+                <p className="text-xs text-admin-text-muted">Sin ventas hoy</p>
+              ) : (
+                <div className="space-y-3">
+                  {categorySalesToday.map(cat => (
+                    <div key={cat.name}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold text-admin-text">{cat.name}</span>
+                        <span className="text-[10px] text-admin-text-muted">{cat.qty}x · ${cat.revenue.toFixed(2)}</span>
+                      </div>
+                      <div className="w-full h-2 bg-admin-bg rounded-full overflow-hidden">
+                        <div className="h-full bg-primary-vibrant/70 rounded-full" style={{ width: `${(cat.revenue / Math.max(...categorySalesToday.map(c => c.revenue), 1)) * 100}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
-            <Smartphone className="w-8 h-8 text-purple-500 mb-4" />
-            <p className="text-3xl font-black">Bs {today.pagoMovilBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            <p className="text-admin-muted text-sm mt-1">PagoMóvil</p>
+
+          {/* Payment Methods + Location Summary */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-admin-surface border border-admin-border rounded-2xl p-6">
+              <h3 className="text-sm font-black text-admin-text uppercase tracking-widest mb-4">Métodos de Pago</h3>
+              {paymentBreakdownToday.length === 0 ? (
+                <p className="text-xs text-admin-text-muted">Sin pagos hoy</p>
+              ) : (
+                <div className="space-y-3">
+                  {paymentBreakdownToday.map(p => (
+                    <div key={p.method}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold text-admin-text">{p.method}</span>
+                        <span className="text-[10px] text-admin-text-muted">${p.amount.toFixed(2)}</span>
+                      </div>
+                      <div className="w-full h-2 bg-admin-bg rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500/70 rounded-full" style={{ width: `${(p.amount / Math.max(...paymentBreakdownToday.map(x => x.amount), 1)) * 100}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-admin-surface border border-admin-border rounded-2xl p-6">
+              <h3 className="text-sm font-black text-admin-text uppercase tracking-widest mb-4">Resumen por Sede</h3>
+              {locationSummaryToday.length === 0 ? (
+                <p className="text-xs text-admin-text-muted">Sin ventas hoy</p>
+              ) : (
+                <div className="space-y-3">
+                  {locationSummaryToday.map(loc => (
+                    <div key={loc.name} className="flex items-center gap-3 p-3 bg-admin-bg rounded-xl">
+                      <div className="w-8 h-8 rounded-lg bg-primary-vibrant/10 flex items-center justify-center shrink-0">
+                        <MapPin className="w-4 h-4 text-primary-vibrant" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-admin-text truncate">{loc.name}</p>
+                        <p className="text-[10px] text-admin-text-muted">{loc.count} pedidos</p>
+                      </div>
+                      <span className="text-sm font-black text-admin-text shrink-0">${loc.total.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="bg-admin-surface border border-admin-border rounded-2xl p-8">
-            <CreditCard className="w-8 h-8 text-blue-500 mb-4" />
-            <p className="text-3xl font-black">Bs {today.tarjetaBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            <p className="text-admin-muted text-sm mt-1">Tarjeta</p>
-          </div>
+
+          {/* Cashier Summary */}
+          {cashierSummaryToday.length > 0 && (
+            <div>
+              <h3 className="text-sm font-black text-admin-text uppercase tracking-widest mb-4">Resumen por Cajero/a</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {cashierSummaryToday.map(c => (
+                  <div key={c.name} className="bg-admin-surface border border-admin-border rounded-2xl p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 rounded-xl bg-primary-vibrant/10 flex items-center justify-center shrink-0">
+                        <User className="w-5 h-5 text-primary-vibrant" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-admin-text truncate">{c.name}</p>
+                        <p className="text-[10px] text-admin-text-muted">{c.orders} pedidos</p>
+                      </div>
+                      <span className="text-lg font-black text-admin-text shrink-0">${c.total.toFixed(2)}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Efectivo</span>
+                        <span className="text-xs font-bold text-admin-text">${c.cash.toFixed(2)}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Tarjeta / PagoMóvil</span>
+                        <span className="text-xs font-bold text-admin-text">${c.card.toFixed(2)}</span>
+                      </div>
+                      {c.other > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Otro</span>
+                          <span className="text-xs font-bold text-admin-text">${c.other.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

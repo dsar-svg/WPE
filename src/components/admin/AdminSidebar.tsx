@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import {
   LayoutDashboard, MapPin, Utensils, Settings, ShoppingBag,
-  LogOut, ChevronRight, User, Users, DollarSign, Calendar, Search, History, BarChart3
+  LogOut, ChevronRight, User, Users, DollarSign, Calendar, Search, History
 } from 'lucide-react';
 import { RestaurantConfig } from '../../types';
 import { BrandName } from '../ui/BrandName';
 
-export type AdminPageTab = 'dashboard' | 'reporte' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras' | 'finanzas' | 'cortes' | 'audit_log';
+export type AdminPageTab = 'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras' | 'finanzas' | 'cortes' | 'audit_log';
 
 interface AdminSidebarProps {
   activeTab: AdminPageTab;
@@ -24,7 +24,6 @@ interface AdminSidebarProps {
 
 const navItems: { id: AdminPageTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'reporte', label: 'Reporte Diario', icon: BarChart3 },
   { id: 'sedes', label: 'Sedes', icon: MapPin },
   { id: 'productos', label: 'Productos', icon: Utensils },
   { id: 'pedidos', label: 'Pedidos', icon: ShoppingBag },
