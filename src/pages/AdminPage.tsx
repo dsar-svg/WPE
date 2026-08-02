@@ -66,7 +66,7 @@ const fetchCashiers = async () => {
 };
 
 useEffect(() => {
-  if (activeTab === 'cajeras') fetchCashiers();
+  if (activeTab === 'cajeras' || activeTab === 'reporte') fetchCashiers();
 }, [activeTab]);
 
 const handleDeleteCashier = async (id: string) => {
@@ -601,6 +601,7 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
             orders={orders}
             locations={locations}
             menuItems={menuItems}
+            cashiers={cashiers}
           />
         )}
       </div>

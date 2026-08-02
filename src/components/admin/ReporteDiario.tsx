@@ -1,12 +1,13 @@
 import { useMemo, useState, useEffect } from 'react';
-import { ShoppingBag, DollarSign, Receipt, Clock, MapPin } from 'lucide-react';
-import { Order, Location, Product } from '../../types';
+import { ShoppingBag, DollarSign, Receipt, Clock, MapPin, User } from 'lucide-react';
+import { Order, Location, Product, Cashier } from '../../types';
 import { supabase } from '../../lib/supabase';
 
 interface ReporteDiarioProps {
   orders: Order[];
   locations: Location[];
   menuItems: Product[];
+  cashiers: Cashier[];
 }
 
 function isToday(dateStr: string) {
@@ -19,7 +20,7 @@ function getHour(dateStr: string) {
   return new Date(dateStr).getHours();
 }
 
-export function ReporteDiario({ orders, locations, menuItems }: ReporteDiarioProps) {
+export function ReporteDiario({ orders, locations, menuItems, cashiers }: ReporteDiarioProps) {
   const [orderPaymentsMap, setOrderPaymentsMap] = useState<Record<string, { payment_method: string; amount: number; currency?: string }[]>>({});
 
   const todayOrders = useMemo(
@@ -270,6 +271,9 @@ export function ReporteDiario({ orders, locations, menuItems }: ReporteDiarioPro
             </div>
           )}
         </div>
+
+        {/* Cashier Summary */}
+        <CashierSummary todayOrders={todayOrders} cashiers={cashiers} />
       </div>
     </div>
   );
@@ -284,6 +288,74 @@ function KpiCard({ icon, label, value }: { icon: React.ReactNode; label: string;
       <div className="min-w-0">
         <p className="text-[10px] text-admin-text-muted uppercase tracking-widest font-bold">{label}</p>
         <p className="text-lg font-black text-admin-text truncate">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function CashierSummary({ todayOrders, cashiers }: { todayOrders: Order[]; cashiers: Cashier[] }) {
+  const cashierData = useMemo(() => {
+    const map: Record<string, { name: string; orders: number; total: number; cash: number; card: number; other: number }> = {};
+
+    todayOrders.forEach(order => {
+      const cid = order.cashier_id || 'online';
+      if (!map[cid]) {
+        const cashier = cashiers.find(c => c.id === cid);
+        map[cid] = {
+          name: cid === 'online' ? 'Pedidos Online' : (cashier?.name || cashier?.employee_id || 'Cajero/a'),
+          orders: 0,
+          total: 0,
+          cash: 0,
+          card: 0,
+          other: 0,
+        };
+      }
+      map[cid].orders++;
+      map[cid].total += order.total;
+      if (order.payment_method === 'Efectivo') map[cid].cash += order.total;
+      else if (order.payment_method === 'Tarjeta' || order.payment_method === 'PagoMóvil') map[cid].card += order.total;
+      else map[cid].other += order.total;
+    });
+
+    return Object.values(map).sort((a, b) => b.total - a.total);
+  }, [todayOrders, cashiers]);
+
+  if (cashierData.length === 0) return null;
+
+  return (
+    <div>
+      <h3 className="text-sm font-black text-admin-text uppercase tracking-widest mb-4">Resumen por Cajero/a</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {cashierData.map(c => (
+          <div key={c.name} className="bg-admin-surface border border-admin-border rounded-2xl p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-primary-vibrant/10 flex items-center justify-center shrink-0">
+                <User className="w-5 h-5 text-primary-vibrant" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-black text-admin-text truncate">{c.name}</p>
+                <p className="text-[10px] text-admin-text-muted">{c.orders} pedidos</p>
+              </div>
+              <span className="ml-auto text-lg font-black text-admin-text">${c.total.toFixed(2)}</span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Efectivo</span>
+                <span className="text-xs font-bold text-admin-text">${c.cash.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Tarjeta / PagoMóvil</span>
+                <span className="text-xs font-bold text-admin-text">${c.card.toFixed(2)}</span>
+              </div>
+              {c.other > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Otro</span>
+                  <span className="text-xs font-bold text-admin-text">${c.other.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
