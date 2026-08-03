@@ -217,7 +217,11 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
   }, [todayOrders, locations]);
 
   const cashierSummaryToday = useMemo(() => {
-    const map: Record<string, { name: string; orders: number; total: number; cash: number; card: number; other: number }> = {};
+    const map: Record<string, {
+      name: string; orders: number; total: number; cash: number; card: number; other: number;
+      delivery: number; pickup: number; items: number; topProduct: string; firstOrder: string; lastOrder: string;
+    }> = {};
+    const itemMaps: Record<string, Record<string, number>> = {};
     todayOrders.forEach(order => {
       const cid = order.cashier_id || 'online';
       if (!map[cid]) {
@@ -225,13 +229,28 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
         map[cid] = {
           name: cid === 'online' ? 'Pedidos Online' : (cashier?.name || cashier?.employee_id || 'Cajero/a'),
           orders: 0, total: 0, cash: 0, card: 0, other: 0,
+          delivery: 0, pickup: 0, items: 0, topProduct: '', firstOrder: '', lastOrder: '',
         };
+        itemMaps[cid] = {};
       }
-      map[cid].orders++;
-      map[cid].total += order.total;
-      if (order.payment_method === 'Efectivo') map[cid].cash += order.total;
-      else if (order.payment_method === 'Tarjeta' || order.payment_method === 'PagoMóvil') map[cid].card += order.total;
-      else map[cid].other += order.total;
+      const entry = map[cid];
+      entry.orders++;
+      entry.total += order.total;
+      if (order.payment_method === 'Efectivo') entry.cash += order.total;
+      else if (order.payment_method === 'Tarjeta' || order.payment_method === 'PagoMóvil') entry.card += order.total;
+      else entry.other += order.total;
+      if (order.delivery_type === 'Delivery') entry.delivery++;
+      else entry.pickup++;
+      entry.items += order.items.reduce((sum, it) => sum + it.quantity, 0);
+      if (!entry.firstOrder || order.created_at < entry.firstOrder) entry.firstOrder = order.created_at;
+      if (!entry.lastOrder || order.created_at > entry.lastOrder) entry.lastOrder = order.created_at;
+      order.items.forEach(item => {
+        itemMaps[cid][item.name] = (itemMaps[cid][item.name] || 0) + item.quantity;
+      });
+    });
+    Object.entries(map).forEach(([cid, entry]) => {
+      const sorted = Object.entries(itemMaps[cid] || {}).sort((a, b) => b[1] - a[1]);
+      entry.topProduct = sorted[0]?.[0] || '';
     });
     return Object.values(map).sort((a, b) => b.total - a.total);
   }, [todayOrders, cashiers]);
@@ -460,36 +479,78 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
             <div>
               <h3 className="text-sm font-black text-admin-text uppercase tracking-widest mb-4">Resumen por Cajero/a</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {cashierSummaryToday.map(c => (
-                  <div key={c.name} className="bg-admin-surface border border-admin-border rounded-2xl p-5">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-10 h-10 rounded-xl bg-primary-vibrant/10 flex items-center justify-center shrink-0">
-                        <User className="w-5 h-5 text-primary-vibrant" />
+                {cashierSummaryToday.map(c => {
+                  const avgTicket = c.orders > 0 ? c.total / c.orders : 0;
+                  const timeRange = c.firstOrder && c.lastOrder
+                    ? `${new Date(c.firstOrder).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })} – ${new Date(c.lastOrder).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}`
+                    : '';
+                  return (
+                    <div key={c.name} className="bg-admin-surface border border-admin-border rounded-2xl p-5 space-y-4">
+                      {/* Header */}
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary-vibrant/10 flex items-center justify-center shrink-0">
+                          <User className="w-5 h-5 text-primary-vibrant" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-black text-admin-text truncate">{c.name}</p>
+                          <p className="text-[10px] text-admin-text-muted">{c.orders} pedidos · {c.items} artículos</p>
+                        </div>
+                        <span className="text-lg font-black text-admin-text shrink-0">${c.total.toFixed(2)}</span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-admin-text truncate">{c.name}</p>
-                        <p className="text-[10px] text-admin-text-muted">{c.orders} pedidos</p>
+
+                      {/* Metrics row */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-admin-bg rounded-xl p-2 text-center">
+                          <p className="text-[9px] text-admin-text-muted uppercase">Ticket</p>
+                          <p className="text-xs font-black text-admin-text">${avgTicket.toFixed(2)}</p>
+                        </div>
+                        <div className="bg-admin-bg rounded-xl p-2 text-center">
+                          <p className="text-[9px] text-admin-text-muted uppercase">Delivery</p>
+                          <p className="text-xs font-black text-admin-text">{c.delivery}</p>
+                        </div>
+                        <div className="bg-admin-bg rounded-xl p-2 text-center">
+                          <p className="text-[9px] text-admin-text-muted uppercase">Pick-up</p>
+                          <p className="text-xs font-black text-admin-text">{c.pickup}</p>
+                        </div>
                       </div>
-                      <span className="text-lg font-black text-admin-text shrink-0">${c.total.toFixed(2)}</span>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Efectivo</span>
-                        <span className="text-xs font-bold text-admin-text">${c.cash.toFixed(2)}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Tarjeta / PagoMóvil</span>
-                        <span className="text-xs font-bold text-admin-text">${c.card.toFixed(2)}</span>
-                      </div>
-                      {c.other > 0 && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Otro</span>
-                          <span className="text-xs font-bold text-admin-text">${c.other.toFixed(2)}</span>
+
+                      {/* Top product */}
+                      {c.topProduct && (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-admin-bg rounded-xl">
+                          <Trophy className="w-3.5 h-3.5 text-yellow-500 shrink-0" />
+                          <span className="text-[10px] text-admin-text-muted">Más vendido:</span>
+                          <span className="text-[10px] font-bold text-admin-text truncate">{c.topProduct}</span>
                         </div>
                       )}
+
+                      {/* Time range */}
+                      {timeRange && (
+                        <div className="flex items-center gap-2 text-[10px] text-admin-text-muted">
+                          <Clock className="w-3 h-3" />
+                          <span>{timeRange}</span>
+                        </div>
+                      )}
+
+                      {/* Payment breakdown */}
+                      <div className="space-y-1.5 border-t border-admin-border pt-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Efectivo</span>
+                          <span className="text-[11px] font-bold text-admin-text">${c.cash.toFixed(2)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Tarjeta / PagoMóvil</span>
+                          <span className="text-[11px] font-bold text-admin-text">${c.card.toFixed(2)}</span>
+                        </div>
+                        {c.other > 0 && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Otro</span>
+                            <span className="text-[11px] font-bold text-admin-text">${c.other.toFixed(2)}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
