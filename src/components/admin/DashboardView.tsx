@@ -218,7 +218,10 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
 
   const cashierSummaryToday = useMemo(() => {
     const map: Record<string, {
-      name: string; orders: number; total: number; cash: number; card: number; other: number;
+      name: string; orders: number; total: number;
+      efectivoUsd: number; efectivoBs: number;
+      tarjetaUsd: number; tarjetaBs: number;
+      pagoMovilUsd: number; pagoMovilBs: number;
       delivery: number; pickup: number; items: number; topProduct: string; firstOrder: string; lastOrder: string;
     }> = {};
     const itemMaps: Record<string, Record<string, number>> = {};
@@ -228,7 +231,7 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
         const cashier = cashiers.find(c => c.id === cid);
         map[cid] = {
           name: cid === 'online' ? 'Pedidos Online' : (cashier?.name || cashier?.employee_id || 'Cajero/a'),
-          orders: 0, total: 0, cash: 0, card: 0, other: 0,
+          orders: 0, total: 0, efectivoUsd: 0, efectivoBs: 0, tarjetaUsd: 0, tarjetaBs: 0, pagoMovilUsd: 0, pagoMovilBs: 0,
           delivery: 0, pickup: 0, items: 0, topProduct: '', firstOrder: '', lastOrder: '',
         };
         itemMaps[cid] = {};
@@ -236,9 +239,32 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
       const entry = map[cid];
       entry.orders++;
       entry.total += order.total;
-      if (order.payment_method === 'Efectivo') entry.cash += order.total;
-      else if (order.payment_method === 'Tarjeta' || order.payment_method === 'PagoMóvil') entry.card += order.total;
-      else entry.other += order.total;
+      const splits = orderPaymentsMap[order.id];
+      if (splits && splits.length > 0) {
+        for (const sp of splits) {
+          if (sp.payment_method === 'Efectivo') {
+            if (sp.currency === 'BS') entry.efectivoBs += sp.amount;
+            else entry.efectivoUsd += sp.amount;
+          } else if (sp.payment_method === 'Tarjeta') {
+            if (sp.currency === 'BS') entry.tarjetaBs += sp.amount;
+            else entry.tarjetaUsd += sp.amount;
+          } else if (sp.payment_method === 'PagoMóvil') {
+            if (sp.currency === 'BS') entry.pagoMovilBs += sp.amount;
+            else entry.pagoMovilUsd += sp.amount;
+          }
+        }
+      } else {
+        if (order.payment_method === 'Efectivo') {
+          if (order.payment_currency === 'BS') entry.efectivoBs += order.total * rate;
+          else entry.efectivoUsd += order.total;
+        } else if (order.payment_method === 'Tarjeta') {
+          if (order.payment_currency === 'BS') entry.tarjetaBs += order.total * rate;
+          else entry.tarjetaUsd += order.total;
+        } else if (order.payment_method === 'PagoMóvil') {
+          if (order.payment_currency === 'BS') entry.pagoMovilBs += order.total * rate;
+          else entry.pagoMovilUsd += order.total;
+        }
+      }
       if (order.delivery_type === 'Delivery') entry.delivery++;
       else entry.pickup++;
       entry.items += order.items.reduce((sum, it) => sum + it.quantity, 0);
@@ -253,7 +279,7 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
       entry.topProduct = sorted[0]?.[0] || '';
     });
     return Object.values(map).sort((a, b) => b.total - a.total);
-  }, [todayOrders, cashiers]);
+  }, [todayOrders, cashiers, orderPaymentsMap, rate]);
 
   const avgMinutesToday = useMemo(() => {
     if (todayOrders.length < 2) return 0;
@@ -533,18 +559,34 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
 
                       {/* Payment breakdown */}
                       <div className="space-y-1.5 border-t border-admin-border pt-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Efectivo</span>
-                          <span className="text-[11px] font-bold text-admin-text">${c.cash.toFixed(2)}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Tarjeta / PagoMóvil</span>
-                          <span className="text-[11px] font-bold text-admin-text">${c.card.toFixed(2)}</span>
-                        </div>
-                        {c.other > 0 && (
+                        {(c.efectivoBs > 0 || c.efectivoUsd > 0) && (
                           <div className="flex items-center justify-between">
-                            <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Otro</span>
-                            <span className="text-[11px] font-bold text-admin-text">${c.other.toFixed(2)}</span>
+                            <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Efectivo</span>
+                            <div className="text-right">
+                              {c.efectivoBs > 0 && <span className="text-[11px] font-bold text-admin-text">Bs {c.efectivoBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+                              {c.efectivoBs > 0 && c.efectivoUsd > 0 && <span className="text-[9px] text-admin-text-muted"> / </span>}
+                              {c.efectivoUsd > 0 && <span className="text-[11px] font-bold text-admin-text">${c.efectivoUsd.toFixed(2)}</span>}
+                            </div>
+                          </div>
+                        )}
+                        {(c.tarjetaBs > 0 || c.tarjetaUsd > 0) && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Tarjeta</span>
+                            <div className="text-right">
+                              {c.tarjetaBs > 0 && <span className="text-[11px] font-bold text-admin-text">Bs {c.tarjetaBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+                              {c.tarjetaBs > 0 && c.tarjetaUsd > 0 && <span className="text-[9px] text-admin-text-muted"> / </span>}
+                              {c.tarjetaUsd > 0 && <span className="text-[11px] font-bold text-admin-text">${c.tarjetaUsd.toFixed(2)}</span>}
+                            </div>
+                          </div>
+                        )}
+                        {(c.pagoMovilBs > 0 || c.pagoMovilUsd > 0) && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">PagoMóvil</span>
+                            <div className="text-right">
+                              {c.pagoMovilBs > 0 && <span className="text-[11px] font-bold text-admin-text">Bs {c.pagoMovilBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>}
+                              {c.pagoMovilBs > 0 && c.pagoMovilUsd > 0 && <span className="text-[9px] text-admin-text-muted"> / </span>}
+                              {c.pagoMovilUsd > 0 && <span className="text-[11px] font-bold text-admin-text">${c.pagoMovilUsd.toFixed(2)}</span>}
+                            </div>
                           </div>
                         )}
                       </div>
