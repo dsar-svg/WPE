@@ -564,27 +564,27 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
                         {(c.efectivoBs > 0 || c.efectivoUsd > 0) && (
                           <div className="flex items-center justify-between">
                             <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Efectivo</span>
-                            <div className="text-[11px] font-bold text-admin-text">
-                              <span>Bs {(c.efectivoBs + c.efectivoUsd * rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                              <span className="text-[9px] text-admin-text-muted"> / ${(c.efectivoBs / rate + c.efectivoUsd).toFixed(2)}</span>
+                            <div className="text-[11px] font-bold text-admin-text text-right">
+                              {c.efectivoBs > 0 && <div>Bs {c.efectivoBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>}
+                              {c.efectivoUsd > 0 && <div>${c.efectivoUsd.toFixed(2)}</div>}
                             </div>
                           </div>
                         )}
                         {(c.tarjetaBs > 0 || c.tarjetaUsd > 0) && (
                           <div className="flex items-center justify-between">
                             <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">Tarjeta</span>
-                            <div className="text-[11px] font-bold text-admin-text">
-                              <span>Bs {(c.tarjetaBs + c.tarjetaUsd * rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                              <span className="text-[9px] text-admin-text-muted"> / ${(c.tarjetaBs / rate + c.tarjetaUsd).toFixed(2)}</span>
+                            <div className="text-[11px] font-bold text-admin-text text-right">
+                              {c.tarjetaBs > 0 && <div>Bs {c.tarjetaBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>}
+                              {c.tarjetaUsd > 0 && <div>${c.tarjetaUsd.toFixed(2)}</div>}
                             </div>
                           </div>
                         )}
                         {(c.pagoMovilBs > 0 || c.pagoMovilUsd > 0) && (
                           <div className="flex items-center justify-between">
                             <span className="text-[10px] text-admin-text-muted uppercase tracking-widest">PagoMóvil</span>
-                            <div className="text-[11px] font-bold text-admin-text">
-                              <span>Bs {(c.pagoMovilBs + c.pagoMovilUsd * rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                              <span className="text-[9px] text-admin-text-muted"> / ${(c.pagoMovilBs / rate + c.pagoMovilUsd).toFixed(2)}</span>
+                            <div className="text-[11px] font-bold text-admin-text text-right">
+                              {c.pagoMovilBs > 0 && <div>Bs {c.pagoMovilBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>}
+                              {c.pagoMovilUsd > 0 && <div>${c.pagoMovilUsd.toFixed(2)}</div>}
                             </div>
                           </div>
                         )}
