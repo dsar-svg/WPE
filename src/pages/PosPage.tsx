@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+﻿import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, Printer, DollarSign, CreditCard, Smartphone, Banknote, LogOut, User, IdCard, Calendar, History, Loader2, QrCode, Truck, Store } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -171,7 +171,10 @@ function PaymentModal({
     if (isSplit) {
       onConfirm(splits.filter(s => s.amount > 0), 0);
     } else {
-      onConfirm([{ method, amount: method === 'Efectivo' ? amountReceivedUsd : total, currency: method === 'Efectivo' ? amountCurrency : undefined, ref: paymentRef || undefined }], changeAmount);
+      const amountToSend = method === 'Efectivo'
+        ? (amountCurrency === 'BS' ? (parseFloat(amountReceived) || 0) : amountReceivedUsd)
+        : total;
+      onConfirm([{ method, amount: amountToSend, currency: method === 'Efectivo' ? amountCurrency : undefined, ref: paymentRef || undefined }], changeAmount);
     }
   };
 
@@ -780,13 +783,19 @@ function CorteDeCajaModal({
   const [error, setError] = useState('');
   const [orderPaymentsMap, setOrderPaymentsMap] = useState<Record<string, { payment_method: string; amount: number; currency?: string }[]>>({});
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const VZ_OFFSET_MS = -4 * 60 * 60 * 1000;
+  const getVzDateStr = (d: Date) => new Date(d.getTime() + VZ_OFFSET_MS).toISOString().slice(0, 10);
+  const getVzStartOfDayUtc = (d: Date) => {
+    const vz = new Date(d.getTime() + VZ_OFFSET_MS);
+    return new Date(Date.UTC(vz.getUTCFullYear(), vz.getUTCMonth(), vz.getUTCDate(), 4, 0, 0));
+  };
+
+  const todayStr = getVzDateStr(new Date());
   const todayCortes = useMemo(() => cortes.filter(c => c.date === todayStr && c.cashier_id === cashier?.id).sort((a, b) => new Date(b.closed_at).getTime() - new Date(a.closed_at).getTime()), [cortes, todayStr, cashier?.id]);
   const existingCorte = todayCortes[0] || null;
 
   const todayOrders = useMemo(() => {
-    const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const startOfDay = getVzStartOfDayUtc(new Date());
     return orders.filter(o =>
       o.location_id === locationId &&
       o.status === 'exitoso' &&
@@ -880,7 +889,7 @@ function CorteDeCajaModal({
     setError('');
     try {
       const now = new Date();
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfDay = getVzStartOfDayUtc(now);
       const fromTime = existingCorte ? existingCorte.closed_at : startOfDay.toISOString();
       const { error: insertError } = await supabase.from('cortes').insert({
         location_id: locationId,
@@ -2049,6 +2058,7 @@ export function PosPage() {
     setCustomerName('');
     setCustomerPhone('');
     setCustomerCedula('');
+    setDeliveryType('Pick-up');
     setOrderCode('');
     setOrderCodeError('');
     setLoadedOrderId(null);

@@ -49,6 +49,8 @@ export function OrdersPage() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [cashiers, setCashiers] = useState<Cashier[]>([]);
   const [cashierFilter, setCashierFilter] = useState('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [orderPaymentsMap, setOrderPaymentsMap] = useState<Record<string, { payment_method: string; amount: number; currency?: string }[]>>({});
 
   useEffect(() => { fetchOrders(); }, [fetchOrders]);
@@ -104,6 +106,14 @@ export function OrdersPage() {
     if (deliveryFilter !== 'all') result = result.filter(o => o.delivery_type === deliveryFilter);
     if (statusFilter !== 'all') result = result.filter(o => o.status === statusFilter);
     if (cashierFilter !== 'all') result = result.filter(o => o.cashier_id === cashierFilter);
+    if (dateFrom) {
+      const from = new Date(dateFrom + 'T00:00:00-04:00');
+      result = result.filter(o => new Date(o.created_at) >= from);
+    }
+    if (dateTo) {
+      const to = new Date(dateTo + 'T23:59:59-04:00');
+      result = result.filter(o => new Date(o.created_at) <= to);
+    }
     result.sort((a, b) => {
       let cmp = 0;
       if (sortField === 'created_at') cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -120,7 +130,7 @@ export function OrdersPage() {
     return filtered.slice(start, start + ITEMS_PER_PAGE);
   }, [filtered, page]);
 
-  useEffect(() => { setPage(1); }, [search, locationFilter, deliveryFilter, statusFilter, cashierFilter]);
+  useEffect(() => { setPage(1); }, [search, locationFilter, deliveryFilter, statusFilter, cashierFilter, dateFrom, dateTo]);
 
   const toggleSort = (field: typeof sortField) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -321,6 +331,18 @@ export function OrdersPage() {
             {cashiers.map(c => <option key={c.id} value={c.id}>{c.employee_id || c.name || c.email}</option>)}
           </select>
         )}
+        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+          className="bg-admin-surface border border-admin-border rounded-xl px-4 py-2.5 text-sm text-admin-text focus:border-primary-vibrant/50 outline-none transition-colors"
+          placeholder="Desde" />
+        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+          className="bg-admin-surface border border-admin-border rounded-xl px-4 py-2.5 text-sm text-admin-text focus:border-primary-vibrant/50 outline-none transition-colors"
+          placeholder="Hasta" />
+        {(dateFrom || dateTo || search || locationFilter !== 'all' || deliveryFilter !== 'all' || statusFilter !== 'all' || cashierFilter !== 'all') && (
+          <button onClick={() => { setSearch(''); setLocationFilter('all'); setDeliveryFilter('all'); setStatusFilter('all'); setCashierFilter('all'); setDateFrom(''); setDateTo(''); }}
+            className="text-[10px] text-admin-muted hover:text-admin-text px-2 py-1 rounded-lg transition-colors">
+            Limpiar filtros
+          </button>
+        )}
       </div>
 
       {/* Desktop Table */}
@@ -376,12 +398,30 @@ export function OrdersPage() {
             className="px-3 py-1.5 rounded-lg text-xs font-bold bg-admin-surface text-admin-muted hover:text-admin-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
             Anterior
           </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-            <button key={p} onClick={() => setPage(p)}
-              className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
-                p === page ? 'bg-white text-black shadow-lg' : 'bg-admin-surface text-admin-muted hover:text-admin-text'
-              }`}>{p}</button>
-          ))}
+          {(() => {
+            const pages: (number | '...')[] = [];
+            if (totalPages <= 7) {
+              for (let i = 1; i <= totalPages; i++) pages.push(i);
+            } else {
+              pages.push(1);
+              if (page > 3) pages.push('...');
+              const start = Math.max(2, page - 1);
+              const end = Math.min(totalPages - 1, page + 1);
+              for (let i = start; i <= end; i++) pages.push(i);
+              if (page < totalPages - 2) pages.push('...');
+              pages.push(totalPages);
+            }
+            return pages.map((p, i) =>
+              p === '...' ? (
+                <span key={`e${i}`} className="w-8 h-8 flex items-center justify-center text-xs text-admin-muted">…</span>
+              ) : (
+                <button key={p} onClick={() => setPage(p)}
+                  className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${
+                    p === page ? 'bg-white text-black shadow-lg' : 'bg-admin-surface text-admin-muted hover:text-admin-text'
+                  }`}>{p}</button>
+              )
+            );
+          })()}
           <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
             className="px-3 py-1.5 rounded-lg text-xs font-bold bg-admin-surface text-admin-muted hover:text-admin-text disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
             Siguiente

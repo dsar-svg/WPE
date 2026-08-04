@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { LogIn, MapPin, Clock, MessageCircle, Power, RefreshCcw, Plus, Trash2, Tag, Edit2, Eye, EyeOff, Menu, X, Key, AlertTriangle } from 'lucide-react';
+import { LogIn, MapPin, Clock, MessageCircle, Power, RefreshCcw, Plus, Trash2, Tag, Edit2, Eye, EyeOff, Menu, X, Key, AlertTriangle, Printer, ChevronDown, ChevronRight, Truck, Store, Banknote, CreditCard, Smartphone, DollarSign, Loader2 } from 'lucide-react';
 import { useRestaurant } from '../context/RestaurantContext';
 import { Product, Location, Cashier } from '../types';
 import { Link } from 'react-router-dom';
@@ -14,6 +14,7 @@ import { SettingsPage } from '../components/admin/SettingsPage';
 import { OrdersPage } from '../components/admin/OrdersPage';
 import { DashboardView } from '../components/admin/DashboardView';
 import { AuditLogView } from '../components/admin/AuditLogView';
+import { DailyReportView } from '../components/admin/DailyReportView';
 import { Pagination } from '../components/ui/Pagination';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
 import { supabase } from '../lib/supabase';
@@ -24,7 +25,7 @@ const formatTime12h = (time: string) => { if (!time) return ''; const [hours, mi
 const h = parseInt(hours);
 const ampm = h >= 12 ? 'PM' : 'AM'; const h12 = h % 12 || 12; return `${h12}:${minutes} ${ampm}`;};
 export function AdminPage() { const { locations, menuItems, categories, config, isAdmin, isLoading, isSuperAdmin, managedLocationId, userEmail, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, orders, fetchOrders, signIn, signOut, createLocationAdmin } = useRestaurant(); const isSedesHidden = !isSuperAdmin;
-const [activeTab, setActiveTab] = useState<'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras' | 'finanzas' | 'cortes' | 'audit_log'>('dashboard');
+const [activeTab, setActiveTab] = useState<'dashboard' | 'sedes' | 'productos' | 'ajustes' | 'pedidos' | 'cajeras' | 'finanzas' | 'cortes' | 'audit_log' | 'daily_report'>('dashboard');
 
 useOrderNotification(() => {
   if (activeTab === 'pedidos') fetchOrders?.();
@@ -39,6 +40,12 @@ useEffect(() => {
 const [cortesData, setCortesData] = useState<any[]>([]);
 const [cortesLoading, setCortesLoading] = useState(false);
 const [cortesFilterLoc, setCortesFilterLoc] = useState('');
+const [cortesFilterDate, setCortesFilterDate] = useState('');
+const [cortesFilterCashier, setCortesFilterCashier] = useState('');
+const [expandedCorteId, setExpandedCorteId] = useState<string | null>(null);
+const [corteOrdersMap, setCorteOrdersMap] = useState<Record<string, any[]>>({});
+const [corteOrdersLoadingId, setCorteOrdersLoadingId] = useState<string | null>(null);
+const [showBsPrimary, setShowBsPrimary] = useState(false);
 
 useEffect(() => {
   if (activeTab !== 'cortes') return;
@@ -413,85 +420,320 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
           <OrdersPage />
         )}
 
-        {activeTab === 'cortes' && (
+        {activeTab === 'cortes' && (() => {
+          const uniqueCashiers = [...new Set(cortesData.map(c => c.cashier_name).filter(Boolean))];
+          const filteredCortes = cortesData.filter(c => {
+            if (cortesFilterDate && c.date !== cortesFilterDate) return false;
+            if (cortesFilterCashier && c.cashier_name !== cortesFilterCashier) return false;
+            return true;
+          });
+          const formatBs = (v: number) => v.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+          const handleExpandCorte = async (c: any) => {
+            if (expandedCorteId === c.id) { setExpandedCorteId(null); return; }
+            setExpandedCorteId(c.id);
+            if (corteOrdersMap[c.id]) return;
+            setCorteOrdersLoadingId(c.id);
+            const { data } = await supabase.from('orders')
+              .select('id, total, customer_name, delivery_type, payment_method, payment_currency, created_at')
+              .eq('cashier_id', c.cashier_id)
+              .eq('location_id', c.location_id)
+              .eq('status', 'exitoso')
+              .gte('created_at', c.from_date)
+              .lte('created_at', c.closed_at)
+              .order('created_at');
+            setCorteOrdersMap(prev => ({ ...prev, [c.id]: data || [] }));
+            setCorteOrdersLoadingId(null);
+          };
+
+          const handleCorteReprint = (c: any) => {
+            const efectivoUsd = Number(c.total_efectivo_usd ?? 0);
+            const efectivoBs = Number(c.total_efectivo_bs ?? 0);
+            const tarjetaBs = Number(c.total_tarjeta_bs ?? 0);
+            const pagomovilBs = Number(c.total_pagomovil_bs ?? 0);
+            const locName = locations.find(l => l.id === c.location_id)?.name || '';
+            const receiptHtml = `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Corte de Caja</title>
+<style>
+@media print { @page { size: 80mm auto; margin: 0; } body { margin: 0; padding: 0; } }
+* { font-family: Arial, Helvetica, sans-serif !important; }
+body { font-size: 10px; width: 270px; margin: 0 auto; padding: 8px 5px; color: #000; line-height: 1.2; }
+.text-center { text-align: center; } .text-right { text-align: right; } .bold { font-weight: bold; }
+.header-title { font-size: 13px; font-weight: bold; margin-bottom: 2px; }
+.header-sub { font-size: 9px; margin: 1px 0; }
+.divider { border-top: 1px dashed #000; margin: 5px 0; }
+table { width: 100%; border-collapse: collapse; } td { padding: 1.5px 0; font-size: 9px; } td.r { text-align: right; }
+.total-row td { font-weight: bold; font-size: 10px; }
+.section-title { font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+</style></head><body>
+<div class="text-center">
+  <div class="header-title">CORTE DE CAJA</div>
+  <div class="header-sub bold">${locName}</div>
+  <div class="header-sub">${new Date(c.date).toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })} ${new Date(c.closed_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}</div>
+  <div class="header-sub">Cajero: ${c.cashier_name}</div>
+</div>
+<div class="divider"></div>
+<table>
+  <tr><td>Pedidos</td><td class="r bold">${c.order_count}</td></tr>
+</table>
+<div class="divider"></div>
+<div class="section-title">M&Eacute;TODO DE PAGO</div>
+<table>
+  <tr><td>Efectivo $</td><td class="r">$${efectivoUsd.toFixed(2)}</td></tr>
+  <tr><td>Efectivo Bs</td><td class="r">Bs ${formatBs(efectivoBs)}</td></tr>
+  <tr><td>Tarjeta</td><td class="r">Bs ${formatBs(tarjetaBs)}</td></tr>
+  <tr><td>Pago M&oacute;vil</td><td class="r">Bs ${formatBs(pagomovilBs)}</td></tr>
+</table>
+<div class="divider"></div>
+<table>
+  <tr class="total-row"><td>TOTAL</td><td class="r">$${Number(c.grand_total).toFixed(2)}</td></tr>
+</table>
+<div class="divider"></div>
+<p class="text-center" style="font-size:8px">Cerrado: ${new Date(c.closed_at).toLocaleString('es-VE')}</p>
+</body></html>`;
+            const w = window.open('', '_blank', 'width=320,height=600');
+            if (w) { w.document.write(receiptHtml); w.document.close(); setTimeout(() => { w.print(); w.close(); }, 400); }
+          };
+
+          return (
           <div>
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h2 className="text-2xl font-black">Cortes de Caja</h2>
-                <p className="text-admin-text-muted text-sm">
-                  {cortesData.length} corte(s) registrados
-                </p>
-              </div>
-              {isSuperAdmin && locations.length > 1 && (
-                <select value={cortesFilterLoc} onChange={e => setCortesFilterLoc(e.target.value)}
-                  className="bg-admin-surface border border-admin-border rounded-xl px-4 py-3 text-sm font-bold text-admin-text outline-none"
+            <div className="flex flex-col gap-4 mb-8">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-black">Cortes de Caja</h2>
+                  <p className="text-admin-text-muted text-sm">
+                    {filteredCortes.length} de {cortesData.length} corte(s)
+                  </p>
+                </div>
+                <button onClick={() => setShowBsPrimary(p => !p)}
+                  className="self-start bg-admin-surface border border-admin-border rounded-xl px-4 py-2 text-xs font-bold text-admin-text hover:border-admin-primary transition-colors"
                 >
-                  <option value="">Todas las sedes</option>
-                  {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  {showBsPrimary ? 'Bs primario' : 'USD primario'}
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <input type="date" value={cortesFilterDate} onChange={e => setCortesFilterDate(e.target.value)}
+                  className="bg-admin-surface border border-admin-border rounded-xl px-4 py-2 text-sm font-bold text-admin-text outline-none"
+                />
+                <select value={cortesFilterCashier} onChange={e => setCortesFilterCashier(e.target.value)}
+                  className="bg-admin-surface border border-admin-border rounded-xl px-4 py-2 text-sm font-bold text-admin-text outline-none"
+                >
+                  <option value="">Todos los cajeros</option>
+                  {uniqueCashiers.map(name => <option key={name} value={name}>{name}</option>)}
                 </select>
-              )}
+                {isSuperAdmin && locations.length > 1 && (
+                  <select value={cortesFilterLoc} onChange={e => setCortesFilterLoc(e.target.value)}
+                    className="bg-admin-surface border border-admin-border rounded-xl px-4 py-2 text-sm font-bold text-admin-text outline-none"
+                  >
+                    <option value="">Todas las sedes</option>
+                    {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  </select>
+                )}
+                {(cortesFilterDate || cortesFilterCashier || cortesFilterLoc) && (
+                  <button onClick={() => { setCortesFilterDate(''); setCortesFilterCashier(''); setCortesFilterLoc(''); }}
+                    className="bg-admin-surface border border-admin-border rounded-xl px-4 py-2 text-xs font-bold text-admin-text-muted hover:text-admin-text hover:border-admin-primary/50 transition-all"
+                  >
+                    Limpiar filtros
+                  </button>
+                )}
+              </div>
             </div>
             {cortesLoading ? (
               <div className="text-center py-16 text-admin-muted text-sm animate-pulse">Cargando...</div>
-            ) : cortesData.length === 0 ? (
+            ) : filteredCortes.length === 0 ? (
               <div className="text-center py-16 text-admin-muted text-sm">No hay cortes registrados</div>
             ) : (
               <div className="space-y-3">
-                {cortesData.map(c => {
+                {filteredCortes.map(c => {
                   const locName = locations.find(l => l.id === c.location_id)?.name;
                   const fromTime = c.from_date ? new Date(c.from_date).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) : null;
                   const toTime = new Date(c.closed_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+                  const isExpanded = expandedCorteId === c.id;
+                  const corteOrders = corteOrdersMap[c.id] || [];
+                  const isLoadingOrders = corteOrdersLoadingId === c.id;
+                  const efectivoUsd = Number(c.total_efectivo_usd ?? 0);
+                  const efectivoBs = Number(c.total_efectivo_bs ?? 0);
+                  const tarjetaBs = Number(c.total_tarjeta_bs ?? 0);
+                  const pagomovilBs = Number(c.total_pagomovil_bs ?? 0);
+                  const deliveryCount = corteOrders.filter(o => o.delivery_type === 'Delivery').length;
+                  const pickupCount = corteOrders.filter(o => o.delivery_type === 'Pick-up').length;
+                  const eUsdVal = efectivoUsd;
+                  const eBsVal = efectivoBs;
+                  const tBsVal = tarjetaBs;
+                  const pmBsVal = pagomovilBs;
+
                   return (
                     <div key={c.id}
-                      className="bg-admin-surface border border-admin-border rounded-2xl p-6 hover:border-admin-border/50 transition-colors"
+                      className={`bg-admin-surface border rounded-2xl transition-all ${isExpanded ? 'border-admin-primary/50 shadow-lg shadow-admin-primary/5' : 'border-admin-border hover:border-admin-border/50'}`}
                     >
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="space-y-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-black text-white">
-                              {new Date(c.closed_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })}
-                            </span>
-                            {fromTime && <span className="text-[10px] text-zinc-600">{fromTime} — {toTime}</span>}
+                      <button onClick={() => handleExpandCorte(c)}
+                        className="w-full text-left p-6"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-admin-text-muted flex-shrink-0">{isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}</span>
+                            <div className="space-y-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-black text-admin-text">
+                                  {new Date(c.closed_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })}
+                                </span>
+                                {fromTime && <span className="text-[10px] text-admin-text-muted">{fromTime} — {toTime}</span>}
+                              </div>
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-admin-text-muted">
+                                {isSuperAdmin && locName && <span className="font-bold text-admin-text">{locName}</span>}
+                                <span>Cajero: <span className="font-bold text-admin-text">{c.cashier_name}</span></span>
+                                <span>{c.order_count} pedido(s)</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-500">
-                            {isSuperAdmin && locName && <span className="font-bold text-white">{locName}</span>}
-                            <span>Cajero/a: <span className="font-bold text-zinc-300">{c.cashier_name}</span></span>
-                            <span>{c.order_count} pedido(s)</span>
+                          <div className="flex items-center gap-4 flex-shrink-0">
+                            <div className="text-right">
+                              <p className="text-[10px] text-admin-text-muted uppercase tracking-widest font-bold">Efectivo</p>
+                              {showBsPrimary ? (
+                                <>
+                                  <p className="font-black text-green-400 text-sm">{formatBs(eBsVal)} Bs</p>
+                                  <p className="text-[10px] text-admin-text-muted">${eUsdVal.toFixed(2)}</p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="font-black text-green-400 text-sm">${eUsdVal.toFixed(2)}</p>
+                                  <p className="text-[10px] text-admin-text-muted">{formatBs(eBsVal)} Bs</p>
+                                </>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[10px] text-admin-text-muted uppercase tracking-widest font-bold">Tarjeta</p>
+                              {showBsPrimary ? (
+                                <>
+                                  <p className="font-black text-blue-400 text-sm">{formatBs(tBsVal)} Bs</p>
+                                  <p className="text-[10px] text-admin-text-muted">${(tBsVal / config.exchangeRate).toFixed(2)}</p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="font-black text-blue-400 text-sm">${(tBsVal / config.exchangeRate).toFixed(2)}</p>
+                                  <p className="text-[10px] text-admin-text-muted">{formatBs(tBsVal)} Bs</p>
+                                </>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[10px] text-admin-text-muted uppercase tracking-widest font-bold">P.Móvil</p>
+                              {showBsPrimary ? (
+                                <>
+                                  <p className="font-black text-purple-400 text-sm">{formatBs(pmBsVal)} Bs</p>
+                                  <p className="text-[10px] text-admin-text-muted">${(pmBsVal / config.exchangeRate).toFixed(2)}</p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="font-black text-purple-400 text-sm">${(pmBsVal / config.exchangeRate).toFixed(2)}</p>
+                                  <p className="text-[10px] text-admin-text-muted">{formatBs(pmBsVal)} Bs</p>
+                                </>
+                              )}
+                            </div>
+                            <div className="w-px h-10 bg-admin-border" />
+                            <div className="text-right min-w-[90px]">
+                              <p className="text-[10px] text-admin-text-muted uppercase tracking-widest font-bold">Total</p>
+                              <p className="font-black text-admin-text text-lg">${Number(c.grand_total).toFixed(2)}</p>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 flex-shrink-0">
-                          <div className="text-right">
-                            <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Efectivo</p>
-                            <p className="font-black text-green-400 text-sm">${Number(c.total_efectivo_usd ?? 0).toFixed(2)}</p>
-                            <p className="text-[10px] text-zinc-600">{Number(c.total_efectivo_bs ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs</p>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="px-6 pb-6 space-y-4 border-t border-admin-border pt-4">
+                          <div className="flex items-center justify-between">
+                            <div className="text-[11px] text-admin-text-muted font-bold">
+                              {fromTime} — {toTime}
+                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); handleCorteReprint(c); }}
+                              className="p-2 bg-admin-surface border border-admin-border rounded-xl text-admin-text-muted hover:text-admin-text hover:border-admin-primary/50 transition-all"
+                              title="Reimprimir"
+                            >
+                              <Printer className="w-4 h-4" />
+                            </button>
                           </div>
-                          <div className="text-right">
-                            <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Tarjeta</p>
-                            <p className="font-black text-blue-400 text-sm">{Number(c.total_tarjeta_bs ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs</p>
-                            <p className="text-[10px] text-zinc-600">${Number(c.total_tarjeta ?? 0).toFixed(2)}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">P.Móvil</p>
-                            <p className="font-black text-purple-400 text-sm">{Number(c.total_pagomovil_bs ?? 0).toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs</p>
-                            <p className="text-[10px] text-zinc-600">${Number(c.total_pagomovil ?? 0).toFixed(2)}</p>
-                          </div>
-                          <div className="w-px h-10 bg-zinc-800" />
-                          <div className="text-right min-w-[90px]">
-                            <p className="text-[10px] text-zinc-600 uppercase tracking-widest font-bold">Total</p>
-                            <p className="font-black text-white text-lg">${Number(c.grand_total).toFixed(2)}</p>
-                          </div>
+
+                          {isLoadingOrders ? (
+                            <div className="flex items-center justify-center py-8 gap-2 text-admin-text-muted text-sm">
+                              <Loader2 className="w-4 h-4 animate-spin" /> Cargando pedidos...
+                            </div>
+                          ) : corteOrders.length > 0 ? (
+                            <>
+                              <div className="grid grid-cols-3 gap-2">
+                                <div className="bg-admin-surface border border-admin-border rounded-xl p-3 text-center">
+                                  <p className="text-xl font-black text-admin-text">{corteOrders.length}</p>
+                                  <p className="text-[9px] text-admin-text-muted uppercase tracking-widest font-bold">Pedidos</p>
+                                </div>
+                                <div className="bg-admin-surface border border-admin-border rounded-xl p-3 text-center">
+                                  <Truck className="w-4 h-4 text-blue-400 mx-auto mb-1" />
+                                  <p className="text-xl font-black text-admin-text">{deliveryCount}</p>
+                                  <p className="text-[9px] text-admin-text-muted uppercase tracking-widest font-bold">Delivery</p>
+                                </div>
+                                <div className="bg-admin-surface border border-admin-border rounded-xl p-3 text-center">
+                                  <Store className="w-4 h-4 text-orange-400 mx-auto mb-1" />
+                                  <p className="text-xl font-black text-admin-text">{pickupCount}</p>
+                                  <p className="text-[9px] text-admin-text-muted uppercase tracking-widest font-bold">Local</p>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1.5">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-admin-text-muted">Método de pago</p>
+                                {[
+                                  { label: 'Efectivo $', usd: eUsdVal, bs: eUsdVal * config.exchangeRate, color: 'text-green-400', showAs: 'usd' as const },
+                                  { label: 'Efectivo Bs', usd: null, bs: eBsVal, color: 'text-yellow-400', showAs: 'bs' as const },
+                                  { label: 'Tarjeta', usd: tBsVal / config.exchangeRate, bs: tBsVal, color: 'text-blue-400', showAs: 'bs' as const },
+                                  { label: 'P.Móvil', usd: pmBsVal / config.exchangeRate, bs: pmBsVal, color: 'text-purple-400', showAs: 'bs' as const },
+                                ].filter(x => x.bs > 0 || (x.usd !== null && x.usd > 0)).map(({ label, usd, bs, color, showAs }) => (
+                                  <div key={label} className="flex items-center justify-between bg-admin-surface border border-admin-border p-2.5 rounded-xl text-xs">
+                                    <span className="text-admin-text-muted font-bold">{label}</span>
+                                    <div className="text-right">
+                                      {showAs === 'bs' ? (
+                                        <>
+                                          <span className={`font-black ${color}`}>${usd !== null ? usd.toFixed(2) : (bs / config.exchangeRate).toFixed(2)}</span>
+                                          <span className={`font-bold ${color} text-[10px] ml-1`}>Bs {formatBs(bs)}</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <span className={`font-black ${color}`}>${usd !== null ? usd.toFixed(2) : '0.00'}</span>
+                                          <span className={`font-bold ${color} text-[10px] ml-1`}>Bs {formatBs(bs)}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              <div className="space-y-1 max-h-60 overflow-y-auto">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-admin-text-muted sticky top-0 bg-admin-surface pb-1">Pedidos ({corteOrders.length})</p>
+                                {corteOrders.map(o => (
+                                  <div key={o.id} className="flex items-center justify-between text-[11px] text-admin-text-muted bg-admin-surface border border-admin-border p-2 rounded-lg gap-2">
+                                    <span className="text-admin-text-muted w-12 flex-shrink-0">{new Date(o.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <span className="truncate flex-1 font-bold text-admin-text">{o.customer_name}</span>
+                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold flex-shrink-0 ${o.delivery_type === 'Delivery' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'}`}>{o.delivery_type === 'Delivery' ? 'DEL' : 'LOCAL'}</span>
+                                    <span className="font-bold text-admin-text w-16 text-right">${o.total.toFixed(2)}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-center py-4 text-admin-text-muted text-xs">Sin datos de pedidos</div>
+                          )}
                         </div>
-                      </div>
+                      )}
                     </div>
                   );
                 })}
               </div>
             )}
           </div>
-        )}
+          );
+        })()}
 
         {activeTab === 'audit_log' && (
           <AuditLogView />
+        )}
+
+        {activeTab === 'daily_report' && (
+          <DailyReportView orders={orders} locations={locations} config={config} />
         )}
 
         {activeTab === 'cajeras' && (

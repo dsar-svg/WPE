@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { MapPin, Utensils, ShoppingBag, DollarSign, Trophy, TrendingDown, Calendar, ArrowUpRight, ArrowDownRight, Banknote, CreditCard, Smartphone, Truck, Store } from 'lucide-react';
+import { MapPin, Utensils, ShoppingBag, DollarSign, Trophy, TrendingDown, Calendar, ArrowUpRight, ArrowDownRight, Banknote, CreditCard, Smartphone, Truck, Store, Users } from 'lucide-react';
 import { Order, Location, Product, RestaurantConfig } from '../../types';
 import { supabase } from '../../lib/supabase';
 
@@ -85,7 +85,7 @@ function useTodayFilter(orders: Order[], rate: number, orderPaymentsMap: Record<
       }
     }
 
-    const efectivoBsConverted = efectivoBsRaw * rate;
+    const efectivoBsConverted = efectivoBsRaw;
 
     return { filtered, total, delivery, pickup, count, efectivoUsd, efectivoBs: efectivoBsConverted, tarjetaBs, pagoMovilBs, rate };
   }, [orders, rate, orderPaymentsMap]);
@@ -122,6 +122,7 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
   const [view, setView] = useState<'month' | 'today'>('month');
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
+  const [selectedDay, setSelectedDay] = useState(0);
 
   // Fetch order_payments for today's orders (split payment support)
   const [orderPaymentsMap, setOrderPaymentsMap] = useState<Record<string, { payment_method: string; amount: number; currency?: string }[]>>({});
@@ -141,13 +142,61 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
       });
   }, [orders]);
 
-  const { filtered, total, count, prevTotal, prevCount, totalChange, countChange } = useMonthFilter(orders, year, month);
+  const [cashierNames, setCashierNames] = useState<Record<string, string>>({});
+  useEffect(() => {
+    supabase.from('admins').select('id, name, employee_id, role')
+      .eq('role', 'cashier')
+      .then(({ data }) => {
+        const map: Record<string, string> = {};
+        (data || []).forEach((c: any) => { map[c.id] = c.name || c.employee_id || 'Caja'; });
+        setCashierNames(map);
+      });
+  }, []);
+
+  const { filtered: monthFiltered, total: monthTotal, count: monthCount, prevTotal, prevCount, totalChange, countChange } = useMonthFilter(orders, year, month);
+  const filtered = useMemo(() => selectedDay > 0 ? monthFiltered.filter(o => new Date(o.created_at).getDate() === selectedDay) : monthFiltered, [monthFiltered, selectedDay]);
+  const total = useMemo(() => filtered.reduce((s, o) => s + o.total, 0), [filtered]);
+  const count = filtered.length;
   const today = useTodayFilter(orders, rate, orderPaymentsMap);
   const chart = useMemo(() => buildMonthChart(filtered, year, month), [filtered, year, month]);
+
+  // Per-cashier breakdown for today
+  const cashierBreakdown = useMemo(() => {
+    const todayOrders = orders.filter(o => isToday(o.created_at));
+    if (todayOrders.length === 0) return [];
+    const groups: Record<string, { orders: Order[]; total: number; delivery: number; pickup: number; efectivoUsd: number; efectivoBs: number; tarjetaBs: number; pagoMovilBs: number }> = {};
+    for (const o of todayOrders) {
+      const cid = o.cashier_id || 'sin-caja';
+      if (!groups[cid]) groups[cid] = { orders: [], total: 0, delivery: 0, pickup: 0, efectivoUsd: 0, efectivoBs: 0, tarjetaBs: 0, pagoMovilBs: 0 };
+      const g = groups[cid];
+      g.orders.push(o);
+      g.total += o.total;
+      if (o.delivery_type === 'Delivery') g.delivery += o.total;
+      else g.pickup += o.total;
+      const splits = orderPaymentsMap[o.id];
+      if (splits && splits.length > 0) {
+        for (const sp of splits) {
+          if (sp.payment_method === 'Efectivo') { if (sp.currency === 'BS') g.efectivoBs += sp.amount; else g.efectivoUsd += sp.amount; }
+          else if (sp.payment_method === 'Tarjeta') g.tarjetaBs += (sp.currency === 'BS') ? sp.amount : sp.amount * rate;
+          else if (sp.payment_method === 'PagoMóvil') g.pagoMovilBs += (sp.currency === 'BS') ? sp.amount : sp.amount * rate;
+        }
+      } else {
+        if (o.payment_method === 'Efectivo') { if (o.payment_currency === 'BS') g.efectivoBs += o.total * rate; else g.efectivoUsd += o.total; }
+        else if (o.payment_method === 'Tarjeta') g.tarjetaBs += o.total * rate;
+        else if (o.payment_method === 'PagoMóvil') g.pagoMovilBs += o.total * rate;
+      }
+    }
+    return Object.entries(groups).map(([cid, data]) => ({
+      cashierId: cid,
+      cashierName: cashierNames[cid] || 'Sin caja',
+      ...data,
+    })).sort((a, b) => b.total - a.total);
+  }, [orders, orderPaymentsMap, cashierNames, rate]);
 
   const maxVal = Math.max(...chart.values, 1);
   const BAR_HEIGHT = 140;
   const BAR_GAP = 6;
+  const TOP_PAD = 40;
   const barCount = chart.labels.length;
 
   const productSales = filtered.reduce((acc, order) => {
@@ -178,12 +227,20 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
           </div>
           {view === 'month' && (
             <div className="flex items-center gap-2">
-              <select value={month} onChange={e => setMonth(Number(e.target.value))}
+              <select value={month} onChange={e => { setMonth(Number(e.target.value)); setSelectedDay(0); }}
                 className="bg-admin-surface border border-admin-border rounded-xl px-3 py-2 text-sm font-bold text-admin-text outline-none focus:ring-2 focus:ring-primary-vibrant cursor-pointer"
               >
                 {monthNames.map((name, i) => <option key={i} value={i}>{name}</option>)}
               </select>
-              <select value={year} onChange={e => setYear(Number(e.target.value))}
+              <select value={selectedDay} onChange={e => setSelectedDay(Number(e.target.value))}
+                className="bg-admin-surface border border-admin-border rounded-xl px-3 py-2 text-sm font-bold text-admin-text outline-none focus:ring-2 focus:ring-primary-vibrant cursor-pointer"
+              >
+                <option value={0}>Todos los días</option>
+                {Array.from({ length: new Date(year, month + 1, 0).getDate() }, (_, i) => i + 1).map(d => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+              <select value={year} onChange={e => { setYear(Number(e.target.value)); setSelectedDay(0); }}
                 className="bg-admin-surface border border-admin-border rounded-xl px-3 py-2 text-sm font-bold text-admin-text outline-none focus:ring-2 focus:ring-primary-vibrant cursor-pointer"
               >
                 {Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i).map(y => <option key={y} value={y}>{y}</option>)}
@@ -230,6 +287,36 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
             <p className="text-3xl font-black">Bs {today.tarjetaBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             <p className="text-admin-muted text-sm mt-1">Tarjeta</p>
           </div>
+
+          {cashierBreakdown.length > 0 && (
+            <div className="col-span-full bg-admin-surface border border-admin-border rounded-2xl p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <Users className="w-6 h-6 text-primary-vibrant" />
+                <h3 className="text-lg font-black">Por Caja</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {cashierBreakdown.map(cb => (
+                  <div key={cb.cashierId} className="bg-admin-surface border border-admin-border rounded-xl p-5 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-admin-text text-sm">Caja {cb.cashierName}</span>
+                      <span className="text-[10px] text-admin-text-muted font-bold">{cb.orders.length} pedidos</span>
+                    </div>
+                    <p className="text-2xl font-black text-green-400">${cb.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                    <div className="flex gap-3 text-[11px] text-admin-text-muted">
+                      <span><Truck className="w-3 h-3 inline" /> ${cb.delivery.toFixed(2)}</span>
+                      <span><Store className="w-3 h-3 inline" /> ${cb.pickup.toFixed(2)}</span>
+                    </div>
+                    <div className="border-t border-admin-border pt-2 space-y-1 text-[11px]">
+                      {cb.efectivoUsd > 0 && <div className="flex justify-between"><span className="text-admin-text-muted">Efectivo $</span><span className="font-bold text-green-400">${cb.efectivoUsd.toFixed(2)}</span></div>}
+                      {cb.efectivoBs > 0 && <div className="flex justify-between"><span className="text-admin-text-muted">Efectivo Bs</span><span className="font-bold text-yellow-400">Bs {cb.efectivoBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span></div>}
+                      {cb.tarjetaBs > 0 && <div className="flex justify-between"><span className="text-admin-text-muted">Tarjeta</span><span className="font-bold text-blue-400">Bs {cb.tarjetaBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span></div>}
+                      {cb.pagoMovilBs > 0 && <div className="flex justify-between"><span className="text-admin-text-muted">P.Móvil</span><span className="font-bold text-purple-400">Bs {cb.pagoMovilBs.toLocaleString('es-VE', { minimumFractionDigits: 2 })}</span></div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -274,7 +361,7 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
               <p className="text-admin-muted text-sm text-center py-12">Sin ventas en este período</p>
             ) : (
               <div className="overflow-x-auto pb-2">
-                <svg width="100%" height={BAR_HEIGHT + 40} viewBox={`0 0 ${barCount * (28 + BAR_GAP) + 20} ${BAR_HEIGHT + 40}`} preserveAspectRatio="xMidYMid meet" className="min-w-full">
+                <svg width="100%" height={BAR_HEIGHT + TOP_PAD + 40} viewBox={`0 0 ${barCount * (28 + BAR_GAP) + 20} ${BAR_HEIGHT + TOP_PAD + 40}`} preserveAspectRatio="xMidYMid meet" className="min-w-full">
                   <defs>
                     <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#cb2027" stopOpacity="1" />
@@ -284,7 +371,7 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
                   {chart.values.map((val, i) => {
                     const barH = maxVal > 0 ? (val / maxVal) * BAR_HEIGHT : 0;
                     const x = i * (28 + BAR_GAP) + 10;
-                    const y = BAR_HEIGHT - barH;
+                    const y = TOP_PAD + BAR_HEIGHT - barH;
                     return (
                       <g key={i}>
                         <rect x={x} y={y} width={24} height={barH} rx={4} fill="url(#barGrad)" className="hover:opacity-80 transition-opacity">
@@ -295,14 +382,14 @@ export function DashboardView({ orders, locations, menuItems, totalFacturado: _t
                             ${val.toFixed(2)}
                           </text>
                         )}
-                        <text x={x + 12} y={BAR_HEIGHT + 16} textAnchor="middle" fill="#52525b" fontSize="9" fontWeight="bold">
+                        <text x={x + 12} y={TOP_PAD + BAR_HEIGHT + 16} textAnchor="middle" fill="#52525b" fontSize="9" fontWeight="bold">
                           {chart.labels[i]}
                         </text>
                       </g>
                     );
                   })}
                   {[0, 0.25, 0.5, 0.75, 1].map(pct => (
-                    <line key={pct} x1="0" y1={BAR_HEIGHT - pct * BAR_HEIGHT} x2={barCount * (28 + BAR_GAP) + 10} y2={BAR_HEIGHT - pct * BAR_HEIGHT}
+                    <line key={pct} x1="0" y1={TOP_PAD + BAR_HEIGHT - pct * BAR_HEIGHT} x2={barCount * (28 + BAR_GAP) + 10} y2={TOP_PAD + BAR_HEIGHT - pct * BAR_HEIGHT}
                       stroke="#352f2b" strokeWidth="1" strokeDasharray="4 4" />
                   ))}
                 </svg>
