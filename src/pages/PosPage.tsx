@@ -419,6 +419,33 @@ function PaymentModal({
           </div>
         )}
 
+        {!isSplit && (
+          <div className={`p-4 rounded-2xl border-2 text-center ${
+            method === 'Efectivo' ? 'border-green-500/50 bg-green-500/10' :
+            method === 'Tarjeta' ? 'border-blue-500/50 bg-blue-500/10' :
+            'border-purple-500/50 bg-purple-500/10'
+          }`}>
+            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-1">Cobrar con</p>
+            <p className={`text-2xl font-black ${
+              method === 'Efectivo' ? 'text-green-400' :
+              method === 'Tarjeta' ? 'text-blue-400' :
+              'text-purple-400'
+            }`}>
+              {method === 'Efectivo' && amountCurrency === 'BS' ? 'Efectivo Bs.' :
+               method === 'Efectivo' ? 'Efectivo $' :
+               method === 'Tarjeta' ? 'Tarjeta' : 'Pago Móvil'}
+            </p>
+            {method === 'Efectivo' && (
+              <p className="text-sm text-zinc-400 font-bold mt-1">
+                {amountReceivedUsd > 0 ? `$${amountReceivedUsd.toFixed(2)} — Vuelto: $${changeAmount.toFixed(2)}` : 'Ingrese monto recibido'}
+              </p>
+            )}
+            {method === 'PagoMóvil' && paymentRef && (
+              <p className="text-sm text-zinc-400 font-bold mt-1">Ref: {paymentRef}</p>
+            )}
+          </div>
+        )}
+
         <button onClick={handleConfirm} disabled={!canConfirm}
           className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
         >
@@ -1783,6 +1810,7 @@ export function PosPage() {
   const [orderCodeError, setOrderCodeError] = useState('');
   const [loadedOrderId, setLoadedOrderId] = useState<string | null>(null);
   const [loadedPaymentMethod, setLoadedPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [loadedDeliveryFee, setLoadedDeliveryFee] = useState<number>(0);
   const [localRate, setLocalRate] = useState(() => {
     try {
       const saved = localStorage.getItem('pos_local_rate');
@@ -1921,6 +1949,7 @@ export function PosPage() {
   }, []);
 
   const cartTotal = useMemo(() => cart.reduce((s, i) => s + (i.product.price + getChoiceAdjust(i.product, i.selectedChoices)) * i.quantity, 0), [cart, getChoiceAdjust]);
+  const orderTotal = useMemo(() => cartTotal + loadedDeliveryFee, [cartTotal, loadedDeliveryFee]);
   const cartCount = useMemo(() => cart.reduce((s, i) => s + i.quantity, 0), [cart]);
 
   const addToCart = useCallback((product: Product, selectedChoices?: string[]) => {
@@ -1996,7 +2025,7 @@ export function PosPage() {
           invoice_number: invoiceNumber,
           items: orderItems,
           subtotal: cartTotal,
-          total: cartTotal,
+          total: orderTotal,
           payment_currency: primaryCurrency || null,
         }).eq('id', orderId);
         if (error) throw error;
@@ -2010,8 +2039,8 @@ export function PosPage() {
           delivery_type: deliveryType,
           items: orderItems,
           subtotal: cartTotal,
-          delivery_fee: 0,
-          total: cartTotal,
+          delivery_fee: deliveryType === 'Delivery' ? (config.deliveryFee ?? 0) : 0,
+          total: orderTotal,
           notes: '',
           status: 'exitoso',
           payment_method: primaryMethod,
@@ -2046,12 +2075,12 @@ export function PosPage() {
       posOrdersQuery.refetch();
 
       setShowPayModal(false);
-      setShowReceipt({ items: cart, total: cartTotal, paymentMethod: primaryMethod, changeAmount, invoiceNumber });
+      setShowReceipt({ items: cart, total: orderTotal, paymentMethod: primaryMethod, changeAmount, invoiceNumber });
     } catch (err) {
       console.error('Error processing payment:', err);
       alert('Error al procesar la venta');
     }
-  }, [cashier, locationId, cart, cartTotal, customerName, customerPhone, customerCedula, deliveryType, loadedOrderId, generateInvoiceNumber, saveCustomer, posOrdersQuery]);
+  }, [cashier, locationId, cart, cartTotal, orderTotal, loadedDeliveryFee, customerName, customerPhone, customerCedula, deliveryType, loadedOrderId, generateInvoiceNumber, saveCustomer, posOrdersQuery, config.deliveryFee]);
 
   const handleNewSale = () => {
     setCart([]);
@@ -2063,6 +2092,7 @@ export function PosPage() {
     setOrderCodeError('');
     setLoadedOrderId(null);
     setLoadedPaymentMethod(null);
+    setLoadedDeliveryFee(0);
     setShowReceipt(null);
   };
 
@@ -2085,9 +2115,10 @@ export function PosPage() {
         return;
       }
 
-      // Store original order ID and payment method for POS validation
+      // Store original order ID, payment method, and delivery fee for POS validation
       setLoadedOrderId(data.id);
       setLoadedPaymentMethod((data.payment_method as PaymentMethod) || null);
+      setLoadedDeliveryFee(data.delivery_fee ?? 0);
 
       // Fill customer data
       if (data.customer_name) setCustomerName(data.customer_name);
@@ -2373,9 +2404,15 @@ export function PosPage() {
               <span className="text-zinc-500 font-bold text-sm">Items:</span>
               <span className="font-bold text-white">{cartCount}</span>
             </div>
+            {loadedDeliveryFee > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="text-zinc-500 font-bold text-sm">Delivery:</span>
+                <span className="font-bold text-white">${loadedDeliveryFee.toFixed(2)}</span>
+              </div>
+            )}
             <div className="flex justify-between items-center">
               <span className="text-lg font-black text-white">Total:</span>
-              <span className="text-2xl font-black text-primary-vibrant">${cartTotal.toFixed(2)}</span>
+              <span className="text-2xl font-black text-primary-vibrant">${orderTotal.toFixed(2)}</span>
             </div>
             <button onClick={() => setShowPayModal(true)} disabled={cart.length === 0 || !isFormValid}
               className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
@@ -2392,14 +2429,14 @@ export function PosPage() {
           className="lg:hidden fixed bottom-4 left-4 right-4 bg-primary-vibrant text-white p-4 rounded-2xl font-black shadow-2xl shadow-primary-vibrant/30 z-40 flex items-center justify-between active:scale-[0.98] transition-transform disabled:opacity-50"
         >
           <span className="flex items-center gap-2"><ShoppingCart className="w-5 h-5" /> {cartCount} items</span>
-          <span className="text-lg">${cartTotal.toFixed(2)}</span>
+          <span className="text-lg">${orderTotal.toFixed(2)}</span>
         </button>
       )}
 
       {/* Payment modal */}
       <AnimatePresence>
         {showPayModal && (
-          <PaymentModal total={cartTotal} onConfirm={handlePayment} onClose={() => setShowPayModal(false)} exchangeRate={localRate ?? 1} originalPaymentMethod={loadedPaymentMethod} />
+          <PaymentModal total={orderTotal} onConfirm={handlePayment} onClose={() => setShowPayModal(false)} exchangeRate={localRate ?? 1} originalPaymentMethod={loadedPaymentMethod} />
         )}
       </AnimatePresence>
 
