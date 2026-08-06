@@ -114,13 +114,14 @@ function PosLogin({ onLogin }: { onLogin: (cashier: Cashier) => void }) {
 type PaymentSplit = { method: PaymentMethod; amount: number; currency?: 'USD' | 'BS'; ref?: string };
 
 function PaymentModal({
-  total, onConfirm, onClose, exchangeRate, originalPaymentMethod,
+  total, onConfirm, onClose, exchangeRate, originalPaymentMethod, isProcessing,
 }: {
   total: number;
   onConfirm: (splits: PaymentSplit[], changeAmount: number) => void;
   onClose: () => void;
   exchangeRate: number;
   originalPaymentMethod?: PaymentMethod | null;
+  isProcessing?: boolean;
 }) {
   const [isSplit, setIsSplit] = useState(false);
   const [method, setMethod] = useState<PaymentMethod>(originalPaymentMethod ?? 'Efectivo');
@@ -164,7 +165,7 @@ function PaymentModal({
 
   const canConfirm = isSplit
     ? splitValid
-    : isCashEnough && (!methodChanged || confirmChange);
+    : isCashEnough && (!methodChanged || confirmChange) && !isProcessing;
 
   const handleConfirm = () => {
     if (!canConfirm) return;
@@ -449,8 +450,17 @@ function PaymentModal({
         <button onClick={handleConfirm} disabled={!canConfirm}
           className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
         >
-          <DollarSign className="w-5 h-5" />
-          {isSplit ? `Cerrar venta mixta $${total.toFixed(2)} / ${totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.` : method === 'Efectivo' ? `Cerrar venta $${total.toFixed(2)}` : `Cerrar venta con ${method}`}
+          {isProcessing ? (
+            <>
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Procesando...
+            </>
+          ) : (
+            <>
+              <DollarSign className="w-5 h-5" />
+              {isSplit ? `Cerrar venta mixta $${total.toFixed(2)} / ${totalBs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.` : method === 'Efectivo' ? `Cerrar venta $${total.toFixed(2)}` : `Cerrar venta con ${method}`}
+            </>
+          )}
         </button>
       </motion.div>
     </motion.div>
@@ -1790,6 +1800,7 @@ export function PosPage() {
   const [isLookingUpCustomer, setIsLookingUpCustomer] = useState(false);
   const [deliveryType, setDeliveryType] = useState<'Delivery' | 'Pick-up'>('Pick-up');
   const [showPayModal, setShowPayModal] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
   const [showCorteDeCaja, setShowCorteDeCaja] = useState(false);
   const [showCorteHistory, setShowCorteHistory] = useState(false);
   const [showInvoiceHistory, setShowInvoiceHistory] = useState(false);
@@ -1994,7 +2005,8 @@ export function PosPage() {
   }, []);
 
   const handlePayment = useCallback(async (splits: { method: PaymentMethod; amount: number; currency?: 'USD' | 'BS'; ref?: string }[], changeAmount: number) => {
-    if (!cashier || !locationId || cart.length === 0) return;
+    if (!cashier || !locationId || cart.length === 0 || processingPayment) return;
+    setProcessingPayment(true);
 
     const orderItems = cart.map(i => ({
       id: i.product.id,
@@ -2079,8 +2091,10 @@ export function PosPage() {
     } catch (err) {
       console.error('Error processing payment:', err);
       alert('Error al procesar la venta');
+    } finally {
+      setProcessingPayment(false);
     }
-  }, [cashier, locationId, cart, cartTotal, orderTotal, loadedDeliveryFee, customerName, customerPhone, customerCedula, deliveryType, loadedOrderId, generateInvoiceNumber, saveCustomer, posOrdersQuery, config.deliveryFee]);
+  }, [cashier, locationId, cart, cartTotal, orderTotal, loadedDeliveryFee, customerName, customerPhone, customerCedula, deliveryType, loadedOrderId, generateInvoiceNumber, saveCustomer, posOrdersQuery, config.deliveryFee, processingPayment]);
 
   const handleNewSale = () => {
     setCart([]);
@@ -2436,7 +2450,7 @@ export function PosPage() {
       {/* Payment modal */}
       <AnimatePresence>
         {showPayModal && (
-          <PaymentModal total={orderTotal} onConfirm={handlePayment} onClose={() => setShowPayModal(false)} exchangeRate={localRate ?? 1} originalPaymentMethod={loadedPaymentMethod} />
+          <PaymentModal total={orderTotal} onConfirm={handlePayment} onClose={() => setShowPayModal(false)} exchangeRate={localRate ?? 1} originalPaymentMethod={loadedPaymentMethod} isProcessing={processingPayment} />
         )}
       </AnimatePresence>
 

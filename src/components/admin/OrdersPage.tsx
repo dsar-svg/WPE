@@ -208,7 +208,7 @@ export function OrdersPage() {
                 </button>
               )}
               <button onClick={() => setConfirmDelete(order.id)}
-                className="p-1.5 text-admin-muted hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors" title="Eliminar pedido">
+                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors border border-transparent hover:border-red-500/30" title="Eliminar pedido">
                 <Trash2 className="w-4 h-4" />
               </button>
               <span className="font-bold text-green-500 text-sm">${order.total.toFixed(2)}</span>
@@ -268,7 +268,7 @@ export function OrdersPage() {
               </button>
             )}
             <button onClick={() => setConfirmDelete(order.id)}
-              className="p-1.5 text-admin-muted hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors" title="Eliminar pedido">
+              className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors border border-transparent hover:border-red-500/30" title="Eliminar pedido">
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
