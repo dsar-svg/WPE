@@ -906,7 +906,6 @@ function CorteDeCajaModal({
   const totalTarjeta = totalTarjetaBs / (exchangeRate || 1);
   const totalPagoMovil = totalPagoMovilBs / (exchangeRate || 1);
   const totalChanges = activeOrders.reduce((s, o) => s + (o.payment_method === 'Efectivo' ? (o.change_amount || 0) : 0), 0);
-  const netEfectivo = totalEfectivo - totalChanges;
   const granTotal = activeOrders.reduce((s, o) => s + o.total, 0);
   const count = activeOrders.length;
   const rate = exchangeRate || 1;
@@ -937,7 +936,7 @@ function CorteDeCajaModal({
         date: todayStr,
         closed_at: now.toISOString(),
         order_count: count,
-        total_efectivo: netEfectivo,
+        total_efectivo: totalEfectivo,
         total_efectivo_usd: totalEfectivoUsd,
         total_efectivo_bs: totalEfectivoBs,
         total_tarjeta: totalTarjeta,
@@ -959,7 +958,7 @@ function CorteDeCajaModal({
         date: todayStr,
         closed_at: now.toISOString(),
         order_count: count,
-        total_efectivo: netEfectivo,
+        total_efectivo: totalEfectivo,
         total_efectivo_usd: totalEfectivoUsd,
         total_efectivo_bs: totalEfectivoBs,
         total_tarjeta: totalTarjeta,
@@ -1190,9 +1189,8 @@ ${displayRecord ? `<div class="divider"></div><p class="text-center" style="font
             <div className="space-y-2">
               <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Método de pago</p>
               {[
-                { method: 'Efectivo $', total: totalEfectivoUsd - (totalChanges > 0 ? totalChanges : 0), icon: Banknote, color: 'text-green-400', showAs: 'usd' as const },
+                { method: 'Efectivo $', total: totalEfectivoUsd, icon: Banknote, color: 'text-green-400', showAs: 'usd' as const },
                 { method: 'Efectivo Bs', total: totalEfectivoBs, icon: Banknote, color: 'text-yellow-400', showAs: 'bs' as const },
-                ...(totalChanges > 0 ? [{ method: 'Cambios', total: totalChanges, icon: ArrowDownCircle, color: 'text-red-400', showAs: 'usd' as const }] : []),
                 { method: 'Tarjeta', total: totalTarjetaBs, icon: CreditCard, color: 'text-blue-400', showAs: 'bs' as const },
                 { method: 'P.Móvil', total: totalPagoMovilBs, icon: Smartphone, color: 'text-purple-400', showAs: 'bs' as const },
               ].map(({ method, total: t, icon: Icon, color, showAs }) => (
