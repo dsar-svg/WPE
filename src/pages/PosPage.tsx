@@ -172,10 +172,22 @@ function PaymentModal({
     if (isSplit) {
       onConfirm(splits.filter(s => s.amount > 0), 0);
     } else {
-      const amountToSend = method === 'Efectivo'
-        ? (amountCurrency === 'BS' ? cashTotal * rate : cashTotal)
-        : total;
-      onConfirm([{ method, amount: amountToSend, currency: method === 'Efectivo' ? amountCurrency : undefined, ref: paymentRef || undefined }], changeAmount);
+      let amountToSend: number;
+      let currencyToSend: 'USD' | 'BS' | undefined;
+      if (method === 'Efectivo') {
+        amountToSend = amountCurrency === 'BS' ? cashTotal * rate : cashTotal;
+        currencyToSend = amountCurrency;
+      } else if (method === 'Tarjeta') {
+        amountToSend = total * rate;
+        currencyToSend = 'BS';
+      } else if (method === 'PagoMóvil') {
+        amountToSend = total * rate;
+        currencyToSend = 'BS';
+      } else {
+        amountToSend = total;
+        currencyToSend = undefined;
+      }
+      onConfirm([{ method, amount: amountToSend, currency: currencyToSend, ref: paymentRef || undefined }], changeAmount);
     }
   };
 
