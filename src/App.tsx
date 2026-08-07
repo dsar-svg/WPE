@@ -65,8 +65,6 @@ function MainView() {
   const handleCheckout = async (data: CheckoutData) => {
     if (!selectedLocation) return;
     const orderCode = generateOrderCode();
-    const link = generateWhatsAppLink(selectedLocation, items, data, config, orderCode);
-    window.open(link, "_blank");
     try {
       const deliveryFee = data.calculatedDeliveryFee ?? config.deliveryFee ?? 0;
       await createOrder({
@@ -94,6 +92,8 @@ function MainView() {
         status: 'pendiente',
         code: orderCode,
       });
+      const link = generateWhatsAppLink(selectedLocation, items, data, config, orderCode);
+      window.open(link, "_blank");
     } catch (err) {
       console.error('Error saving order:', err);
     }
