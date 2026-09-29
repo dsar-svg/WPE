@@ -87,7 +87,7 @@ export function CartDrawer({
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [mapCenterKey, setMapCenterKey] = useState(0);
     const [termsAccepted, setTermsAccepted] = useState(true);
-    const [paymentMethod, setPaymentMethod] = useState<'efectivo' | 'pagomovil'>('efectivo');
+    const [paymentMethod, setPaymentMethod] = useState<'pagomovil'>('pagomovil');
     const [paymentRef, setPaymentRef] = useState('');
 
   // Keep ref in sync with state for use inside effects
@@ -486,7 +486,7 @@ export function CartDrawer({
       deliveryCoordinates: deliveryType === 'Delivery' ? deliveryCoordinates ?? undefined : undefined,
       calculatedDistance: deliveryType === 'Delivery' ? calculatedDistance ?? undefined : undefined,
       calculatedDeliveryFee: deliveryType === 'Delivery' ? calculatedFee : undefined,
-      paymentMethod: paymentMethod === 'pagomovil' ? 'PagoMóvil' : 'Efectivo',
+      paymentMethod: 'PagoMóvil',
       paymentRef: paymentMethod === 'pagomovil' ? paymentRef.trim() : undefined,
     });
     setStep('success');
@@ -992,17 +992,6 @@ export function CartDrawer({
                         Método de pago
                       </label>
                       <div className="flex gap-3">
-                        <button
-                          type="button"
-                          onClick={() => { setPaymentMethod('efectivo'); setPaymentRef(''); }}
-                          className={`flex-1 py-4 rounded-[20px] text-[11px] font-bold uppercase tracking-[0.2em] transition-all duration-300 border-2 ${
-                            paymentMethod === 'efectivo'
-                              ? 'bg-primary-vibrant/20 border-primary-vibrant text-primary-vibrant'
-                              : 'bg-dark-surface border-white/10 text-zinc-400 hover:border-white/20'
-                          }`}
-                        >
-                          Efectivo
-                        </button>
                         <button
                           type="button"
                           onClick={() => setPaymentMethod('pagomovil')}
