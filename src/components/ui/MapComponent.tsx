@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { MapContainer, TileLayer, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -9,17 +9,41 @@ const VE_SW = L.latLng(0.6, -73.5);
 const VE_NE = L.latLng(12.5, -59.8);
 const VE_BOUNDS = L.latLngBounds(VE_SW, VE_NE);
 
-// ── Tile layers ─────────────────────────────────────────────────────────────
-const TILE_LAYERS = {
+// ── Base map ────────────────────────────────────────────────────────────────
+// Principal: OpenFreeMap (vectorial, datos OpenStreetMap, gratis y sin API key).
+// Respaldo: Esri Canvas (raster, sin API key) si no hay WebGL o OpenFreeMap no carga.
+// Nota: CARTO basemaps ahora exige API key y muestra marca de agua, por eso no se usa.
+const OSM_ATTRIBUTION = '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>';
+const VECTOR_STYLES = {
+  modern: 'https://tiles.openfreemap.org/styles/dark',
+  light: 'https://tiles.openfreemap.org/styles/positron',
+};
+// Si el estilo vectorial no termina de cargar en este tiempo, se usa el respaldo raster.
+const VECTOR_LOAD_TIMEOUT_MS = 8000;
+
+const ESRI_ATTRIBUTION = 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, HERE, Garmin, &copy; OpenStreetMap contributors';
+const ESRI_CANVAS = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas';
+const FALLBACK_TILE_LAYERS = {
   modern: {
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    url: `${ESRI_CANVAS}/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
+    labelsUrl: `${ESRI_CANVAS}/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`,
   },
   light: {
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    url: `${ESRI_CANVAS}/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
+    labelsUrl: `${ESRI_CANVAS}/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}`,
   },
 };
+// Esri Canvas solo tiene tiles hasta z16; por encima Leaflet escala los de z16.
+const FALLBACK_MAX_NATIVE_ZOOM = 16;
+
+function hasWebGL(): boolean {
+  try {
+    const canvas = document.createElement('canvas');
+    return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'));
+  } catch {
+    return false;
+  }
+}
 
 // ── Types ───────────────────────────────────────────────────────────────────
 interface MapComponentProps {
@@ -147,6 +171,72 @@ function MapMoveHandler({
   return null;
 }
 
+/**
+ * Capa base vectorial (MapLibre dentro de Leaflet). Se carga bajo demanda y llama
+ * `onFail` si no hay WebGL, si falla la descarga o si el estilo no carga a tiempo.
+ */
+function VectorBaseLayer({ styleUrl, onFail }: { styleUrl: string; onFail: () => void }) {
+  const map = useMap();
+  const onFailRef = useRef(onFail);
+  onFailRef.current = onFail;
+
+  useEffect(() => {
+    if (!hasWebGL()) {
+      onFailRef.current();
+      return;
+    }
+
+    let cancelled = false;
+    let loaded = false;
+    let layer: L.Layer | null = null;
+    const fail = () => {
+      if (cancelled || loaded) return;
+      cancelled = true;
+      if (layer) map.removeLayer(layer);
+      onFailRef.current();
+    };
+    const timer = setTimeout(fail, VECTOR_LOAD_TIMEOUT_MS);
+
+    Promise.all([
+      import('maplibre-gl'),
+      // Vite empaqueta el worker de MapLibre (y su chunk compartido) en un solo archivo.
+      import('maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'),
+      import('@maplibre/maplibre-gl-leaflet'),
+      import('maplibre-gl/dist/maplibre-gl.css'),
+    ])
+      .then(([maplibregl, { default: workerUrl }, { maplibreGL }]) => {
+        if (cancelled) return;
+        maplibregl.setWorkerUrl(workerUrl);
+        const glLayer = maplibreGL({ style: styleUrl, attributionControl: false });
+        layer = glLayer;
+        glLayer.addTo(map);
+        map.attributionControl?.addAttribution(OSM_ATTRIBUTION);
+        const glMap = glLayer.getMaplibreMap();
+        glMap.once('load', () => {
+          loaded = true;
+          clearTimeout(timer);
+        });
+        // Antes de cargar, cualquier error (estilo, red) activa el respaldo.
+        // Después, MapLibre reintenta tiles por sí solo.
+        glMap.on('error', fail);
+        glMap.getCanvas().addEventListener('webglcontextlost', () => {
+          loaded = false;
+          fail();
+        });
+      })
+      .catch(fail);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      if (layer) map.removeLayer(layer);
+      map.attributionControl?.removeAttribution(OSM_ATTRIBUTION);
+    };
+  }, [map, styleUrl]);
+
+  return null;
+}
+
 // ── Main component ──────────────────────────────────────────────────────────
 
 export function MapComponent({
@@ -160,7 +250,8 @@ export function MapComponent({
   isPreview = false,
   markerColor = 'red',
 }: MapComponentProps) {
-  const tile = TILE_LAYERS[style];
+  const fallbackTile = FALLBACK_TILE_LAYERS[style];
+  const [useFallback, setUseFallback] = useState(false);
   const pinColor = markerColor === 'orange' ? '#ff6b00' : '#cb2027';
   const skipNextRef = useRef(false);
 
@@ -178,7 +269,14 @@ export function MapComponent({
         dragging={!isPreview}
         scrollWheelZoom={!isPreview}
       >
-        <TileLayer attribution={tile.attribution} url={tile.url} />
+        {useFallback ? (
+          <>
+            <TileLayer attribution={ESRI_ATTRIBUTION} url={fallbackTile.url} maxNativeZoom={FALLBACK_MAX_NATIVE_ZOOM} />
+            <TileLayer url={fallbackTile.labelsUrl} maxNativeZoom={FALLBACK_MAX_NATIVE_ZOOM} />
+          </>
+        ) : (
+          <VectorBaseLayer styleUrl={VECTOR_STYLES[style]} onFail={() => setUseFallback(true)} />
+        )}
         <CenterFlyer center={center} zoom={zoom} centerKey={centerKey} skipNextRef={skipNextRef} />
         <MapMoveHandler
           onLocationSelect={onLocationSelect}

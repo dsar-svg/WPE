@@ -21,6 +21,10 @@ export default defineConfig(({ mode }) => {
             : path.resolve(__dirname, 'index.html'),
       },
     },
+    worker: {
+      // MapLibre GL usa un worker ES module con imports compartidos.
+      format: 'es',
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
