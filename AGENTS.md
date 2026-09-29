@@ -57,6 +57,9 @@ Stack: React 19 / React Router v7 / Vite 6 / TypeScript 5.8 / Tailwind CSS v4 (`
 - **I18n** (`src/context/LanguageContext.tsx`): `es`/`en`/`zh`, 777+ keys inline, `t(key)` function.
 - **Data** (`src/context/RestaurantContext.tsx`): Wraps app; React Query → Supabase. Exposes locations, menu, categories, config, orders, auth.
 - **Distance** (`src/lib/DistanceService.ts` / `src/hooks/useDistanceCalculation.ts`): 3-tier fallback — OSRM mirrors → Valhalla → Haversine. Handles address autocomplete + GPS.
+- **Checkout público** (`src/components/ui/CartDrawer.tsx`): solo Delivery (`deliveryType` fijo). **Único método de pago: Pago Móvil** (Efectivo eliminado; referencia obligatoria). Se guarda como `payment_method = 'PagoMóvil'`.
+- **POS: ventas en espera** (`src/pages/PosPage.tsx`, `PausedSalesModal`): botón **Pausar** junto a Cobrar guarda la venta en curso (carrito, cliente, tipo, pedido web cargado) y limpia la caja; **En espera (N)** en el header lista las pausadas para retomar o eliminar. Al retomar con otra venta abierta, esa se pausa sola. Se guardan en `localStorage` por sede (`pos_paused_sales_<locationId>`), solo en ese navegador (no en Supabase). Al retomar se refrescan productos con el menú actual y, si era pedido web, se verifica que siga `pendiente`.
+- **Mapa** (`src/components/ui/MapComponent.tsx`): Leaflet + capa vectorial **OpenFreeMap** vía MapLibre (`maplibre-gl` + `@maplibre/maplibre-gl-leaflet`, carga diferida), estilos `dark`/`positron`, sin API key. Respaldo automático a **Esri Canvas** raster si no hay WebGL, falla la carga o tarda >8s. No usar CARTO (exige API key, muestra marca de agua "API KEY REQUIRED") ni tile.openstreetmap.org (bloquea apps). Las direcciones (autocompletado/reverse geocode) vienen de Nominatim/Photon en `DistanceService`, no del mapa.
 - **BCV rate** (`src/services/bcvRate.ts`): Fetches VES from dolarapi.com/ve.dolarapi.com, daily localStorage cache.
 - **Image upload** (`src/lib/uploadImage.ts`): Validates 5MB max, compresses to WebP 800px, uploads to `images` Supabase bucket.
 - **Auth**: Supabase Auth (email/password) for admins; 4-digit PIN hash (`src/lib/hashPin.ts`) for POS cashiers. RLS allows anon on `orders`, `cortes`, `admins` (needed by POS).
@@ -72,6 +75,7 @@ Migrations: `supabase/migrations/` (00000_full_schema.sql + incremental). Seeds:
 - **`@supabase/ssr`** used despite client-only SPA. Works — `createBrowserClient` ignores SSR middleware.
 - **Orders `status`**: TEXT with CHECK (`'pendiente'`/`'exitoso'`/`'cancelado'`), not enum.
 - **Orders `payment_method`**: TEXT with CHECK (`'Efectivo'`/`'Tarjeta'`/`'Transferencia'`/`'QR'`/`'PagoMóvil'`/`'Otro'`).
+- **MapLibre worker**: `vite.config.ts` usa `worker.format: 'es'` y `MapComponent` hace `setWorkerUrl()` con `maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url`. Sin esto el mapa vectorial falla con "Worker failed to load" y cae al respaldo Esri.
 - **`tsconfig.json`**: `useDefineForClassFields: false`, `experimentalDecorators: true`.
 - **`scripts/`, `docs/`, `dist*/`, `graphify-out/`** gitignored.
 
@@ -82,6 +86,8 @@ Migrations: `supabase/migrations/` (00000_full_schema.sql + incremental). Seeds:
 ```
 
 Requires Vercel CLI installed. Vercel projects: `wallace-panda-expres`, `pndaexpress-admin`, `pndaexpress-pos`. Each `dist-*/` includes SPA rewrite config in its `vercel.json`.
+
+**Deploy solo de la app pública** (lo usado en la práctica): desde la raíz, `vercel link --yes --project wallace-panda-expres` y `vercel deploy --prod --yes` (build remoto en Vercel con sus env vars). El push a GitHub solo genera deploys **Preview** (ninguna rama está configurada como producción), y las Preview piden login de Vercel. Variables locales: `vercel env pull .env.local --environment=production`.
 
 Supabase migrations applied via SQL Editor (not automated in CI).
 

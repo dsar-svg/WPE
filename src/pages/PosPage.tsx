@@ -1,6 +1,6 @@
 ﻿import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, Printer, DollarSign, CreditCard, Smartphone, Banknote, LogOut, User, IdCard, Calendar, History, Loader2, QrCode, Truck, Store, ArrowDownCircle } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, X, Check, Printer, DollarSign, CreditCard, Smartphone, Banknote, LogOut, User, IdCard, Calendar, History, Loader2, QrCode, Truck, Store, ArrowDownCircle, Pause, Play, Clock } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRestaurant } from '../context/RestaurantContext';
 import { Product, Cashier, POSCartItem, PaymentMethod, Order, OrderStatus, DeliveryType } from '../types';
@@ -1778,6 +1778,130 @@ function CorteHistoryModal({
 }
 
 // ==============================
+// Ventas en espera (pausadas)
+// ==============================
+interface PausedSale {
+  id: string;
+  pausedAt: number;
+  cashierName: string;
+  cart: POSCartItem[];
+  customerName: string;
+  customerPhone: string;
+  customerCedula: string;
+  deliveryType: 'Delivery' | 'Pick-up';
+  orderCode: string;
+  loadedOrderId: string | null;
+  loadedPaymentMethod: PaymentMethod | null;
+  loadedDeliveryFee: number;
+  total: number;
+}
+
+// Se guardan por sede en este navegador: sobreviven recargas y cambios de cajero.
+const pausedSalesKey = (locationId: string) => `pos_paused_sales_${locationId}`;
+
+function loadPausedSales(locationId: string): PausedSale[] {
+  if (!locationId) return [];
+  try {
+    const raw = localStorage.getItem(pausedSalesKey(locationId));
+    const data = raw ? JSON.parse(raw) : [];
+    return Array.isArray(data) ? data : [];
+  } catch { return []; }
+}
+
+function savePausedSales(locationId: string, sales: PausedSale[]) {
+  if (!locationId) return;
+  try {
+    if (sales.length === 0) localStorage.removeItem(pausedSalesKey(locationId));
+    else localStorage.setItem(pausedSalesKey(locationId), JSON.stringify(sales));
+  } catch { /* storage lleno o bloqueado: se mantienen en memoria */ }
+}
+
+function formatWaitTime(pausedAt: number, now: number): string {
+  const mins = Math.max(0, Math.floor((now - pausedAt) / 60000));
+  if (mins < 1) return 'hace menos de 1 min';
+  if (mins < 60) return `hace ${mins} min`;
+  return `hace ${Math.floor(mins / 60)} h ${mins % 60} min`;
+}
+
+function PausedSalesModal({
+  sales,
+  onResume,
+  onDiscard,
+  onClose,
+}: {
+  sales: PausedSale[];
+  onResume: (id: string) => void;
+  onDiscard: (id: string) => void;
+  onClose: () => void;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80"
+    >
+      <motion.div initial={{ scale: 0.9, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }}
+        className="w-full max-w-lg bg-zinc-900 border border-zinc-800 rounded-2xl p-6 space-y-4 max-h-[90vh] flex flex-col"
+      >
+        <div className="flex justify-between items-center flex-shrink-0">
+          <h2 className="text-xl font-black text-white">Ventas en espera</h2>
+          <button onClick={onClose} className="p-2 bg-zinc-800 rounded-xl text-zinc-500 hover:text-white"><X /></button>
+        </div>
+        <p className="text-[10px] text-zinc-500 -mt-3">Retoma una venta pausada para terminar de cobrarla.</p>
+
+        <div className="flex-1 overflow-y-auto space-y-2">
+          {sales.length === 0 ? (
+            <div className="text-center py-12 text-zinc-600 text-sm">No hay ventas en espera</div>
+          ) : (
+            [...sales].sort((a, b) => a.pausedAt - b.pausedAt).map(sale => {
+              const items = sale.cart.reduce((n, i) => n + i.quantity, 0);
+              return (
+                <div key={sale.id} className="bg-zinc-950 border border-zinc-800 rounded-2xl p-3 flex items-center gap-3">
+                  <div className="flex-1 min-w-0 space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-white truncate">{sale.customerName.trim() || 'Sin nombre'}</span>
+                      <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${sale.deliveryType === 'Delivery' ? 'bg-amber-500/15 text-amber-400' : 'bg-zinc-800 text-zinc-400'}`}>
+                        {sale.deliveryType === 'Delivery' ? 'Delivery' : 'Pickup'}
+                      </span>
+                      {sale.orderCode && (
+                        <span className="text-[9px] font-mono font-bold text-zinc-500">#{sale.orderCode}</span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-zinc-500 truncate">
+                      {items} {items === 1 ? 'item' : 'items'} · {sale.cart.map(i => i.product.name).join(', ')}
+                    </div>
+                    <div className="text-[10px] text-zinc-600 flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> {formatWaitTime(sale.pausedAt, now)}{sale.cashierName ? ` · ${sale.cashierName}` : ''}
+                    </div>
+                  </div>
+                  <div className="text-primary-vibrant font-black text-base whitespace-nowrap">${sale.total.toFixed(2)}</div>
+                  <div className="flex flex-col gap-1.5">
+                    <button onClick={() => onResume(sale.id)}
+                      className="px-3 py-1.5 bg-primary-vibrant text-white rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 hover:opacity-90"
+                    >
+                      <Play className="w-3 h-3" /> Retomar
+                    </button>
+                    <button onClick={() => { if (window.confirm('¿Eliminar esta venta en espera? No se podrá recuperar.')) onDiscard(sale.id); }}
+                      className="px-3 py-1.5 bg-red-500/10 text-red-400 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 hover:bg-red-500/20"
+                    >
+                      <Trash2 className="w-3 h-3" /> Eliminar
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ==============================
 // Main POS Page
 // ==============================
 function loadCashier(): Cashier | null {
@@ -1835,6 +1959,13 @@ export function PosPage() {
   const [loadedOrderId, setLoadedOrderId] = useState<string | null>(null);
   const [loadedPaymentMethod, setLoadedPaymentMethod] = useState<PaymentMethod | null>(null);
   const [loadedDeliveryFee, setLoadedDeliveryFee] = useState<number>(0);
+  // Ventas en espera, ligadas a la sede para no mezclar ni sobrescribir las de otra
+  const [pausedState, setPausedState] = useState(() => ({ locationId, sales: loadPausedSales(locationId) }));
+  const pausedSales = pausedState.locationId === locationId ? pausedState.sales : [];
+  const setPausedSales = useCallback((update: (prev: PausedSale[]) => PausedSale[]) => {
+    setPausedState(prev => ({ locationId: prev.locationId, sales: update(prev.sales) }));
+  }, []);
+  const [showPausedSales, setShowPausedSales] = useState(false);
   const [localRate, setLocalRate] = useState(() => {
     try {
       const saved = localStorage.getItem('pos_local_rate');
@@ -1850,6 +1981,14 @@ export function PosPage() {
   useEffect(() => {
     if (cashier) saveCashier(cashier); else clearCashier();
   }, [cashier]);
+
+  // Ventas en espera: se recargan al cambiar de sede y se guardan en cada cambio
+  useEffect(() => {
+    if (pausedState.locationId !== locationId) setPausedState({ locationId, sales: loadPausedSales(locationId) });
+  }, [locationId, pausedState.locationId]);
+  useEffect(() => {
+    savePausedSales(pausedState.locationId, pausedState.sales);
+  }, [pausedState]);
 
   // Fetch orders for the POS location (separate from context query which requires Supabase auth)
   const posOrdersQuery = useQuery({
@@ -2111,7 +2250,7 @@ export function PosPage() {
     }
   }, [cashier, locationId, cart, cartTotal, orderTotal, loadedDeliveryFee, customerName, customerPhone, customerCedula, deliveryType, loadedOrderId, generateInvoiceNumber, saveCustomer, posOrdersQuery, config.deliveryFee, processingPayment]);
 
-  const handleNewSale = () => {
+  const resetSale = () => {
     setCart([]);
     setCustomerName('');
     setCustomerPhone('');
@@ -2122,7 +2261,79 @@ export function PosPage() {
     setLoadedOrderId(null);
     setLoadedPaymentMethod(null);
     setLoadedDeliveryFee(0);
+  };
+
+  const handleNewSale = () => {
+    resetSale();
     setShowReceipt(null);
+  };
+
+  const snapshotCurrentSale = (): PausedSale => ({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    pausedAt: Date.now(),
+    cashierName: cashier?.name || '',
+    cart,
+    customerName,
+    customerPhone,
+    customerCedula,
+    deliveryType,
+    orderCode: loadedOrderId ? orderCode : '',
+    loadedOrderId,
+    loadedPaymentMethod,
+    loadedDeliveryFee,
+    total: orderTotal,
+  });
+
+  const handlePauseSale = () => {
+    if (cart.length === 0) return;
+    setPausedSales(prev => [...prev, snapshotCurrentSale()]);
+    resetSale();
+  };
+
+  const handleDiscardPaused = (id: string) => {
+    setPausedSales(prev => prev.filter(s => s.id !== id));
+  };
+
+  const handleResumeSale = async (id: string) => {
+    const sale = pausedSales.find(s => s.id === id);
+    if (!sale) return;
+
+    // Si era un pedido web, verificar que otra caja no lo haya facturado mientras estaba en espera
+    if (sale.loadedOrderId) {
+      const { data } = await supabase.from('orders').select('status, invoice_number').eq('id', sale.loadedOrderId).maybeSingle();
+      if (data && data.status !== 'pendiente') {
+        const detail = data.status === 'exitoso'
+          ? `ya fue facturado${data.invoice_number ? ` (factura ${data.invoice_number})` : ''}`
+          : 'fue cancelado';
+        if (window.confirm(`El pedido #${sale.orderCode || ''} ${detail}. ¿Quitarlo de la lista de espera?`)) {
+          handleDiscardPaused(id);
+        }
+        return;
+      }
+    }
+
+    // Si hay una venta a medio hacer, se pausa en lugar de perderse
+    const current = cart.length > 0 ? snapshotCurrentSale() : null;
+    setPausedSales(prev => {
+      const rest = prev.filter(s => s.id !== id);
+      return current ? [...rest, current] : rest;
+    });
+
+    // Refrescar productos con el menú actual (precios / opciones)
+    setCart(sale.cart.map(item => {
+      const fresh = menuItems.find(p => p.id === item.product.id);
+      return fresh ? { ...item, product: fresh } : item;
+    }));
+    setCustomerName(sale.customerName);
+    setCustomerPhone(sale.customerPhone);
+    setCustomerCedula(sale.customerCedula);
+    setDeliveryType(sale.deliveryType);
+    setOrderCode(sale.orderCode);
+    setOrderCodeError('');
+    setLoadedOrderId(sale.loadedOrderId);
+    setLoadedPaymentMethod(sale.loadedPaymentMethod);
+    setLoadedDeliveryFee(sale.loadedDeliveryFee);
+    setShowPausedSales(false);
   };
 
   const handleLoadOrderByCode = useCallback(async () => {
@@ -2209,6 +2420,15 @@ export function PosPage() {
           <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{locationName}</span>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setShowPausedSales(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all ${
+              pausedSales.length > 0
+                ? 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
+                : 'bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700'
+            }`}
+          >
+            <Pause className="w-3.5 h-3.5" /> En espera{pausedSales.length > 0 ? ` (${pausedSales.length})` : ''}
+          </button>
           <button onClick={() => setShowCorteDeCaja(true)}
             className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 rounded-xl text-[10px] font-bold text-zinc-400 hover:text-white hover:bg-zinc-700 transition-all"
           >
@@ -2443,19 +2663,34 @@ export function PosPage() {
               <span className="text-lg font-black text-white">Total:</span>
               <span className="text-2xl font-black text-primary-vibrant">${orderTotal.toFixed(2)}</span>
             </div>
-            <button onClick={() => setShowPayModal(true)} disabled={cart.length === 0 || !isFormValid}
-              className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-            >
-              <DollarSign className="w-5 h-5" /> Cobrar
-            </button>
+            <div className="flex gap-2">
+              <button onClick={handlePauseSale} disabled={cart.length === 0}
+                title="Poner la venta en espera y atender otro pedido"
+                className="px-4 bg-zinc-800 text-amber-400 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-700 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                <Pause className="w-4 h-4" /> Pausar
+              </button>
+              <button onClick={() => setShowPayModal(true)} disabled={cart.length === 0 || !isFormValid}
+                className="flex-1 bg-primary-vibrant text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+              >
+                <DollarSign className="w-5 h-5" /> Cobrar
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Mobile cart button */}
       {cartCount > 0 && (
+        <button onClick={handlePauseSale} aria-label="Pausar venta"
+          className="lg:hidden fixed bottom-4 left-4 w-14 bg-zinc-800 text-amber-400 rounded-2xl shadow-2xl z-40 flex items-center justify-center active:scale-95 transition-transform h-[60px]"
+        >
+          <Pause className="w-5 h-5" />
+        </button>
+      )}
+      {cartCount > 0 && (
         <button onClick={() => setShowPayModal(true)} disabled={!isFormValid}
-          className="lg:hidden fixed bottom-4 left-4 right-4 bg-primary-vibrant text-white p-4 rounded-2xl font-black shadow-2xl shadow-primary-vibrant/30 z-40 flex items-center justify-between active:scale-[0.98] transition-transform disabled:opacity-50"
+          className="lg:hidden fixed bottom-4 left-20 right-4 bg-primary-vibrant text-white p-4 rounded-2xl font-black shadow-2xl shadow-primary-vibrant/30 z-40 flex items-center justify-between active:scale-[0.98] transition-transform disabled:opacity-50"
         >
           <span className="flex items-center gap-2"><ShoppingCart className="w-5 h-5" /> {cartCount} items</span>
           <span className="text-lg">${orderTotal.toFixed(2)}</span>
@@ -2528,6 +2763,18 @@ export function PosPage() {
             locationName={locationName}
             exchangeRate={localRate ?? 1}
             onClose={() => setShowInvoiceHistory(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Paused sales modal */}
+      <AnimatePresence>
+        {showPausedSales && (
+          <PausedSalesModal
+            sales={pausedSales}
+            onResume={handleResumeSale}
+            onDiscard={handleDiscardPaused}
+            onClose={() => setShowPausedSales(false)}
           />
         )}
       </AnimatePresence>
