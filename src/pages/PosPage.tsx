@@ -167,7 +167,8 @@ function PaymentModal({
   // Split mode calculations — normalize all to USD before summing
   const splitTotal = splits.reduce((s, p) => s + (p.currency === 'BS' ? p.amount / rate : p.amount), 0);
   const splitRemaining = Math.max(0, total - splitTotal);
-  const splitValid = splits.length > 0 && Math.abs(splitRemaining) < 0.01 && splits.every(s => s.amount > 0);
+  // Exacto en ambos sentidos: si el descuento baja el total, los montos ya cargados no pueden excederlo
+  const splitValid = splits.length > 0 && Math.abs(total - splitTotal) < 0.01 && splits.every(s => s.amount > 0);
 
   const canConfirm = isSplit
     ? splitValid
