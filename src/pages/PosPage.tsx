@@ -114,10 +114,11 @@ function PosLogin({ onLogin }: { onLogin: (cashier: Cashier) => void }) {
 type PaymentSplit = { method: PaymentMethod; amount: number; currency?: 'USD' | 'BS'; ref?: string };
 
 function PaymentModal({
-  total, onConfirm, onClose, exchangeRate, originalPaymentMethod, isProcessing,
+  total: baseTotal, subtotal, onConfirm, onClose, exchangeRate, originalPaymentMethod, isProcessing,
 }: {
   total: number;
-  onConfirm: (splits: PaymentSplit[], changeAmount: number) => void;
+  subtotal: number;
+  onConfirm: (splits: PaymentSplit[], changeAmount: number, discount: number) => void;
   onClose: () => void;
   exchangeRate: number;
   originalPaymentMethod?: PaymentMethod | null;
@@ -139,6 +140,11 @@ function PaymentModal({
     }
   };
   const [paymentRef, setPaymentRef] = useState('');
+  const [discountPct, setDiscountPct] = useState('');
+  // Descuento solo sobre productos (no sobre el delivery)
+  const pct = Math.min(100, Math.max(0, parseFloat(discountPct) || 0));
+  const discount = Math.round(subtotal * pct) / 100;
+  const total = Math.max(0, baseTotal - discount);
   const [amountReceived, setAmountReceived] = useState('');
   const [amountCurrency, setAmountCurrency] = useState<'USD' | 'BS'>('USD');
   const rate = exchangeRate;
@@ -170,7 +176,7 @@ function PaymentModal({
   const handleConfirm = () => {
     if (!canConfirm) return;
     if (isSplit) {
-      onConfirm(splits.filter(s => s.amount > 0), 0);
+      onConfirm(splits.filter(s => s.amount > 0), 0, discount);
     } else {
       let amountToSend: number;
       let currencyToSend: 'USD' | 'BS' | undefined;
@@ -187,7 +193,7 @@ function PaymentModal({
         amountToSend = total;
         currencyToSend = undefined;
       }
-      onConfirm([{ method, amount: amountToSend, currency: currencyToSend, ref: paymentRef || undefined }], changeAmount);
+      onConfirm([{ method, amount: amountToSend, currency: currencyToSend, ref: paymentRef || undefined }], changeAmount, discount);
     }
   };
 
@@ -221,7 +227,13 @@ function PaymentModal({
 
         <div className="text-center py-4">
           <p className="text-zinc-500 text-xs uppercase tracking-widest mb-1">Total a cobrar</p>
+          {discount > 0 && (
+            <p className="text-lg font-bold text-zinc-500 line-through">${baseTotal.toFixed(2)}</p>
+          )}
           <p className="text-5xl font-black text-white">${total.toFixed(2)}</p>
+          {discount > 0 && (
+            <p className="text-sm font-bold text-green-400 mt-1">Descuento {pct}%: -${discount.toFixed(2)}</p>
+          )}
           <div className="mt-3 p-3 bg-primary-vibrant/10 rounded-xl border border-primary-vibrant/20 space-y-1">
             <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Total en Bs.</p>
             <p className="text-3xl font-black text-primary-vibrant">
@@ -230,6 +242,18 @@ function PaymentModal({
             <div className="flex items-center justify-center gap-1.5">
               <p className="text-[10px] text-zinc-500">Tasa: {rate.toFixed(2)}</p>
             </div>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Descuento (%)</label>
+          <div className="relative">
+            <input type="number" step="1" min="0" max="100" value={discountPct}
+              onChange={e => setDiscountPct(e.target.value)}
+              className="w-full bg-zinc-950 border border-zinc-800 p-3 pr-10 rounded-2xl text-lg font-bold text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
+              placeholder="0"
+            />
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">%</span>
           </div>
         </div>
 
@@ -491,10 +515,11 @@ function getChoiceAdjust(product: Product, selectedChoices?: string[]): number {
 }
 
 function ReceiptModal({
-  items, total, paymentMethod, changeAmount, cashierName, customerName, customerCedula, invoiceNumber, config, locationName, exchangeRate, onClose: _onClose, onNewSale,
+  items, total, discount = 0, paymentMethod, changeAmount, cashierName, customerName, customerCedula, invoiceNumber, config, locationName, exchangeRate, onClose: _onClose, onNewSale,
 }: {
   items: POSCartItem[];
   total: number;
+  discount?: number;
   paymentMethod: PaymentMethod;
   changeAmount: number;
   cashierName: string;
@@ -659,6 +684,11 @@ function ReceiptModal({
 
   <!-- Totales e Impuestos -->
   <table class="totals-table">
+    ${discount > 0.01 ? `
+    <tr>
+      <td>DESCUENTO</td>
+      <td class="text-right">-Bs ${formatBs(discount * rate)}</td>
+    </tr>` : ''}
     <tr>
       <td>SUBTTL</td>
       <td class="text-right">Bs ${formatBs(biBs)}</td>
@@ -1316,6 +1346,8 @@ function InvoiceHistoryModal({
       if (!Array.isArray(items) || items.length === 0) return;
       const rate = exchangeRate || config?.exchangeRate || 1;
       const totalBs = order.total * rate;
+      // ponytail: descuento derivado (no hay columna en orders); agregar columna discount si se necesita reportar
+      const discount = (order.subtotal ?? 0) + (order.delivery_fee ?? 0) - order.total;
       const biBs = totalBs / 1.16;
       const taxBs = biBs * 0.16;
       const formatBs = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1446,6 +1478,11 @@ function InvoiceHistoryModal({
   <div class="divider"></div>
 
   <table class="totals-table">
+    ${discount > 0.01 ? `
+    <tr>
+      <td>DESCUENTO</td>
+      <td class="text-right">-Bs ${formatBs(discount * rate)}</td>
+    </tr>` : ''}
     <tr>
       <td>SUBTTL</td>
       <td class="text-right">Bs ${formatBs(biBs)}</td>
@@ -1947,6 +1984,7 @@ export function PosPage() {
   const [showReceipt, setShowReceipt] = useState<{
     items: POSCartItem[];
     total: number;
+    discount: number;
     paymentMethod: PaymentMethod;
     changeAmount: number;
     invoiceNumber: string;
@@ -2158,9 +2196,10 @@ export function PosPage() {
     setCart(prev => prev.filter(i => getItemKey(i) !== key));
   }, []);
 
-  const handlePayment = useCallback(async (splits: { method: PaymentMethod; amount: number; currency?: 'USD' | 'BS'; ref?: string }[], changeAmount: number) => {
+  const handlePayment = useCallback(async (splits: { method: PaymentMethod; amount: number; currency?: 'USD' | 'BS'; ref?: string }[], changeAmount: number, discount = 0) => {
     if (!cashier || !locationId || cart.length === 0 || processingPayment) return;
     setProcessingPayment(true);
+    const finalTotal = Math.max(0, orderTotal - discount);
 
     const orderItems = cart.map(i => ({
       id: i.product.id,
@@ -2191,7 +2230,7 @@ export function PosPage() {
           invoice_number: invoiceNumber,
           items: orderItems,
           subtotal: cartTotal,
-          total: orderTotal,
+          total: finalTotal,
           payment_currency: primaryCurrency || null,
         }).eq('id', orderId);
         if (error) throw error;
@@ -2206,7 +2245,7 @@ export function PosPage() {
           items: orderItems,
           subtotal: cartTotal,
           delivery_fee: deliveryType === 'Delivery' ? (config.deliveryFee ?? 0) : 0,
-          total: orderTotal,
+          total: finalTotal,
           notes: '',
           status: 'exitoso',
           payment_method: primaryMethod,
@@ -2241,7 +2280,7 @@ export function PosPage() {
       posOrdersQuery.refetch();
 
       setShowPayModal(false);
-      setShowReceipt({ items: cart, total: orderTotal, paymentMethod: primaryMethod, changeAmount, invoiceNumber });
+      setShowReceipt({ items: cart, total: finalTotal, discount, paymentMethod: primaryMethod, changeAmount, invoiceNumber });
     } catch (err) {
       console.error('Error processing payment:', err);
       alert('Error al procesar la venta');
@@ -2700,7 +2739,7 @@ export function PosPage() {
       {/* Payment modal */}
       <AnimatePresence>
         {showPayModal && (
-          <PaymentModal total={orderTotal} onConfirm={handlePayment} onClose={() => setShowPayModal(false)} exchangeRate={localRate ?? 1} originalPaymentMethod={loadedPaymentMethod} isProcessing={processingPayment} />
+          <PaymentModal total={orderTotal} subtotal={cartTotal} onConfirm={handlePayment} onClose={() => setShowPayModal(false)} exchangeRate={localRate ?? 1} originalPaymentMethod={loadedPaymentMethod} isProcessing={processingPayment} />
         )}
       </AnimatePresence>
 
@@ -2710,6 +2749,7 @@ export function PosPage() {
           <ReceiptModal
             items={showReceipt.items}
             total={showReceipt.total}
+            discount={showReceipt.discount}
             paymentMethod={showReceipt.paymentMethod}
             changeAmount={showReceipt.changeAmount}
             invoiceNumber={showReceipt.invoiceNumber}
