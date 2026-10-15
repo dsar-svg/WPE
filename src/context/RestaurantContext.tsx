@@ -171,7 +171,7 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [sessionReady, setSessionReady] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [pickedLocation, setSelectedLocation] = useState<Location | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -224,6 +224,11 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
   const adminRecords = adminsQuery.data || [];
 
   const locations = useMemo(() => locationRows.map(rowToLocation), [locationRows]);
+  // Re-read the picked location from fresh data so admin edits (e.g. WhatsApp) reach already-open tabs/PWAs
+  const selectedLocation = useMemo(
+    () => pickedLocation && (locations.find(l => l.id === pickedLocation.id) ?? pickedLocation),
+    [pickedLocation, locations]
+  );
   const menuItems = useMemo(() => menuItemRows.map(rowToProduct), [menuItemRows]);
   const categories = useMemo(() => categoryRows.map(rowToCategory), [categoryRows]);
   const menuItemIds = useMemo(() => new Set(menuItems.map(m => m.id)), [menuItems]);
@@ -386,17 +391,15 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     if (loc.latitude !== undefined) dbRow.latitude = loc.latitude;
     if (loc.longitude !== undefined) dbRow.longitude = loc.longitude;
     if (loc.adminEmail !== undefined) dbRow.admin_email = loc.adminEmail;
-    if (loc.adminPassword !== undefined) dbRow.admin_password = loc.adminPassword;
+    // adminPassword is not sent: locations has no admin_password column, and PostgREST rejects the whole row
     if (loc.discontinuedProductIds !== undefined) dbRow.discontinued_product_ids = loc.discontinuedProductIds;
     const id = loc._id || loc.id;
-    if (id && typeof id === 'string' && (id.startsWith('loc-') || id.startsWith('new-'))) {
-      await supabase.from('locations').insert(dbRow);
-    } else if (id) {
-      await supabase.from('locations').update(dbRow).eq('id', id);
-    } else {
-      await supabase.from('locations').insert(dbRow);
-    }
+    const isNew = !id || (typeof id === 'string' && (id.startsWith('loc-') || id.startsWith('new-')));
+    const { error } = isNew
+      ? await supabase.from('locations').insert(dbRow)
+      : await supabase.from('locations').update(dbRow).eq('id', id);
     invalidate(['locations']);
+    if (error) throw new Error(`No se pudo guardar la sede: ${error.message}`);
   }, [invalidate]);
 
   const updateProduct = useCallback(async (prod: any) => {
