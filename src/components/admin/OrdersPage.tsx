@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBag, MapPin, Phone, User, Clock, ChevronDown, ChevronUp, Search, Trash2, Ban, AlertTriangle, X, Download, UserCircle } from 'lucide-react';
+import { ShoppingBag, MapPin, Phone, User, Clock, ChevronDown, ChevronUp, Search, Ban, AlertTriangle, X, Download, UserCircle } from 'lucide-react';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { supabase } from '../../lib/supabase';
 import { Cashier } from '../../types';
@@ -37,7 +37,7 @@ function exportCSV(orders: any[], locations: any[], cashiers: any[]) {
 }
 
 export function OrdersPage() {
-  const { orders, fetchOrders, locations, deleteOrder, updateOrderStatus } = useRestaurant();
+  const { orders, fetchOrders, locations, updateOrderStatus } = useRestaurant();
 
   const [search, setSearch] = useState('');
   const [locationFilter, setLocationFilter] = useState('all');
@@ -46,7 +46,7 @@ export function OrdersPage() {
   const [sortField, setSortField] = useState<'created_at' | 'total' | 'customer_name'>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [confirmVoid, setConfirmVoid] = useState<string | null>(null);
   const [cashiers, setCashiers] = useState<Cashier[]>([]);
   const [cashierFilter, setCashierFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
@@ -201,16 +201,12 @@ export function OrdersPage() {
               <span className="text-[10px] text-admin-muted uppercase tracking-widest">Total</span>
             </div>
             <div className="flex items-center gap-2">
-              {order.status === 'exitoso' && (
-                <button onClick={() => updateOrderStatus(order.id, 'cancelado')}
-                  className="p-1.5 text-admin-muted hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors" title="Cancelar pedido">
+              {order.status !== 'cancelado' && (
+                <button onClick={() => setConfirmVoid(order.id)}
+                  className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors border border-transparent hover:border-red-500/30" title="Anular pedido">
                   <Ban className="w-4 h-4" />
                 </button>
               )}
-              <button onClick={() => setConfirmDelete(order.id)}
-                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors border border-transparent hover:border-red-500/30" title="Eliminar pedido">
-                <Trash2 className="w-4 h-4" />
-              </button>
               <span className="font-bold text-green-500 text-sm">${order.total.toFixed(2)}</span>
             </div>
           </div>
@@ -261,16 +257,12 @@ export function OrdersPage() {
         <td className="p-4 text-right font-bold text-green-500 text-sm">${order.total.toFixed(2)}</td>
         <td className="p-4">
           <div className="flex items-center justify-end gap-1">
-            {order.status === 'exitoso' && (
-              <button onClick={() => updateOrderStatus(order.id, 'cancelado')}
-                className="p-1.5 text-admin-muted hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors" title="Cancelar pedido">
+            {order.status !== 'cancelado' && (
+              <button onClick={() => setConfirmVoid(order.id)}
+                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors border border-transparent hover:border-red-500/30" title="Anular pedido">
                 <Ban className="w-4 h-4" />
               </button>
             )}
-            <button onClick={() => setConfirmDelete(order.id)}
-              className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors border border-transparent hover:border-red-500/30" title="Eliminar pedido">
-              <Trash2 className="w-4 h-4" />
-            </button>
           </div>
         </td>
       </tr>
@@ -429,29 +421,29 @@ export function OrdersPage() {
         </div>
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Void Confirmation Modal */}
       <AnimatePresence>
-        {confirmDelete && (
+        {confirmVoid && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/80" onClick={() => setConfirmDelete(null)} />
+            <div className="absolute inset-0 bg-black/80" onClick={() => setConfirmVoid(null)} />
             <motion.div initial={{ scale: 0.9, y: 20, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.9, y: 20, opacity: 0 }}
               className="relative w-full max-w-sm bg-admin-surface border border-admin-border rounded-2xl p-8 space-y-6 text-center">
               <div className="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto">
                 <AlertTriangle className="w-8 h-8 text-red-400" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-black text-admin-text">Eliminar Pedido</h3>
-                <p className="text-admin-muted text-sm">Esta acción es permanente. El pedido se eliminará de la base de datos y no se puede recuperar.</p>
+                <h3 className="text-xl font-black text-admin-text">Anular Pedido</h3>
+                <p className="text-admin-muted text-sm">El pedido quedará como Cancelado. Se conserva en el historial con su número de factura y no suma en las ventas.</p>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setConfirmDelete(null)}
+                <button onClick={() => setConfirmVoid(null)}
                   className="flex-1 py-3 rounded-2xl bg-admin-border text-admin-muted font-bold text-sm hover:bg-zinc-700 transition-colors">
                   Cancelar
                 </button>
-                <button onClick={() => { deleteOrder(confirmDelete); setConfirmDelete(null); }}
+                <button onClick={() => { updateOrderStatus(confirmVoid, 'cancelado'); setConfirmVoid(null); }}
                   className="flex-1 py-3 rounded-2xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-colors">
-                  Eliminar
+                  Anular
                 </button>
               </div>
             </motion.div>

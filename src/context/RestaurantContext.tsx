@@ -25,7 +25,6 @@ interface RestaurantContextType {
   deleteProduct: (id: string) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
   createOrder: (order: Omit<Order, 'id' | 'created_at'>) => Promise<void>;
-  deleteOrder: (id: string) => Promise<void>;
   updateOrderStatus: (id: string, status: Order['status']) => Promise<void>;
   fetchOrders: () => void;
   signIn: (email: string, password: string) => Promise<void>;
@@ -464,11 +463,6 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     } catch (error) { console.error('Error creating order:', error); throw error; }
   }, [invalidate]);
 
-  const deleteOrder = useCallback(async (id: string) => {
-    try { await supabase.from('orders').delete().eq('id', id); invalidate(['orders']); }
-    catch (error) { console.error('Error deleting order:', error); }
-  }, [invalidate]);
-
   const updateOrderStatus = useCallback(async (id: string, status: Order['status']) => {
     try { await supabase.from('orders').update({ status }).eq('id', id); invalidate(['orders']); }
     catch (error) { console.error('Error updating order status:', error); }
@@ -525,9 +519,9 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     selectedLocation, setSelectedLocation,
     updateLocation, updateProduct, updateConfig, updateCategory,
     deleteLocation, deleteProduct, deleteCategory,
-    createOrder, deleteOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut, createLocationAdmin,
+    createOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut, createLocationAdmin,
     findCustomer, saveCustomer, generateInvoiceNumber,
-  }), [locations, menuItems, categories, config, orders, isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, selectedLocation, setSelectedLocation, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, createOrder, deleteOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut, createLocationAdmin, findCustomer, saveCustomer, generateInvoiceNumber]);
+  }), [locations, menuItems, categories, config, orders, isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, selectedLocation, setSelectedLocation, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, createOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut, createLocationAdmin, findCustomer, saveCustomer, generateInvoiceNumber]);
 
   return (
     <RestaurantContext.Provider value={value}>
