@@ -63,7 +63,8 @@ Stack: React 19 / React Router v7 / Vite 6 / TypeScript 5.8 / Tailwind CSS v4 (`
 - **Mapa** (`src/components/ui/MapComponent.tsx`): Leaflet + capa vectorial **OpenFreeMap** vía MapLibre (`maplibre-gl` + `@maplibre/maplibre-gl-leaflet`, carga diferida), estilos `dark`/`positron`, sin API key. Respaldo automático a **Esri Canvas** raster si no hay WebGL, falla la carga o tarda >8s. No usar CARTO (exige API key, muestra marca de agua "API KEY REQUIRED") ni tile.openstreetmap.org (bloquea apps). Las direcciones (autocompletado/reverse geocode) vienen de Nominatim/Photon en `DistanceService`, no del mapa.
 - **BCV rate** (`src/services/bcvRate.ts`): Fetches VES from dolarapi.com/ve.dolarapi.com, daily localStorage cache.
 - **Image upload** (`src/lib/uploadImage.ts`): Validates 5MB max, compresses to WebP 800px, uploads to `images` Supabase bucket.
-- **Auth**: Supabase Auth (email/password) for admins; 4-digit PIN hash (`src/lib/hashPin.ts`) for POS cashiers. RLS allows anon on `orders`, `cortes`, `admins` (needed by POS).
+- **Auth**: Supabase Auth (email/password) for admins; escrituras del admin solo si `is_staff()` (email confirmado + rol `super_admin`/`location_admin`). POS: PIN de 4 dígitos → RPC `pos_login` devuelve un token (`pos_sessions`, 16 h) guardado en `cashier.token`. La clave anon **no** puede leer `admins`/`customers` ni escribir `orders` (salvo pedido web `pendiente`), `order_payments`, `cortes` o `invoice_counters` (migración 00022).
+- **POS: cobro y corte por RPC**: `pos_cobrar` asigna el número de factura atómico (si falla no consume número), guarda `paid_at`, `exchange_rate`, vuelto y su moneda (`change_currency`). `pos_corte` calcula el corte en el servidor con los pedidos `corte_id IS NULL` de la cajera, guarda el conteo ciego (`counted_*`) y marca los pedidos con `corte_id`. Arqueo/diferencias: `src/lib/corte.ts`.
 
 ## DB schema
 
