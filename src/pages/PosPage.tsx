@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase';
 import { OptimizedImage } from '../components/ui/OptimizedImage';
 
 import { ChoiceSelectorModal } from '../components/ui/ChoiceSelectorModal';
-import { hashPin } from '../lib/hashPin';
+import { corteArqueo, arqueoHtml, cuadra, formatArqueo } from '../lib/corte';
 
 // ==============================
 // PIN Login
@@ -31,29 +31,11 @@ function PosLogin({ onLogin }: { onLogin: (cashier: Cashier) => void }) {
     if (pin.length !== 4) return;
     (async () => {
       setLoading(true);
-      const pinHash = await hashPin(pin);
-      let { data } = await supabase
-        .from('admins')
-        .select('*')
-        .eq('pin_hash', pinHash)
-        .limit(1)
-        .maybeSingle();
-      if (!data) {
-        const { data: fallback } = await supabase
-          .from('admins')
-          .select('*')
-          .eq('pin', pin)
-          .limit(1)
-          .maybeSingle();
-        data = fallback;
-        if (fallback) {
-          supabase.from('admins').update({ pin_hash: pinHash }).eq('id', fallback.id).then();
-        }
-      }
+      const { data, error: rpcError } = await supabase.rpc('pos_login', { p_pin: pin });
       if (data) {
-        onLogin({ id: data.id, name: data.name || data.email, email: data.email, employee_id: data.employee_id, location_id: data.location_id });
+        onLogin(data as Cashier);
       } else {
-        setError('PIN incorrecto');
+        setError(rpcError?.message || 'PIN incorrecto');
         setPin('');
       }
       setLoading(false);
@@ -118,7 +100,7 @@ function PaymentModal({
 }: {
   total: number;
   subtotal: number;
-  onConfirm: (splits: PaymentSplit[], changeAmount: number, discount: number) => void;
+  onConfirm: (splits: PaymentSplit[], changeAmount: number, discount: number, changeCurrency: 'USD' | 'BS') => void;
   onClose: () => void;
   exchangeRate: number;
   originalPaymentMethod?: PaymentMethod | null;
@@ -147,6 +129,8 @@ function PaymentModal({
   const total = Math.max(0, baseTotal - discount);
   const [amountReceived, setAmountReceived] = useState('');
   const [amountCurrency, setAmountCurrency] = useState<'USD' | 'BS'>('USD');
+  // Moneda en que se entrega el vuelto: si difiere de la recibida, el corte lo descuenta de esa caja
+  const [changeCurrency, setChangeCurrency] = useState<'USD' | 'BS' | null>(null);
   const rate = exchangeRate;
 
   // Split payment state
@@ -162,6 +146,9 @@ function PaymentModal({
     ? Math.max(0, amountReceivedUsd - cashTotal)
     : 0;
   const isCashEnough = method !== 'Efectivo' || amountReceivedUsd >= cashTotal;
+  const changeCur = changeCurrency ?? amountCurrency;
+  // Un vuelto de $100 o más casi siempre es el monto tecleado en la moneda equivocada
+  const changeTooBig = changeAmount >= 100;
   const totalBs = total * rate;
 
   // Split mode calculations — normalize all to USD before summing
@@ -172,12 +159,12 @@ function PaymentModal({
 
   const canConfirm = isSplit
     ? splitValid
-    : isCashEnough && (!methodChanged || confirmChange) && !isProcessing;
+    : isCashEnough && !changeTooBig && (!methodChanged || confirmChange) && !isProcessing;
 
   const handleConfirm = () => {
     if (!canConfirm) return;
     if (isSplit) {
-      onConfirm(splits.filter(s => s.amount > 0), 0, discount);
+      onConfirm(splits.filter(s => s.amount > 0), 0, discount, 'USD');
     } else {
       let amountToSend: number;
       let currencyToSend: 'USD' | 'BS' | undefined;
@@ -194,7 +181,7 @@ function PaymentModal({
         amountToSend = total;
         currencyToSend = undefined;
       }
-      onConfirm([{ method, amount: amountToSend, currency: currencyToSend, ref: paymentRef || undefined }], changeAmount, discount);
+      onConfirm([{ method, amount: amountToSend, currency: currencyToSend, ref: paymentRef || undefined }], changeAmount, discount, changeCur);
     }
   };
 
@@ -338,6 +325,7 @@ function PaymentModal({
                     <button onClick={() => {
                       setAmountCurrency(c => c === 'USD' ? 'BS' : 'USD');
                       setAmountReceived('');
+                      setChangeCurrency(null);
                     }}
                       className="px-3 bg-zinc-800 rounded-2xl text-white font-bold text-sm hover:bg-zinc-700 transition-all flex items-center"
                     >
@@ -346,14 +334,29 @@ function PaymentModal({
                   </div>
                 </div>
                 {parseFloat(amountReceived) > 0 && (
-                  <div className={`p-4 rounded-2xl text-center ${isCashEnough ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                    <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Vuelto</p>
-                    <p className={`text-3xl font-black ${isCashEnough ? 'text-green-400' : 'text-red-400'}`}>
-                      {amountCurrency === 'USD'
+                  <div className={`p-4 rounded-2xl text-center space-y-2 ${isCashEnough && !changeTooBig ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                    <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Vuelto</p>
+                    <p className={`text-3xl font-black ${isCashEnough && !changeTooBig ? 'text-green-400' : 'text-red-400'}`}>
+                      {changeCur === 'USD'
                         ? `$${changeAmount.toFixed(2)}`
                         : `${(changeAmount * rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.`
                       }
                     </p>
+                    {changeTooBig && (
+                      <p className="text-xs font-bold text-red-400">Vuelto de $100 o más: revisa el monto y la moneda ($ / Bs).</p>
+                    )}
+                    {changeAmount > 0 && !changeTooBig && (
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Entregar en</span>
+                        {(['USD', 'BS'] as const).map(c => (
+                          <button key={c} onClick={() => setChangeCurrency(c)}
+                            className={`px-3 py-1 rounded-lg text-xs font-black transition-all ${changeCur === c ? 'bg-green-500 text-white' : 'bg-zinc-800 text-zinc-400 hover:text-white'}`}
+                          >
+                            {c === 'USD' ? '$' : 'Bs'}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
                 <div className="flex gap-2">
@@ -475,7 +478,9 @@ function PaymentModal({
             </p>
             {method === 'Efectivo' && (
               <p className="text-sm text-zinc-400 font-bold mt-1">
-                {amountReceivedUsd > 0 ? `$${amountReceivedUsd.toFixed(2)} — Vuelto: $${changeAmount.toFixed(2)}` : 'Ingrese monto recibido'}
+                {amountReceivedUsd > 0
+                  ? `$${amountReceivedUsd.toFixed(2)} — Vuelto: ${changeCur === 'USD' ? `$${changeAmount.toFixed(2)}` : `${(changeAmount * rate).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.`}`
+                  : 'Ingrese monto recibido'}
               </p>
             )}
             {method === 'PagoMóvil' && paymentRef && (
@@ -516,13 +521,14 @@ function getChoiceAdjust(product: Product, selectedChoices?: string[]): number {
 }
 
 function ReceiptModal({
-  items, total, discount = 0, paymentMethod, changeAmount, cashierName, customerName, customerCedula, invoiceNumber, config, locationName, exchangeRate, onClose: _onClose, onNewSale,
+  items, total, discount = 0, paymentMethod, changeAmount, changeCurrency = 'BS', cashierName, customerName, customerCedula, invoiceNumber, config, locationName, exchangeRate, onClose: _onClose, onNewSale,
 }: {
   items: POSCartItem[];
   total: number;
   discount?: number;
   paymentMethod: PaymentMethod;
   changeAmount: number;
+  changeCurrency?: 'USD' | 'BS';
   cashierName: string;
   customerName: string;
   customerCedula?: string;
@@ -728,7 +734,7 @@ function ReceiptModal({
     ${paymentMethod === 'Efectivo' && changeAmount > 0 ? `
       <tr>
         <td>VUELTO</td>
-        <td class="text-right">Bs ${formatBs(changeAmount * rate)}</td>
+        <td class="text-right">${changeCurrency === 'USD' ? `$${changeAmount.toFixed(2)}` : `Bs ${formatBs(changeAmount * rate)}`}</td>
       </tr>
     ` : ''}
   </table>
@@ -844,7 +850,141 @@ interface CorteRecord {
   from_date: string;
   to_date: string;
   created_at: string;
+  exchange_rate?: number | null;
+  counted_efectivo_usd?: number | null;
+  counted_efectivo_bs?: number | null;
+  counted_tarjeta_bs?: number | null;
+  counted_pagomovil_bs?: number | null;
 }
+
+const toCorteRecord = (row: any): CorteRecord => ({
+  ...row,
+  cashier_name: row.cashier_name || '',
+  total_efectivo_usd: Number(row.total_efectivo_usd ?? 0),
+  total_efectivo_bs: Number(row.total_efectivo_bs ?? 0),
+  total_tarjeta_usd: Number(row.total_tarjeta_usd ?? 0),
+  total_tarjeta_bs: Number(row.total_tarjeta_bs ?? 0),
+  total_pagomovil_usd: Number(row.total_pagomovil_usd ?? 0),
+  total_pagomovil_bs: Number(row.total_pagomovil_bs ?? 0),
+  grand_total: Number(row.grand_total ?? 0),
+});
+
+// Cortes viejos guardaban 0 en los campos USD de tarjeta/pago móvil: se convierten con la tasa
+const corteUsd = (bs: number, usd: number, rate: number) => (usd > 0 ? usd : bs / (rate || 1));
+
+function buildCorteReceipt(c: CorteRecord, locationName: string, fallbackRate: number, orders: Order[] | null) {
+  const rate = c.exchange_rate || fallbackRate || 1;
+  const formatBs = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtTime = (d: string) => new Date(d).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
+  const tarjetaUsd = corteUsd(c.total_tarjeta_bs, c.total_tarjeta_usd, rate);
+  const pagomovilUsd = corteUsd(c.total_pagomovil_bs, c.total_pagomovil_usd, rate);
+  const delivery = (orders || []).filter(o => o.delivery_type === 'Delivery');
+  const local = (orders || []).filter(o => o.delivery_type !== 'Delivery');
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Corte de Caja</title>
+<style>
+  @media print { @page { size: 80mm auto; margin: 0; } body { margin: 0; padding: 0; } }
+  * { font-family: Arial, Helvetica, sans-serif !important; }
+  body { font-size: 10px; width: 270px; margin: 0 auto; padding: 8px 5px; color: #000; line-height: 1.2; }
+  .text-center { text-align: center; } .bold { font-weight: bold; }
+  .header-title { font-size: 13px; font-weight: bold; margin-bottom: 2px; }
+  .header-sub { font-size: 9px; margin: 1px 0; }
+  .divider { border-top: 1px dashed #000; margin: 5px 0; }
+  table { width: 100%; border-collapse: collapse; } td { padding: 1.5px 0; font-size: 9px; } td.r { text-align: right; }
+  .total-row td { font-weight: bold; font-size: 10px; }
+  .section-title { font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+  .order-row td { font-size: 8.5px; }
+</style>
+</head>
+<body>
+<div class="text-center">
+  <div class="header-title">CORTE DE CAJA</div>
+  <div class="header-sub bold">${locationName}</div>
+  <div class="header-sub">${new Date(c.closed_at).toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+  <div class="header-sub">Cajero: ${c.cashier_name}</div>
+  <div class="header-sub">${c.from_date ? `${fmtTime(c.from_date)} - ` : ''}${fmtTime(c.closed_at)} · Tasa: ${formatBs(rate)} Bs/$</div>
+</div>
+<div class="divider"></div>
+<table>
+  <tr><td>Pedidos</td><td class="r bold">${c.order_count}</td></tr>
+  ${orders ? `<tr><td>Delivery (${delivery.length})</td><td class="r">$${delivery.reduce((s, o) => s + o.total, 0).toFixed(2)}</td></tr>
+  <tr><td>Local (${local.length})</td><td class="r">$${local.reduce((s, o) => s + o.total, 0).toFixed(2)}</td></tr>` : ''}
+</table>
+<div class="divider"></div>
+<div class="section-title">M&Eacute;TODO DE PAGO (SISTEMA)</div>
+<table>
+  <tr><td>Efectivo $</td><td class="r">$${c.total_efectivo_usd.toFixed(2)}</td></tr>
+  <tr><td>Efectivo Bs</td><td class="r">Bs ${formatBs(c.total_efectivo_bs)}</td></tr>
+  <tr><td>Tarjeta</td><td class="r">$${tarjetaUsd.toFixed(2)} / Bs ${formatBs(c.total_tarjeta_bs)}</td></tr>
+  <tr><td>Pago M&oacute;vil</td><td class="r">$${pagomovilUsd.toFixed(2)} / Bs ${formatBs(c.total_pagomovil_bs)}</td></tr>
+</table>
+<div class="divider"></div>
+<table>
+  <tr class="total-row"><td>TOTAL FACTURADO</td><td class="r">$${c.grand_total.toFixed(2)}</td></tr>
+  <tr class="total-row"><td></td><td class="r">Bs ${formatBs(c.grand_total * rate)}</td></tr>
+</table>
+${arqueoHtml(c)}
+${orders && orders.length > 0 ? `<div class="divider"></div>
+<div class="section-title">DETALLE DE PEDIDOS</div>
+<table>
+${orders.map(o => `  <tr class="order-row"><td>${fmtTime(o.paid_at || o.created_at)}</td><td>${(o.invoice_number || '').slice(-4)}</td><td>${(o.customer_name || 'N/A').substring(0, 12)}</td><td>${(o.payment_method || '').substring(0, 4).toUpperCase()}</td><td class="r">$${o.total.toFixed(2)}</td></tr>`).join('\n')}
+</table>` : ''}
+<div class="divider"></div>
+<p class="text-center" style="font-size:8px">Cerrado: ${new Date(c.closed_at).toLocaleString('es-VE')}</p>
+<div class="divider"></div>
+<p class="text-center" style="font-size:8px">Firma cajera: ____________________</p>
+</body>
+</html>`;
+}
+
+function printHtml(html: string) {
+  const iframe = document.createElement('iframe');
+  Object.assign(iframe.style, { position: 'fixed', right: '0', bottom: '0', width: '0', height: '0', border: 'none' });
+  document.body.appendChild(iframe);
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!doc) return;
+  doc.open();
+  doc.write(html);
+  doc.close();
+  setTimeout(() => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+    setTimeout(() => document.body.removeChild(iframe), 2000);
+  }, 500);
+}
+
+function ArqueoTable({ c }: { c: CorteRecord }) {
+  const rows = corteArqueo(c);
+  if (!rows) return null;
+  return (
+    <div className="space-y-1">
+      <div className="grid grid-cols-4 text-[9px] font-bold uppercase tracking-widest text-zinc-500 px-2">
+        <span>Arqueo</span><span className="text-right">Sistema</span><span className="text-right">Contado</span><span className="text-right">Dif.</span>
+      </div>
+      {rows.map(r => (
+        <div key={r.label} className="grid grid-cols-4 items-center bg-zinc-950 p-2 rounded-lg text-[11px]">
+          <span className="font-bold text-zinc-300">{r.label}</span>
+          <span className="text-right text-zinc-400">{formatArqueo(r, r.esperado)}</span>
+          <span className="text-right text-zinc-400">{formatArqueo(r, r.contado)}</span>
+          <span className={`text-right font-black ${cuadra(r) ? 'text-green-400' : 'text-red-400'}`}>
+            {r.diferencia > 0 ? '+' : ''}{formatArqueo(r, r.diferencia)}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const COUNT_FIELDS = [
+  { key: 'efectivo_usd', label: 'Efectivo en dólares', unit: '$', icon: Banknote, color: 'text-green-400' },
+  { key: 'efectivo_bs', label: 'Efectivo en bolívares', unit: 'Bs', icon: Banknote, color: 'text-yellow-400' },
+  { key: 'tarjeta_bs', label: 'Tarjeta (cierre del punto)', unit: 'Bs', icon: CreditCard, color: 'text-blue-400' },
+  { key: 'pagomovil_bs', label: 'Pago Móvil (según banco)', unit: 'Bs', icon: Smartphone, color: 'text-purple-400' },
+] as const;
+type CountKey = typeof COUNT_FIELDS[number]['key'];
 
 function CorteDeCajaModal({
   orders, cortes, locationId, locationName, cashier, exchangeRate, onCorteSaved, onClose,
@@ -860,295 +1000,48 @@ function CorteDeCajaModal({
 }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<CorteRecord | null>(null);
+  const [savedOrders, setSavedOrders] = useState<Order[]>([]);
   const [error, setError] = useState('');
-  const [orderPaymentsMap, setOrderPaymentsMap] = useState<Record<string, { payment_method: string; amount: number; currency?: string }[]>>({});
+  const [counted, setCounted] = useState<Record<CountKey, string>>({ efectivo_usd: '', efectivo_bs: '', tarjeta_bs: '', pagomovil_bs: '' });
 
-  const VZ_OFFSET_MS = -4 * 60 * 60 * 1000;
-  const getVzDateStr = (d: Date) => new Date(d.getTime() + VZ_OFFSET_MS).toISOString().slice(0, 10);
-  const getVzStartOfDayUtc = (d: Date) => {
-    const vz = new Date(d.getTime() + VZ_OFFSET_MS);
-    return new Date(Date.UTC(vz.getUTCFullYear(), vz.getUTCMonth(), vz.getUTCDate(), 4, 0, 0));
-  };
+  // Misma regla que pos_corte: pedidos de esta cajera aún sin corte
+  const pendingOrders = useMemo(() => {
+    const lastClosed = cortes.filter(c => c.cashier_id === cashier?.id)
+      .reduce<string | null>((m, c) => (!m || c.closed_at > m ? c.closed_at : m), null);
+    const vz = new Date(Date.now() - 4 * 60 * 60 * 1000);
+    const bound = lastClosed ? new Date(lastClosed) : new Date(Date.UTC(vz.getUTCFullYear(), vz.getUTCMonth(), vz.getUTCDate(), 4, 0, 0));
+    return orders
+      .filter(o => o.location_id === locationId && o.status === 'exitoso' && o.cashier_id === cashier?.id && !o.corte_id
+        && (o.paid_at || new Date(o.created_at) > bound))
+      .sort((a, b) => new Date(a.paid_at || a.created_at).getTime() - new Date(b.paid_at || b.created_at).getTime());
+  }, [orders, cortes, locationId, cashier?.id]);
 
-  const todayStr = getVzDateStr(new Date());
-  const todayCortes = useMemo(() => cortes.filter(c => c.date === todayStr && c.cashier_id === cashier?.id).sort((a, b) => new Date(b.closed_at).getTime() - new Date(a.closed_at).getTime()), [cortes, todayStr, cashier?.id]);
-  const existingCorte = todayCortes[0] || null;
-
-  const todayOrders = useMemo(() => {
-    const startOfDay = getVzStartOfDayUtc(new Date());
-    return orders.filter(o =>
-      o.location_id === locationId &&
-      o.status === 'exitoso' &&
-      o.cashier_id === cashier?.id &&
-      new Date(o.created_at) >= startOfDay
-    );
-  }, [orders, locationId, cashier?.id]);
-
-  // Always filter orders after the last corte (auto-reset after save)
-  const activeOrders = useMemo(() => {
-    const ref = saved || existingCorte;
-    if (!ref) return todayOrders;
-    const corteTime = new Date(ref.closed_at);
-    return todayOrders.filter(o => new Date(o.created_at) > corteTime);
-  }, [todayOrders, existingCorte, saved]);
-
-  // Fetch order_payments for active orders to handle split payments
-  useEffect(() => {
-    if (activeOrders.length === 0) { setOrderPaymentsMap({}); return; }
-    const orderIds = activeOrders.map(o => o.id);
-    supabase.from('order_payments').select('order_id, payment_method, amount, currency')
-      .in('order_id', orderIds)
-      .then(({ data }) => {
-        const map: Record<string, { payment_method: string; amount: number; currency?: string }[]> = {};
-        (data || []).forEach(row => {
-          if (!map[row.order_id]) map[row.order_id] = [];
-          map[row.order_id].push(row);
-        });
-        setOrderPaymentsMap(map);
-      });
-  }, [activeOrders]);
-
-  // Aggregate totals: prefer order_payments (split-aware), fall back to order.payment_method
-  // RULE: Tarjeta and PagoMóvil are ALWAYS in BS. Convert USD amounts to BS using exchangeRate.
-  const { totalEfectivoUsd, totalEfectivoBs, totalTarjetaBs, totalPagoMovilBs } = useMemo(() => {
-    let eUsd = 0, eBs = 0, tBs = 0, pmBs = 0;
-    const rate = exchangeRate || 1;
-    for (const o of activeOrders) {
-      const splits = orderPaymentsMap[o.id];
-      if (splits && splits.length > 0) {
-        for (const sp of splits) {
-          if (sp.payment_method === 'Efectivo') {
-            if (sp.currency === 'BS') eBs += sp.amount;
-            else eUsd += sp.amount;
-          } else if (sp.payment_method === 'Tarjeta') {
-            // Tarjeta is always BS — convert USD amounts to BS
-            tBs += (sp.currency === 'BS') ? sp.amount : sp.amount * rate;
-          } else if (sp.payment_method === 'PagoMóvil') {
-            // PagoMóvil is always BS — convert USD amounts to BS
-            pmBs += (sp.currency === 'BS') ? sp.amount : sp.amount * rate;
-          }
-        }
-      } else {
-        // Legacy: no splits stored, use order-level fields
-        // NOTE: o.total is always in USD. Convert to BS when needed.
-        if (o.payment_method === 'Efectivo') {
-          if (o.payment_currency === 'BS') eBs += o.total * rate;
-          else eUsd += o.total;
-        } else if (o.payment_method === 'Tarjeta') {
-          // Tarjeta is always BS — order.total is USD, convert to BS
-          tBs += o.total * rate;
-        } else if (o.payment_method === 'PagoMóvil') {
-          // PagoMóvil is always BS — order.total is USD, convert to BS
-          pmBs += o.total * rate;
-        }
-      }
-    }
-    return { totalEfectivoUsd: eUsd, totalEfectivoBs: eBs, totalTarjetaBs: tBs, totalPagoMovilBs: pmBs };
-  }, [activeOrders, orderPaymentsMap, exchangeRate]);
-  const totalEfectivo = totalEfectivoUsd + (totalEfectivoBs / (exchangeRate || 1));
-  const totalTarjeta = totalTarjetaBs / (exchangeRate || 1);
-  const totalPagoMovil = totalPagoMovilBs / (exchangeRate || 1);
-  const totalChanges = activeOrders.reduce((s, o) => s + (o.payment_method === 'Efectivo' ? (o.change_amount || 0) : 0), 0);
-  const granTotal = activeOrders.reduce((s, o) => s + o.total, 0);
-  const count = activeOrders.length;
+  const countValid = COUNT_FIELDS.every(f => counted[f.key].trim() !== '' && parseFloat(counted[f.key]) >= 0);
+  const dateStr = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
   const rate = exchangeRate || 1;
   const formatBs = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const deliveryCount = activeOrders.filter(o => o.delivery_type === 'Delivery').length;
-  const pickupCount = activeOrders.filter(o => o.delivery_type === 'Pick-up').length;
-  const deliveryTotal = activeOrders.filter(o => o.delivery_type === 'Delivery').reduce((s, o) => s + o.total, 0);
-  const pickupTotal = activeOrders.filter(o => o.delivery_type === 'Pick-up').reduce((s, o) => s + o.total, 0);
-
-  const sortedOrders = [...activeOrders].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-  const timeFrom = sortedOrders.length > 0 ? new Date(sortedOrders[0].created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-  const timeTo = sortedOrders.length > 0 ? new Date(sortedOrders[sortedOrders.length - 1].created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-
-  const dateStr = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
-
   const handleSaveCorte = async () => {
+    if (!cashier?.token || !countValid) return;
     setSaving(true);
     setError('');
     try {
-      const now = new Date();
-      const startOfDay = getVzStartOfDayUtc(now);
-      const fromTime = existingCorte ? existingCorte.closed_at : startOfDay.toISOString();
-      const { error: insertError } = await supabase.from('cortes').insert({
-        location_id: locationId,
-        cashier_id: cashier?.id || '',
-        cashier_name: cashier?.employee_id || cashier?.name || '',
-        date: todayStr,
-        closed_at: now.toISOString(),
-        order_count: count,
-        total_efectivo: totalEfectivo,
-        total_efectivo_usd: totalEfectivoUsd,
-        total_efectivo_bs: totalEfectivoBs,
-        total_tarjeta: totalTarjeta,
-        total_tarjeta_usd: 0,
-        total_tarjeta_bs: totalTarjetaBs,
-        total_pagomovil: totalPagoMovil,
-        total_pagomovil_usd: 0,
-        total_pagomovil_bs: totalPagoMovilBs,
-        grand_total: granTotal,
-        from_date: fromTime,
-        to_date: now.toISOString(),
+      const { data, error: rpcError } = await supabase.rpc('pos_corte', {
+        p_token: cashier.token,
+        p_counted: Object.fromEntries(COUNT_FIELDS.map(f => [f.key, parseFloat(counted[f.key])])),
+        p_exchange_rate: exchangeRate,
       });
-      if (insertError) throw insertError;
-      const record: CorteRecord = {
-        id: '',
-        location_id: locationId,
-        cashier_id: cashier?.id || '',
-        cashier_name: cashier?.employee_id || cashier?.name || '',
-        date: todayStr,
-        closed_at: now.toISOString(),
-        order_count: count,
-        total_efectivo: totalEfectivo,
-        total_efectivo_usd: totalEfectivoUsd,
-        total_efectivo_bs: totalEfectivoBs,
-        total_tarjeta: totalTarjeta,
-        total_tarjeta_usd: 0,
-        total_tarjeta_bs: totalTarjetaBs,
-        total_pagomovil: totalPagoMovil,
-        total_pagomovil_usd: 0,
-        total_pagomovil_bs: totalPagoMovilBs,
-        grand_total: granTotal,
-        from_date: fromTime,
-        to_date: now.toISOString(),
-        created_at: now.toISOString(),
-      };
+      if (rpcError) throw rpcError;
+      const record = toCorteRecord(data);
       setSaved(record);
+      const { data: rows } = await supabase.from('orders').select('*').eq('corte_id', record.id).order('paid_at');
+      setSavedOrders((rows || []) as Order[]);
       onCorteSaved();
-      // Auto-reset after 3 seconds to show next batch of pending orders
-      setTimeout(() => setSaved(null), 3000);
     } catch (err) {
       console.error('Error saving corte:', err);
-      setError('Error al guardar el corte. Intenta de nuevo.');
+      setError((err as { message?: string })?.message || 'Error al guardar el corte. Intenta de nuevo.');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handlePrint = () => {
-    const displayRecord = saved || existingCorte;
-    const efectivoUsd = displayRecord?.total_efectivo_usd ?? totalEfectivoUsd;
-    const efectivoBs = displayRecord?.total_efectivo_bs ?? totalEfectivoBs;
-    const tarjetaBs = displayRecord?.total_tarjeta_bs ?? totalTarjetaBs;
-    const pagomovilBs = displayRecord?.total_pagomovil_bs ?? totalPagoMovilBs;
-    const tarjetaUsd = tarjetaBs / rate;
-    const pagomovilUsd = pagomovilBs / rate;
-    const grand = displayRecord?.grand_total ?? granTotal;
-    const ordenes = displayRecord?.order_count ?? count;
-    const ordersList = sortedOrders.length > 0 ? sortedOrders : activeOrders;
-    const receiptHtml = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Corte de Caja</title>
-<style>
-  @media print {
-    @page { size: 80mm auto; margin: 0; }
-    body { margin: 0; padding: 0; }
-  }
-  * { font-family: Arial, Helvetica, sans-serif !important; }
-  body {
-    font-family: Arial, Helvetica, sans-serif !important;
-    font-size: 10px;
-    width: 270px;
-    margin: 0 auto;
-    padding: 8px 5px;
-    color: #000;
-    line-height: 1.2;
-  }
-  .text-center { text-align: center; }
-  .text-right { text-align: right; }
-  .bold { font-weight: bold; }
-  .header-title { font-size: 13px; font-weight: bold; margin-bottom: 2px; }
-  .header-sub { font-size: 9px; margin: 1px 0; }
-  .divider { border-top: 1px dashed #000; margin: 5px 0; }
-  table { width: 100%; border-collapse: collapse; }
-  td { padding: 1.5px 0; font-size: 9px; }
-  td.r { text-align: right; }
-  .total-row td { font-weight: bold; font-size: 10px; }
-  .section-title { font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
-  .order-row td { font-size: 8.5px; }
-  .footer-text { font-size: 8px; margin-top: 4px; }
-</style>
-</head>
-<body>
-
-<div class="text-center">
-  <div class="header-title">CORTE DE CAJA</div>
-  <div class="header-sub bold">${locationName}</div>
-  <div class="header-sub">${dateStr}</div>
-  <div class="header-sub">${timeFrom} - ${timeTo} · Tasa: ${formatBs(rate)} Bs/$</div>
-</div>
-
-<div class="divider"></div>
-
-<table>
-  <tr><td>Pedidos</td><td class="r bold">${ordenes}</td></tr>
-  <tr><td>Delivery (${deliveryCount})</td><td class="r">$${deliveryTotal.toFixed(2)}</td></tr>
-  <tr><td>Local (${pickupCount})</td><td class="r">$${pickupTotal.toFixed(2)}</td></tr>
-</table>
-
-<div class="divider"></div>
-
-<div class="section-title">M&Eacute;TODO DE PAGO</div>
-<table>
-  <tr><td>Efectivo $</td><td class="r">$${efectivoUsd.toFixed(2)} / Bs ${formatBs(efectivoUsd * rate)}</td></tr>
-  <tr><td>Efectivo Bs</td><td class="r">Bs ${formatBs(efectivoBs)}</td></tr>
-  <tr><td>Tarjeta</td><td class="r">$${tarjetaUsd.toFixed(2)} / Bs ${formatBs(tarjetaBs)}</td></tr>
-  <tr><td>Pago M&oacute;vil</td><td class="r">$${pagomovilUsd.toFixed(2)} / Bs ${formatBs(pagomovilBs)}</td></tr>
-</table>
-
-<div class="divider"></div>
-
-<table>
-  <tr class="total-row"><td>TOTAL</td><td class="r">$${grand.toFixed(2)}</td></tr>
-  <tr class="total-row"><td></td><td class="r">Bs ${formatBs(grand * rate)}</td></tr>
-</table>
-
-<div class="divider"></div>
-
-<div class="section-title">DETALLE DE PEDIDOS</div>
-<table>
-${ordersList.slice(0, 30).map(o => {
-  const t = new Date(o.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
-  const name = (o.customer_name || 'N/A').substring(0, 14);
-  const type = o.delivery_type === 'Delivery' ? 'DEL' : 'LOC';
-  const pay = (o.payment_method || '').substring(0, 4).toUpperCase();
-  return `  <tr class="order-row"><td>${t}</td><td>${name}</td><td>${type}</td><td>${pay}</td><td class="r">$${o.total.toFixed(2)}</td></tr>`;
-}).join('\n')}
-</table>
-
-${displayRecord ? `<div class="divider"></div><p class="text-center" style="font-size:8px">Cerrado: ${new Date(displayRecord.closed_at).toLocaleString('es-VE')}</p>` : ''}
-
-<div class="divider"></div>
-
-<div class="text-center footer-text">
-  <div>¡Gracias por su trabajo!</div>
-  <div>wallacepandaexpress.com</div>
-</div>
-
-</body>
-</html>`;
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = 'none';
-    document.body.appendChild(iframe);
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (doc) {
-      doc.open();
-      doc.write(receiptHtml);
-      doc.close();
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        setTimeout(() => document.body.removeChild(iframe), 2000);
-      }, 500);
     }
   };
 
@@ -1170,16 +1063,34 @@ ${displayRecord ? `<div class="divider"></div><p class="text-center" style="font
         </div>
 
         {saved ? (
-          <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
-            <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Check className="w-5 h-5 text-green-400" />
+          <>
+            <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/20 rounded-2xl p-4">
+              <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Check className="w-5 h-5 text-green-400" />
+              </div>
+              <div>
+                <p className="text-green-400 font-black text-sm">Corte guardado</p>
+                <p className="text-[10px] text-zinc-500">{saved.order_count} pedidos · ${saved.grand_total.toFixed(2)} · {formatBs(saved.grand_total * (saved.exchange_rate || rate))} Bs.</p>
+              </div>
             </div>
-            <div>
-              <p className="text-green-400 font-black text-sm">Corte guardado</p>
-              <p className="text-[10px] text-zinc-500">{saved.order_count} pedidos · ${saved.grand_total.toFixed(2)}</p>
+            <ArqueoTable c={saved} />
+            {corteArqueo(saved)?.every(cuadra)
+              ? <p className="text-center text-xs font-bold text-green-400">La caja cuadra.</p>
+              : <p className="text-center text-xs font-bold text-red-400">Hay diferencias. Quedan registradas en el corte.</p>}
+            <div className="flex gap-2">
+              <button onClick={() => printHtml(buildCorteReceipt(saved, locationName, rate, savedOrders))}
+                className="flex-1 bg-zinc-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-700 transition-all flex items-center justify-center gap-2"
+              >
+                <Printer className="w-4 h-4" /> Imprimir
+              </button>
+              <button onClick={onClose}
+                className="flex-1 bg-primary-vibrant text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all"
+              >
+                Cerrar
+              </button>
             </div>
-          </div>
-        ) : activeOrders.length === 0 ? (
+          </>
+        ) : pendingOrders.length === 0 ? (
           <div className="text-center py-8">
             <Check className="w-12 h-12 text-green-400/50 mx-auto mb-3" />
             <p className="text-zinc-500 font-bold text-sm">No hay pedidos pendientes</p>
@@ -1187,86 +1098,52 @@ ${displayRecord ? `<div class="divider"></div><p class="text-center" style="font
           </div>
         ) : (
           <>
-            <div className="text-center text-[11px] text-zinc-500 font-bold">
-              {timeFrom} — {timeTo} · Tasa: {formatBs(rate)} Bs/$
-            </div>
-
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-zinc-950 rounded-2xl p-3 text-center">
                 <ShoppingCart className="w-4 h-4 text-primary-vibrant mx-auto mb-1" />
-                <p className="text-xl font-black text-white">{count}</p>
+                <p className="text-xl font-black text-white">{pendingOrders.length}</p>
                 <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Pedidos</p>
               </div>
               <div className="bg-zinc-950 rounded-2xl p-3 text-center">
                 <Truck className="w-4 h-4 text-blue-400 mx-auto mb-1" />
-                <p className="text-xl font-black text-white">{deliveryCount}</p>
+                <p className="text-xl font-black text-white">{pendingOrders.filter(o => o.delivery_type === 'Delivery').length}</p>
                 <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Delivery</p>
               </div>
               <div className="bg-zinc-950 rounded-2xl p-3 text-center">
                 <Store className="w-4 h-4 text-orange-400 mx-auto mb-1" />
-                <p className="text-xl font-black text-white">{pickupCount}</p>
+                <p className="text-xl font-black text-white">{pendingOrders.filter(o => o.delivery_type !== 'Delivery').length}</p>
                 <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Local</p>
               </div>
             </div>
 
-            <div className="bg-zinc-950 rounded-2xl p-4 text-center">
-              <DollarSign className="w-5 h-5 text-green-400 mx-auto mb-1" />
-              <p className="text-2xl font-black text-green-400">${granTotal.toFixed(2)}</p>
-              <p className="text-xs text-zinc-500 font-bold">{formatBs(granTotal * rate)} Bs.</p>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mt-1">Total Facturado</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="bg-zinc-950 rounded-xl p-3">
-                <p className="text-[9px] text-blue-400 uppercase tracking-widest font-bold mb-1">Delivery</p>
-                <p className="font-black text-white text-sm">${deliveryTotal.toFixed(2)}</p>
-                <p className="text-[10px] text-zinc-500">{formatBs(deliveryTotal * rate)} Bs.</p>
-              </div>
-              <div className="bg-zinc-950 rounded-xl p-3">
-                <p className="text-[9px] text-orange-400 uppercase tracking-widest font-bold mb-1">Local</p>
-                <p className="font-black text-white text-sm">${pickupTotal.toFixed(2)}</p>
-                <p className="text-[10px] text-zinc-500">{formatBs(pickupTotal * rate)} Bs.</p>
-              </div>
-            </div>
-
             <div className="space-y-2">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Método de pago</p>
-              {[
-                { method: 'Efectivo $', total: totalEfectivoUsd, icon: Banknote, color: 'text-green-400', showAs: 'usd' as const },
-                { method: 'Efectivo Bs', total: totalEfectivoBs, icon: Banknote, color: 'text-yellow-400', showAs: 'bs' as const },
-                { method: 'Tarjeta', total: totalTarjetaBs, icon: CreditCard, color: 'text-blue-400', showAs: 'bs' as const },
-                { method: 'P.Móvil', total: totalPagoMovilBs, icon: Smartphone, color: 'text-purple-400', showAs: 'bs' as const },
-              ].map(({ method, total: t, icon: Icon, color, showAs }) => (
-                <div key={method} className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <Icon className={`w-4 h-4 ${color}`} />
-                    <span className="text-sm font-bold text-zinc-300">{method}</span>
-                  </div>
-                  <div className="text-right">
-                    {showAs === 'bs' ? (
-                      <>
-                        <span className={`font-black ${color}`}>${(t / rate).toFixed(2)}</span>
-                        <p className="text-[10px] text-zinc-500">{formatBs(t)} Bs.</p>
-                      </>
-                    ) : (
-                      <>
-                        <span className={`font-black ${color}`}>${t.toFixed(2)}</span>
-                        <p className="text-[10px] text-zinc-500">{formatBs(t * rate)} Bs.</p>
-                      </>
-                    )}
-                  </div>
-                </div>
+              <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Cuenta tu caja</p>
+              <p className="text-[10px] text-zinc-600 -mt-1">Escribe lo que tienes, sin el fondo de caja. El sistema compara al guardar.</p>
+              {COUNT_FIELDS.map(({ key, label, unit, icon: Icon, color }) => (
+                <label key={key} className="flex items-center justify-between gap-3 bg-zinc-950 p-3 rounded-xl">
+                  <span className="flex items-center gap-2 text-sm font-bold text-zinc-300">
+                    <Icon className={`w-4 h-4 ${color}`} /> {label}
+                  </span>
+                  <span className="relative w-32 flex-shrink-0">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500">{unit}</span>
+                    <input type="number" inputMode="decimal" step="0.01" min="0" value={counted[key]}
+                      onChange={e => setCounted(prev => ({ ...prev, [key]: e.target.value }))}
+                      className="w-full bg-zinc-900 border border-zinc-800 py-2 pl-8 pr-2 rounded-lg text-right text-sm font-black text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
+                      placeholder="0.00"
+                    />
+                  </span>
+                </label>
               ))}
             </div>
 
             <div className="space-y-1 max-h-40 overflow-y-auto">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 sticky top-0 bg-zinc-900 pb-1">Pedidos ({activeOrders.length})</p>
-              {sortedOrders.map(o => (
+              <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 sticky top-0 bg-zinc-900 pb-1">Pedidos ({pendingOrders.length})</p>
+              {pendingOrders.map(o => (
                 <div key={o.id} className="flex items-center justify-between text-[11px] text-zinc-400 bg-zinc-950 p-2 rounded-lg gap-2">
-                  <span className="text-zinc-600 w-12 flex-shrink-0">{new Date(o.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="text-zinc-600 w-12 flex-shrink-0">{new Date(o.paid_at || o.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}</span>
                   <span className="truncate flex-1">{o.customer_name}</span>
                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold flex-shrink-0 ${o.delivery_type === 'Delivery' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'}`}>{o.delivery_type === 'Delivery' ? 'DEL' : 'LOCAL'}</span>
-                  <span className="font-bold text-white w-16 text-right">${o.total.toFixed(2)}</span>
+                  <span className="text-zinc-600 w-12 text-right">{(o.invoice_number || '').slice(-4)}</span>
                 </div>
               ))}
             </div>
@@ -1281,7 +1158,7 @@ ${displayRecord ? `<div class="divider"></div><p class="text-center" style="font
               >
                 Cancelar
               </button>
-              <button onClick={handleSaveCorte} disabled={saving || count === 0}
+              <button onClick={handleSaveCorte} disabled={saving || !countValid}
                 className="flex-1 bg-primary-vibrant text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
@@ -1289,21 +1166,6 @@ ${displayRecord ? `<div class="divider"></div><p class="text-center" style="font
               </button>
             </div>
           </>
-        )}
-
-        {saved && (
-          <div className="flex gap-2">
-            <button onClick={handlePrint}
-              className="flex-1 bg-zinc-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-700 transition-all flex items-center justify-center gap-2"
-            >
-              <Printer className="w-4 h-4" /> Imprimir
-            </button>
-            <button onClick={onClose}
-              className="flex-1 bg-primary-vibrant text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all"
-            >
-              Cerrar
-            </button>
-          </div>
         )}
       </motion.div>
     </motion.div>
@@ -1521,7 +1383,7 @@ function InvoiceHistoryModal({
     ${order.payment_method === 'Efectivo' && order.change_amount && order.change_amount > 0 ? `
       <tr>
         <td>VUELTO</td>
-        <td class="text-right">Bs ${formatBs(order.change_amount * rate)}</td>
+        <td class="text-right">${order.change_currency === 'USD' ? `$${order.change_amount.toFixed(2)}` : `Bs ${formatBs(order.change_amount * rate)}`}</td>
       </tr>
     ` : ''}
   </table>
@@ -1640,62 +1502,8 @@ function CorteHistoryModal({
   });
 
   const handleReprint = (c: CorteRecord) => {
-    const efectivoUsd = c.total_efectivo_usd;
-    const efectivoBs = c.total_efectivo_bs;
-    const tarjetaBs = c.total_tarjeta_bs;
-    const pagomovilBs = c.total_pagomovil_bs;
-    const tarjetaUsd = tarjetaBs / exchangeRate;
-    const pagomovilUsd = pagomovilBs / exchangeRate;
-    const grand = c.grand_total;
-
-    const receiptHtml = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Corte de Caja</title>
-<style>
-  @media print { @page { size: 80mm auto; margin: 0; } body { margin: 0; padding: 0; } }
-  * { font-family: Arial, Helvetica, sans-serif !important; }
-  body { font-family: Arial, Helvetica, sans-serif !important; font-size: 10px; width: 270px; margin: 0 auto; padding: 8px 5px; color: #000; line-height: 1.2; }
-  .text-center { text-align: center; } .text-right { text-align: right; } .bold { font-weight: bold; }
-  .header-title { font-size: 13px; font-weight: bold; margin-bottom: 2px; }
-  .header-sub { font-size: 9px; margin: 1px 0; }
-  .divider { border-top: 1px dashed #000; margin: 5px 0; }
-  table { width: 100%; border-collapse: collapse; } td { padding: 1.5px 0; font-size: 9px; } td.r { text-align: right; }
-  .total-row td { font-weight: bold; font-size: 10px; }
-  .section-title { font-size: 9px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
-</style>
-</head>
-<body>
-<div class="text-center">
-  <div class="header-title">CORTE DE CAJA</div>
-  <div class="header-sub bold">${locationName}</div>
-  <div class="header-sub">${formatDate(c.date)} ${formatTime(c.closed_at)}</div>
-  <div class="header-sub">Cajero: ${c.cashier_name}</div>
-  <div class="header-sub">Tasa: ${formatBs(exchangeRate)} Bs/$</div>
-</div>
-<div class="divider"></div>
-<table>
-  <tr><td>Pedidos</td><td class="r bold">${c.order_count}</td></tr>
-</table>
-<div class="divider"></div>
-<div class="section-title">M&Eacute;TODO DE PAGO</div>
-<table>
-  <tr><td>Efectivo $</td><td class="r">$${efectivoUsd.toFixed(2)} / Bs ${formatBs(efectivoUsd * exchangeRate)}</td></tr>
-  <tr><td>Efectivo Bs</td><td class="r">Bs ${formatBs(efectivoBs)}</td></tr>
-  <tr><td>Tarjeta</td><td class="r">$${tarjetaUsd.toFixed(2)} / Bs ${formatBs(tarjetaBs)}</td></tr>
-  <tr><td>Pago M&oacute;vil</td><td class="r">$${pagomovilUsd.toFixed(2)} / Bs ${formatBs(pagomovilBs)}</td></tr>
-</table>
-<div class="divider"></div>
-<table>
-  <tr class="total-row"><td>TOTAL</td><td class="r">$${grand.toFixed(2)}</td></tr>
-  <tr class="total-row"><td></td><td class="r">Bs ${formatBs(grand * exchangeRate)}</td></tr>
-</table>
-<div class="divider"></div>
-<p class="text-center" style="font-size:8px">Cerrado: ${new Date(c.closed_at).toLocaleString('es-VE')}</p>
-</body></html>`;
     const w = window.open('', '_blank', 'width=320,height=600');
-    if (w) { w.document.write(receiptHtml); w.document.close(); setTimeout(() => { w.print(); w.close(); }, 400); }
+    if (w) { w.document.write(buildCorteReceipt(c, locationName, exchangeRate, null)); w.document.close(); setTimeout(() => { w.print(); w.close(); }, 400); }
   };
 
   return (
@@ -1762,15 +1570,15 @@ function CorteHistoryModal({
                   <div>
                     <p className="text-[10px] text-zinc-500">Total</p>
                     <p className="text-lg font-black text-green-400">${selected.grand_total.toFixed(2)}</p>
-                    <p className="text-[10px] text-zinc-500">{formatBs(selected.grand_total * exchangeRate)} Bs.</p>
+                    <p className="text-[10px] text-zinc-500">{formatBs(selected.grand_total * (selected.exchange_rate || exchangeRate))} Bs.</p>
                   </div>
                 </div>
                 <div className="space-y-1 pt-2 border-t border-zinc-800">
                   {[
                     { label: 'Efectivo $', usd: selected.total_efectivo_usd, bs: selected.total_efectivo_bs, color: 'text-green-400', showUsd: true },
                     { label: 'Efectivo Bs', usd: null, bs: selected.total_efectivo_bs, color: 'text-yellow-400', showUsd: false },
-                    { label: 'Tarjeta', usd: selected.total_tarjeta_bs / exchangeRate, bs: selected.total_tarjeta_bs, color: 'text-blue-400', showUsd: true },
-                    { label: 'Pago Móvil', usd: selected.total_pagomovil_bs / exchangeRate, bs: selected.total_pagomovil_bs, color: 'text-purple-400', showUsd: true },
+                    { label: 'Tarjeta', usd: corteUsd(selected.total_tarjeta_bs, selected.total_tarjeta_usd, selected.exchange_rate || exchangeRate), bs: selected.total_tarjeta_bs, color: 'text-blue-400', showUsd: true },
+                    { label: 'Pago Móvil', usd: corteUsd(selected.total_pagomovil_bs, selected.total_pagomovil_usd, selected.exchange_rate || exchangeRate), bs: selected.total_pagomovil_bs, color: 'text-purple-400', showUsd: true },
                   ].map(({ label, usd, bs, color, showUsd }) => (
                     <div key={label} className="flex justify-between text-xs">
                       <span className="text-zinc-500">{label}</span>
@@ -1782,6 +1590,9 @@ function CorteHistoryModal({
                       </div>
                     </div>
                   ))}
+                </div>
+                <div className="pt-2 border-t border-zinc-800">
+                  <ArqueoTable c={selected} />
                 </div>
               </div>
             </div>
@@ -1798,6 +1609,9 @@ function CorteHistoryModal({
                   </div>
                   <p className="text-xs text-zinc-500 mt-0.5">
                     {c.order_count} pedidos · ${c.grand_total.toFixed(2)} · {c.cashier_name}
+                    {corteArqueo(c) && (corteArqueo(c)!.every(cuadra)
+                      ? <span className="ml-2 text-green-400 font-bold">Cuadra</span>
+                      : <span className="ml-2 text-red-400 font-bold">Descuadre</span>)}
                   </p>
                 </div>
                 <button onClick={(e) => { e.stopPropagation(); handleReprint(c); }}
@@ -1947,7 +1761,8 @@ function loadCashier(): Cashier | null {
     const raw = localStorage.getItem('pos_cashier');
     if (!raw) return null;
     const data = JSON.parse(raw);
-    if (Date.now() - data.timestamp > 86400000) {
+    // Sesiones guardadas antes de los tokens no sirven para cobrar: pedir PIN de nuevo
+    if (Date.now() - data.timestamp > 86400000 || !data.cashier?.token) {
       localStorage.removeItem('pos_cashier');
       return null;
     }
@@ -1964,8 +1779,22 @@ function clearCashier() {
 }
 
 export function PosPage() {
-  const { menuItems, categories, locations, config, findCustomer, saveCustomer, generateInvoiceNumber } = useRestaurant();
+  const { menuItems, categories, locations, config, findCustomer } = useRestaurant();
   const [cashier, setCashier] = useState<Cashier | null>(() => loadCashier());
+  const cashierToken = cashier?.token;
+
+  // La sesión vence en el servidor (16 h): si ya no vale, volver al PIN
+  useEffect(() => {
+    if (!cashierToken) return;
+    supabase.rpc('pos_whoami', { p_token: cashierToken }).then(({ data, error }) => {
+      if (!error && !data) setCashier(null);
+    });
+  }, [cashierToken]);
+
+  const logout = () => {
+    if (cashierToken) supabase.rpc('pos_logout', { p_token: cashierToken }).then();
+    setCashier(null);
+  };
   const [activeCategory, setActiveCategory] = useState('Todas');
   const [cart, setCart] = useState<POSCartItem[]>([]);
   const [search, setSearch] = useState('');
@@ -1988,6 +1817,7 @@ export function PosPage() {
     discount: number;
     paymentMethod: PaymentMethod;
     changeAmount: number;
+    changeCurrency: 'USD' | 'BS';
     invoiceNumber: string;
   } | null>(null);
   const locationId = cashier?.location_id || '';
@@ -2059,6 +1889,9 @@ export function PosPage() {
         cashier_id: row.cashier_id,
         invoice_number: row.invoice_number || '',
         payment_currency: row.payment_currency || null,
+        change_currency: row.change_currency || null,
+        paid_at: row.paid_at || null,
+        corte_id: row.corte_id || null,
         created_at: row.created_at,
       }));
     },
@@ -2076,28 +1909,7 @@ export function PosPage() {
         .eq('location_id', locationId)
         .order('closed_at', { ascending: false })
         .limit(50);
-      return (data || []).map((row: any) => ({
-        id: row.id,
-        location_id: row.location_id,
-        cashier_id: row.cashier_id,
-        cashier_name: row.cashier_name || '',
-        date: row.date,
-        closed_at: row.closed_at,
-        order_count: row.order_count,
-        total_efectivo: row.total_efectivo,
-        total_efectivo_usd: row.total_efectivo_usd ?? 0,
-        total_efectivo_bs: row.total_efectivo_bs ?? 0,
-        total_tarjeta: row.total_tarjeta,
-        total_tarjeta_usd: row.total_tarjeta_usd ?? 0,
-        total_tarjeta_bs: row.total_tarjeta_bs ?? 0,
-        total_pagomovil: row.total_pagomovil,
-        total_pagomovil_usd: row.total_pagomovil_usd ?? 0,
-        total_pagomovil_bs: row.total_pagomovil_bs ?? 0,
-        grand_total: row.grand_total,
-        from_date: row.from_date,
-        to_date: row.to_date,
-        created_at: row.created_at,
-      }));
+      return (data || []).map(toCorteRecord);
     },
     enabled: !!cashier && !!locationId,
     staleTime: 5000,
@@ -2197,7 +2009,7 @@ export function PosPage() {
     setCart(prev => prev.filter(i => getItemKey(i) !== key));
   }, []);
 
-  const handlePayment = useCallback(async (splits: { method: PaymentMethod; amount: number; currency?: 'USD' | 'BS'; ref?: string }[], changeAmount: number, discount = 0) => {
+  const handlePayment = useCallback(async (splits: { method: PaymentMethod; amount: number; currency?: 'USD' | 'BS'; ref?: string }[], changeAmount: number, discount = 0, changeCurrency: 'USD' | 'BS' = 'USD') => {
     if (!cashier || !locationId || cart.length === 0 || processingPayment) return;
     setProcessingPayment(true);
     const finalTotal = Math.max(0, orderTotal - discount);
@@ -2216,79 +2028,41 @@ export function PosPage() {
     const primaryRef = splits.length === 1 ? splits[0].ref : undefined;
 
     try {
-      const invoiceNumber = await generateInvoiceNumber(locationId);
-
-      let orderId = loadedOrderId;
-
-      if (orderId) {
-        // UPDATE the original online order → mark as exitoso with invoice
-        const { error } = await supabase.from('orders').update({
-          status: 'exitoso',
-          payment_method: primaryMethod,
-          payment_ref: primaryRef || null,
-          change_amount: changeAmount,
-          cashier_id: cashier.id,
-          invoice_number: invoiceNumber,
-          items: orderItems,
-          subtotal: cartTotal,
-          total: finalTotal,
-          payment_currency: primaryCurrency || null,
-        }).eq('id', orderId);
-        if (error) throw error;
-      } else {
-        // Manual POS sale (no online order) → INSERT new row
-        const { data: inserted, error } = await supabase.from('orders').insert({
-          location_id: locationId,
-          customer_name: customerName || 'Mostrador',
-          customer_phone: customerPhone || 'N/A',
-          cedula: customerCedula || '',
+      const { data, error } = await supabase.rpc('pos_cobrar', {
+        p_token: cashier.token,
+        p_order_id: loadedOrderId,
+        p_order: {
+          customer_name: customerName,
+          customer_phone: customerPhone,
+          cedula: customerCedula,
           delivery_type: deliveryType,
           items: orderItems,
           subtotal: cartTotal,
-          delivery_fee: deliveryType === 'Delivery' ? (config.deliveryFee ?? 0) : 0,
+          delivery_fee: orderTotal - cartTotal,
           total: finalTotal,
-          notes: '',
-          status: 'exitoso',
           payment_method: primaryMethod,
-          payment_ref: primaryRef || null,
-          change_amount: changeAmount,
-          cashier_id: cashier.id,
-          invoice_number: invoiceNumber,
-          payment_currency: primaryCurrency || null,
-        }).select('id').single();
-        if (error) throw error;
-        orderId = inserted?.id;
-      }
-
-      // Save split payments to order_payments table
-      if (orderId && splits.length > 0) {
-        // Delete existing splits (for loaded orders that might already have splits)
-        await supabase.from('order_payments').delete().eq('order_id', orderId);
-
-        const splitRows = splits.map(s => ({
-          order_id: orderId!,
-          payment_method: s.method,
-          amount: s.amount,
-          currency: s.currency || null,
-          payment_ref: s.ref || '',
-        }));
-        const { error: splitError } = await supabase.from('order_payments').insert(splitRows);
-        if (splitError) console.error('Error saving splits:', splitError);
-      }
-
-      await saveCustomer({ cedula: customerCedula, name: customerName || 'Mostrador', phone: customerPhone || 'N/A' });
+          payment_ref: primaryRef || '',
+          payment_currency: primaryCurrency || '',
+        },
+        p_payments: splits.map(s => ({ method: s.method, amount: s.amount, currency: s.currency || '', ref: s.ref || '' })),
+        p_exchange_rate: localRate,
+        p_change_amount: changeAmount,
+        p_change_currency: changeAmount > 0 ? changeCurrency : null,
+      });
+      if (error) throw error;
+      const invoiceNumber: string = data.invoice_number;
 
       posOrdersQuery.refetch();
 
       setShowPayModal(false);
-      setShowReceipt({ items: cart, total: finalTotal, discount, paymentMethod: primaryMethod, changeAmount, invoiceNumber });
+      setShowReceipt({ items: cart, total: finalTotal, discount, paymentMethod: primaryMethod, changeAmount, changeCurrency, invoiceNumber });
     } catch (err) {
       console.error('Error processing payment:', err);
-      alert('Error al procesar la venta');
+      alert(`Error al procesar la venta: ${(err as { message?: string })?.message || 'intenta de nuevo'}`);
     } finally {
       setProcessingPayment(false);
     }
-  }, [cashier, locationId, cart, cartTotal, orderTotal, loadedDeliveryFee, customerName, customerPhone, customerCedula, deliveryType, loadedOrderId, generateInvoiceNumber, saveCustomer, posOrdersQuery, config.deliveryFee, processingPayment]);
+  }, [cashier, locationId, cart, cartTotal, orderTotal, customerName, customerPhone, customerCedula, deliveryType, loadedOrderId, localRate, posOrdersQuery, processingPayment]);
 
   const resetSale = () => {
     setCart([]);
@@ -2496,7 +2270,7 @@ export function PosPage() {
                 if (v > 0) {
                   setLocalRate(v);
                   if (v !== localRate) {
-                    await supabase.rpc('update_exchange_rate', { rate: v });
+                    await supabase.rpc('pos_update_rate', { p_token: cashierToken, p_rate: v });
                     queryClient.refetchQueries({ queryKey: ['config'] });
                   }
                 }
@@ -2514,7 +2288,7 @@ export function PosPage() {
               <DollarSign className="w-3 h-3" /> Bs. {localRate?.toFixed(2) || 'N/A'}
             </button>
           )}
-          <button onClick={() => setCashier(null)}
+          <button onClick={logout}
             className="p-2 bg-zinc-800 rounded-xl text-zinc-500 hover:text-white hover:bg-zinc-700 transition-all"
           >
             <LogOut className="w-4 h-4" />
@@ -2753,6 +2527,7 @@ export function PosPage() {
             discount={showReceipt.discount}
             paymentMethod={showReceipt.paymentMethod}
             changeAmount={showReceipt.changeAmount}
+            changeCurrency={showReceipt.changeCurrency}
             invoiceNumber={showReceipt.invoiceNumber}
             cashierName={cashier?.name || ''}
             customerName={customerName}

@@ -21,6 +21,7 @@ import { supabase } from '../lib/supabase';
 import { useOrderNotification } from '../hooks/useOrderNotification';
 import { CardSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
+import { corteArqueo, arqueoHtml, cuadra, formatArqueo } from '../lib/corte';
 const formatTime12h = (time: string) => { if (!time) return ''; const [hours, minutes] = time.split(':');
 const h = parseInt(hours);
 const ampm = h >= 12 ? 'PM' : 'AM'; const h12 = h % 12 || 12; return `${h12}:${minutes} ${ampm}`;};
@@ -434,8 +435,11 @@ className="w-full bg-primary-vibrant text-white py-4 rounded-2xl font-black flex
             setExpandedCorteId(c.id);
             if (corteOrdersMap[c.id]) return;
             setCorteOrdersLoadingId(c.id);
-            const { data } = await supabase.from('orders')
-              .select('id, total, customer_name, delivery_type, payment_method, payment_currency, created_at')
+            const cols = 'id, total, customer_name, delivery_type, payment_method, payment_currency, created_at';
+            // Cortes nuevos marcan sus pedidos con corte_id; los viejos se ubican por rango de fechas
+            const { data: marked } = await supabase.from('orders').select(cols).eq('corte_id', c.id).order('paid_at');
+            const { data } = marked && marked.length > 0 ? { data: marked } : await supabase.from('orders')
+              .select(cols)
               .eq('cashier_id', c.cashier_id)
               .eq('location_id', c.location_id)
               .eq('status', 'exitoso')
@@ -488,6 +492,7 @@ table { width: 100%; border-collapse: collapse; } td { padding: 1.5px 0; font-si
 <table>
   <tr class="total-row"><td>TOTAL</td><td class="r">$${Number(c.grand_total).toFixed(2)}</td></tr>
 </table>
+${arqueoHtml(c)}
 <div class="divider"></div>
 <p class="text-center" style="font-size:8px">Cerrado: ${new Date(c.closed_at).toLocaleString('es-VE')}</p>
 </body></html>`;
@@ -561,6 +566,7 @@ table { width: 100%; border-collapse: collapse; } td { padding: 1.5px 0; font-si
                   const eBsVal = efectivoBs;
                   const tBsVal = tarjetaBs;
                   const pmBsVal = pagomovilBs;
+                  const arqueo = corteArqueo(c);
 
                   return (
                     <div key={c.id}
@@ -583,6 +589,9 @@ table { width: 100%; border-collapse: collapse; } td { padding: 1.5px 0; font-si
                                 {isSuperAdmin && locName && <span className="font-bold text-admin-text">{locName}</span>}
                                 <span>Cajero: <span className="font-bold text-admin-text">{c.cashier_name}</span></span>
                                 <span>{c.order_count} pedido(s)</span>
+                                {arqueo && (arqueo.every(cuadra)
+                                  ? <span className="font-bold text-green-400">Cuadra</span>
+                                  : <span className="font-bold text-red-400">Descuadre: {arqueo.filter(r => !cuadra(r)).map(r => `${r.label} ${r.diferencia > 0 ? '+' : ''}${formatArqueo(r, r.diferencia)}`).join(' · ')}</span>)}
                               </div>
                             </div>
                           </div>

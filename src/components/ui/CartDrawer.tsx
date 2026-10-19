@@ -21,8 +21,6 @@ import { MapComponent } from './MapComponent';
 import { useLanguage } from '../../context/LanguageContext';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { useDistanceCalculation } from '../../hooks/useDistanceCalculation';
-import { fetchBcvRate, getRateSource } from '../../services/bcvRate';
-import { supabase } from '../../lib/supabase';
 import { OptimizedImage } from './OptimizedImage';
 
 interface CartDrawerProps {
@@ -109,19 +107,6 @@ export function CartDrawer({
 
     }
   }, [step, loadLastAddress]);
-
-  // ── Fetch BCV rate when cart opens (only if source is 'bcv') ─────────
-  useEffect(() => {
-    if (!isOpen || getRateSource() !== 'bcv') return;
-    (async () => {
-      try {
-        const rate = await fetchBcvRate();
-        if (rate !== null && rate !== config.exchangeRate) {
-          await supabase.rpc('update_exchange_rate', { rate });
-        }
-        } catch { /* BCV rate fetch failed */ }
-      })();
-  }, [isOpen, config.exchangeRate]);
 
   // ── Auto GPS geolocation when checkout opens (once) ──────────────────
   const gpsAttempted = useRef(false);

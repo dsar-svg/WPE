@@ -32,8 +32,6 @@ interface RestaurantContextType {
   signOut: () => Promise<void>;
   createLocationAdmin: (email: string, password: string, role?: string, locationId?: string) => Promise<{ success: boolean; message: string }>;
   findCustomer: (cedula: string) => Promise<Customer | null>;
-  saveCustomer: (c: Customer) => Promise<void>;
-  generateInvoiceNumber: (locationId: string) => Promise<string>;
 }
 
 const RestaurantContext = createContext<RestaurantContextType | undefined>(undefined);
@@ -470,45 +468,13 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
 
   const fetchOrders = useCallback(() => ordersQuery.refetch(), [ordersQuery]);
 
+  // customers ya no es legible por anon: se consulta una cédula a la vez vía RPC
   const findCustomer = useCallback(async (cedula: string): Promise<Customer | null> => {
     if (!cedula || cedula.length < 6) return null;
     try {
-      const { data } = await supabase.from('customers').select('*').eq('cedula', cedula).maybeSingle();
+      const { data } = await supabase.rpc('find_customer', { p_cedula: cedula });
       return data ? { cedula: data.cedula, name: data.name, phone: data.phone, address: data.address || '' } : null;
     } catch { return null; }
-  }, []);
-
-  const saveCustomer = useCallback(async (c: Customer) => {
-    if (!c.cedula || c.cedula.length < 6) return;
-    try {
-      const { data: existing } = await supabase.from('customers').select('cedula').eq('cedula', c.cedula).maybeSingle();
-      if (existing) {
-        await supabase.from('customers').update({ name: c.name, phone: c.phone, address: c.address || '', updated_at: new Date().toISOString() }).eq('cedula', c.cedula);
-      } else {
-        await supabase.from('customers').insert({ cedula: c.cedula, name: c.name, phone: c.phone, address: c.address || '' });
-      }
-    } catch { /* failed to save customer */ }
-  }, []);
-
-  const generateInvoiceNumber = useCallback(async (locationId: string): Promise<string> => {
-    try {
-      const today = new Date();
-      const datePart = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
-
-      const { data: counter } = await supabase.from('invoice_counters').select('*').eq('location_id', locationId).maybeSingle();
-      let nextNum = 1;
-
-      if (counter) {
-        nextNum = counter.last_number + 1;
-        await supabase.from('invoice_counters').update({ last_number: nextNum }).eq('location_id', locationId);
-      } else {
-        await supabase.from('invoice_counters').insert({ location_id: locationId, prefix: 'FAC-', last_number: 1 });
-      }
-
-      return `FAC-${datePart}-${String(nextNum).padStart(4, '0')}`;
-    } catch {
-      return `FAC-${Date.now()}`;
-    }
   }, []);
 
   const isLoading = !sessionReady || !dataFetched;
@@ -520,8 +486,8 @@ export function RestaurantProvider({ children }: { children: ReactNode }) {
     updateLocation, updateProduct, updateConfig, updateCategory,
     deleteLocation, deleteProduct, deleteCategory,
     createOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut, createLocationAdmin,
-    findCustomer, saveCustomer, generateInvoiceNumber,
-  }), [locations, menuItems, categories, config, orders, isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, selectedLocation, setSelectedLocation, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, createOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut, createLocationAdmin, findCustomer, saveCustomer, generateInvoiceNumber]);
+    findCustomer,
+  }), [locations, menuItems, categories, config, orders, isLoading, isAdmin, isSuperAdmin, isLocalAdmin, managedLocationId, userEmail, selectedLocation, setSelectedLocation, updateLocation, updateProduct, updateConfig, updateCategory, deleteLocation, deleteProduct, deleteCategory, createOrder, updateOrderStatus, fetchOrders, signIn, signUp, signOut, createLocationAdmin, findCustomer]);
 
   return (
     <RestaurantContext.Provider value={value}>

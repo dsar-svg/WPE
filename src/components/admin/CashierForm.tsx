@@ -36,10 +36,12 @@ export function CashierForm({ cashier, onClose, onSaved }: CashierFormProps) {
         location_id: form.location_id || null,
         role: 'cashier',
       };
-      if (cashier) {
-        await supabase.from('admins').update(record).eq('id', cashier.id);
-      } else {
-        await supabase.from('admins').insert(record);
+      const { error } = cashier
+        ? await supabase.from('admins').update(record).eq('id', cashier.id)
+        : await supabase.from('admins').insert(record);
+      if (error) {
+        alert(error.code === '23505' ? 'Ese PIN ya lo usa otra persona. Elige otro.' : `No se pudo guardar: ${error.message}`);
+        return;
       }
       onSaved();
       onClose();

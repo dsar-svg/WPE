@@ -123,6 +123,7 @@ export interface Cashier {
   employee_id?: string;
   location_id?: string;
   pin?: string;
+  token?: string; // sesión de caja (pos_login); sin token no se puede cobrar ni cortar
 }
 
 export interface Order {
@@ -146,6 +147,9 @@ export interface Order {
   invoice_number?: string;
   payment_ref?: string;
   payment_currency?: 'USD' | 'BS';
+  change_currency?: 'USD' | 'BS' | null;
+  paid_at?: string | null;
+  corte_id?: string | null;
   code?: string;
   payments?: OrderPayment[];
   created_at: string;
