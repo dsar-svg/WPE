@@ -978,13 +978,38 @@ function ArqueoTable({ c }: { c: CorteRecord }) {
   );
 }
 
-const COUNT_FIELDS = [
-  { key: 'efectivo_usd', label: 'Efectivo en dólares', hint: 'Billetes de $ que hay en la caja', unit: '$', icon: Banknote, color: 'text-green-400' },
-  { key: 'efectivo_bs', label: 'Efectivo en bolívares', hint: 'Billetes de Bs que hay en la caja', unit: 'Bs', icon: Banknote, color: 'text-yellow-400' },
-  { key: 'tarjeta_bs', label: 'Tarjeta', hint: 'Total del cierre del punto de venta', unit: 'Bs', icon: CreditCard, color: 'text-blue-400' },
-  { key: 'pagomovil_bs', label: 'Pago Móvil', hint: 'Suma de los pagos móviles en el banco', unit: 'Bs', icon: Smartphone, color: 'text-purple-400' },
-] as const;
-type CountKey = typeof COUNT_FIELDS[number]['key'];
+// Totales por método que calcula el servidor (pos_corte) con las ventas registradas
+function CorteTotals({ c }: { c: CorteRecord }) {
+  const formatBs = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const rate = c.exchange_rate || 1;
+  const rows = [
+    { label: 'Efectivo $', icon: Banknote, color: 'text-green-400', main: `$${c.total_efectivo_usd.toFixed(2)}`, sub: '' },
+    { label: 'Efectivo Bs', icon: Banknote, color: 'text-yellow-400', main: `${formatBs(c.total_efectivo_bs)} Bs`, sub: '' },
+    { label: 'Tarjeta', icon: CreditCard, color: 'text-blue-400', main: `${formatBs(c.total_tarjeta_bs)} Bs`, sub: `$${corteUsd(c.total_tarjeta_bs, c.total_tarjeta_usd, rate).toFixed(2)}` },
+    { label: 'Pago Móvil', icon: Smartphone, color: 'text-purple-400', main: `${formatBs(c.total_pagomovil_bs)} Bs`, sub: `$${corteUsd(c.total_pagomovil_bs, c.total_pagomovil_usd, rate).toFixed(2)}` },
+  ];
+  return (
+    <div className="space-y-2">
+      <div className="bg-zinc-950 rounded-2xl p-4 text-center">
+        <DollarSign className="w-5 h-5 text-green-400 mx-auto mb-1" />
+        <p className="text-2xl font-black text-green-400">${c.grand_total.toFixed(2)}</p>
+        <p className="text-xs text-zinc-500 font-bold">{formatBs(c.grand_total * rate)} Bs.</p>
+        <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mt-1">Total vendido · {c.order_count} pedidos</p>
+      </div>
+      <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Lo que debe haber</p>
+      {rows.map(({ label, icon: Icon, color, main, sub }) => (
+        <div key={label} className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl">
+          <span className="flex items-center gap-2 text-sm font-bold text-zinc-300"><Icon className={`w-4 h-4 ${color}`} /> {label}</span>
+          <span className="text-right">
+            <span className={`font-black ${color}`}>{main}</span>
+            {sub && <span className="block text-[10px] text-zinc-500">{sub}</span>}
+          </span>
+        </div>
+      ))}
+      <p className="text-[10px] text-zinc-600">El efectivo ya descuenta el vuelto dado en otra moneda. Tasa: {formatBs(rate)} Bs/$.</p>
+    </div>
+  );
+}
 
 function CorteDeCajaModal({
   orders, cortes, locationId, locationName, cashier, exchangeRate, onCorteSaved, onClose,
@@ -1001,8 +1026,9 @@ function CorteDeCajaModal({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<CorteRecord | null>(null);
   const [savedOrders, setSavedOrders] = useState<Order[]>([]);
+  const [preview, setPreview] = useState<CorteRecord | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(true);
   const [error, setError] = useState('');
-  const [counted, setCounted] = useState<Record<CountKey, string>>({ efectivo_usd: '', efectivo_bs: '', tarjeta_bs: '', pagomovil_bs: '' });
 
   // Misma regla que pos_corte: pedidos de esta cajera aún sin corte
   const pendingOrders = useMemo(() => {
@@ -1016,23 +1042,28 @@ function CorteDeCajaModal({
       .sort((a, b) => new Date(a.paid_at || a.created_at).getTime() - new Date(b.paid_at || b.created_at).getTime());
   }, [orders, cortes, locationId, cashier?.id]);
 
-  const missing = COUNT_FIELDS.filter(f => counted[f.key].trim() === '' || !(parseFloat(counted[f.key]) >= 0));
-  const countValid = missing.length === 0;
-  const firstOrderAt = pendingOrders[0] ? new Date(pendingOrders[0].paid_at || pendingOrders[0].created_at) : null;
+  // Los totales los calcula el servidor; se recalculan si entra otra venta con el modal abierto
+  const token = cashier?.token;
+  useEffect(() => {
+    if (!token || saved) return;
+    setLoadingPreview(true);
+    supabase.rpc('pos_corte', { p_token: token, p_exchange_rate: exchangeRate, p_preview: true })
+      .then(({ data, error: rpcError }) => {
+        setPreview(rpcError || !data ? null : toCorteRecord(data));
+        setLoadingPreview(false);
+      });
+  }, [token, exchangeRate, pendingOrders.length, saved]);
+
   const dateStr = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
   const rate = exchangeRate || 1;
-  const formatBs = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const firstOrderAt = preview?.from_date ? new Date(preview.from_date) : null;
 
   const handleSaveCorte = async () => {
-    if (!cashier?.token || !countValid) return;
+    if (!token) return;
     setSaving(true);
     setError('');
     try {
-      const { data, error: rpcError } = await supabase.rpc('pos_corte', {
-        p_token: cashier.token,
-        p_counted: Object.fromEntries(COUNT_FIELDS.map(f => [f.key, parseFloat(counted[f.key])])),
-        p_exchange_rate: exchangeRate,
-      });
+      const { data, error: rpcError } = await supabase.rpc('pos_corte', { p_token: token, p_exchange_rate: exchangeRate, p_preview: false });
       if (rpcError) throw rpcError;
       const record = toCorteRecord(data);
       setSaved(record);
@@ -1070,15 +1101,9 @@ function CorteDeCajaModal({
               <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Check className="w-5 h-5 text-green-400" />
               </div>
-              <div>
-                <p className="text-green-400 font-black text-sm">Corte guardado</p>
-                <p className="text-[10px] text-zinc-500">{saved.order_count} pedidos · ${saved.grand_total.toFixed(2)} · {formatBs(saved.grand_total * (saved.exchange_rate || rate))} Bs.</p>
-              </div>
+              <p className="text-green-400 font-black text-sm">Corte guardado</p>
             </div>
-            <ArqueoTable c={saved} />
-            {corteArqueo(saved)?.every(cuadra)
-              ? <p className="text-center text-xs font-bold text-green-400">La caja cuadra.</p>
-              : <p className="text-center text-xs font-bold text-red-400">Hay diferencias. Quedan registradas en el corte.</p>}
+            <CorteTotals c={saved} />
             <div className="flex gap-2">
               <button onClick={() => printHtml(buildCorteReceipt(saved, locationName, rate, savedOrders))}
                 className="flex-1 bg-zinc-800 text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-700 transition-all flex items-center justify-center gap-2"
@@ -1092,7 +1117,11 @@ function CorteDeCajaModal({
               </button>
             </div>
           </>
-        ) : pendingOrders.length === 0 ? (
+        ) : loadingPreview ? (
+          <div className="flex items-center justify-center py-12 gap-2 text-zinc-500 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" /> Calculando el corte...
+          </div>
+        ) : !preview ? (
           <div className="text-center py-8">
             <Check className="w-12 h-12 text-green-400/50 mx-auto mb-3" />
             <p className="text-zinc-500 font-bold text-sm">No hay pedidos pendientes</p>
@@ -1100,63 +1129,12 @@ function CorteDeCajaModal({
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-3 gap-2">
-              <div className="bg-zinc-950 rounded-2xl p-3 text-center">
-                <ShoppingCart className="w-4 h-4 text-primary-vibrant mx-auto mb-1" />
-                <p className="text-xl font-black text-white">{pendingOrders.length}</p>
-                <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Pedidos</p>
-              </div>
-              <div className="bg-zinc-950 rounded-2xl p-3 text-center">
-                <Truck className="w-4 h-4 text-blue-400 mx-auto mb-1" />
-                <p className="text-xl font-black text-white">{pendingOrders.filter(o => o.delivery_type === 'Delivery').length}</p>
-                <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Delivery</p>
-              </div>
-              <div className="bg-zinc-950 rounded-2xl p-3 text-center">
-                <Store className="w-4 h-4 text-orange-400 mx-auto mb-1" />
-                <p className="text-xl font-black text-white">{pendingOrders.filter(o => o.delivery_type !== 'Delivery').length}</p>
-                <p className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold">Local</p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <div className="bg-primary-vibrant/10 border border-primary-vibrant/30 rounded-xl p-3 space-y-1">
-                <p className="text-sm font-black text-white">Paso 1: cuenta lo que tienes</p>
-                <p className="text-[11px] text-zinc-300">Cuenta el dinero de la caja y revisa el punto y el banco. Escribe cada monto abajo. Si no recibiste de algo, toca <span className="font-black text-white">No hay</span>.</p>
-                <p className="text-[11px] text-zinc-400">No cuentes el fondo de caja (el sencillo con que abriste).</p>
-                {firstOrderAt && (
-                  <p className="text-[11px] text-yellow-400 font-bold">
-                    Incluye todo lo vendido desde el {firstOrderAt.toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'short' })} a las {firstOrderAt.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}.
-                  </p>
-                )}
-              </div>
-              {COUNT_FIELDS.map(({ key, label, hint, unit, icon: Icon, color }) => (
-                <div key={key} className="flex flex-wrap items-center justify-between gap-2 bg-zinc-950 p-3 rounded-xl">
-                  <label htmlFor={`count-${key}`} className="min-w-0">
-                    <span className="flex items-center gap-2 text-sm font-bold text-zinc-200">
-                      <Icon className={`w-4 h-4 ${color}`} /> {label}
-                    </span>
-                    <span className="block text-[10px] text-zinc-500">{hint}</span>
-                  </label>
-                  <span className="flex items-center gap-1.5">
-                    <span className="relative w-28">
-                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500">{unit}</span>
-                      <input id={`count-${key}`} type="number" inputMode="decimal" step="0.01" min="0" value={counted[key]}
-                        onChange={e => setCounted(prev => ({ ...prev, [key]: e.target.value }))}
-                        className={`w-full bg-zinc-900 border py-2 pl-8 pr-2 rounded-lg text-right text-sm font-black text-white outline-none focus:ring-2 focus:ring-primary-vibrant ${counted[key] === '' ? 'border-yellow-500/50' : 'border-zinc-800'}`}
-                        placeholder="Escribe"
-                      />
-                    </span>
-                    <button type="button" onClick={() => setCounted(prev => ({ ...prev, [key]: '0' }))}
-                      className="px-2.5 py-2 rounded-lg bg-zinc-800 text-[11px] font-bold text-zinc-300 hover:bg-zinc-700 hover:text-white transition-all"
-                    >
-                      No hay
-                    </button>
-                  </span>
-                </div>
-              ))}
-              <p className="text-sm font-black text-white pt-1">Paso 2: toca <span className="text-primary-vibrant">Hacer corte</span></p>
-              <p className="text-[11px] text-zinc-400 -mt-1">El sistema compara lo que contaste con lo que registró y te muestra si cuadra.</p>
-            </div>
+            {firstOrderAt && (
+              <p className="text-center text-[11px] text-zinc-400 font-bold">
+                Ventas desde el {firstOrderAt.toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'short' })}, {firstOrderAt.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}
+              </p>
+            )}
+            <CorteTotals c={preview} />
 
             <div className="space-y-1 max-h-40 overflow-y-auto">
               <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 sticky top-0 bg-zinc-900 pb-1">Pedidos ({pendingOrders.length})</p>
@@ -1165,16 +1143,13 @@ function CorteDeCajaModal({
                   <span className="text-zinc-600 w-12 flex-shrink-0">{new Date(o.paid_at || o.created_at).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}</span>
                   <span className="truncate flex-1">{o.customer_name}</span>
                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold flex-shrink-0 ${o.delivery_type === 'Delivery' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'}`}>{o.delivery_type === 'Delivery' ? 'DEL' : 'LOCAL'}</span>
-                  <span className="text-zinc-600 w-12 text-right">{(o.invoice_number || '').slice(-4)}</span>
+                  <span className="font-bold text-white w-16 text-right">${o.total.toFixed(2)}</span>
                 </div>
               ))}
             </div>
 
             {error && (
               <p className="text-red-400 text-xs font-bold text-center">{error}</p>
-            )}
-            {!countValid && (
-              <p className="text-yellow-400 text-xs font-bold text-center">Falta escribir: {missing.map(f => f.label).join(', ')}</p>
             )}
 
             <div className="flex gap-2">
@@ -1183,7 +1158,7 @@ function CorteDeCajaModal({
               >
                 Cancelar
               </button>
-              <button onClick={handleSaveCorte} disabled={saving || !countValid}
+              <button onClick={handleSaveCorte} disabled={saving}
                 className="flex-1 bg-primary-vibrant text-white py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
