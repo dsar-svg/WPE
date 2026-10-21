@@ -979,10 +979,10 @@ function ArqueoTable({ c }: { c: CorteRecord }) {
 }
 
 const COUNT_FIELDS = [
-  { key: 'efectivo_usd', label: 'Efectivo en dólares', unit: '$', icon: Banknote, color: 'text-green-400' },
-  { key: 'efectivo_bs', label: 'Efectivo en bolívares', unit: 'Bs', icon: Banknote, color: 'text-yellow-400' },
-  { key: 'tarjeta_bs', label: 'Tarjeta (cierre del punto)', unit: 'Bs', icon: CreditCard, color: 'text-blue-400' },
-  { key: 'pagomovil_bs', label: 'Pago Móvil (según banco)', unit: 'Bs', icon: Smartphone, color: 'text-purple-400' },
+  { key: 'efectivo_usd', label: 'Efectivo en dólares', hint: 'Billetes de $ que hay en la caja', unit: '$', icon: Banknote, color: 'text-green-400' },
+  { key: 'efectivo_bs', label: 'Efectivo en bolívares', hint: 'Billetes de Bs que hay en la caja', unit: 'Bs', icon: Banknote, color: 'text-yellow-400' },
+  { key: 'tarjeta_bs', label: 'Tarjeta', hint: 'Total del cierre del punto de venta', unit: 'Bs', icon: CreditCard, color: 'text-blue-400' },
+  { key: 'pagomovil_bs', label: 'Pago Móvil', hint: 'Suma de los pagos móviles en el banco', unit: 'Bs', icon: Smartphone, color: 'text-purple-400' },
 ] as const;
 type CountKey = typeof COUNT_FIELDS[number]['key'];
 
@@ -1016,7 +1016,9 @@ function CorteDeCajaModal({
       .sort((a, b) => new Date(a.paid_at || a.created_at).getTime() - new Date(b.paid_at || b.created_at).getTime());
   }, [orders, cortes, locationId, cashier?.id]);
 
-  const countValid = COUNT_FIELDS.every(f => counted[f.key].trim() !== '' && parseFloat(counted[f.key]) >= 0);
+  const missing = COUNT_FIELDS.filter(f => counted[f.key].trim() === '' || !(parseFloat(counted[f.key]) >= 0));
+  const countValid = missing.length === 0;
+  const firstOrderAt = pendingOrders[0] ? new Date(pendingOrders[0].paid_at || pendingOrders[0].created_at) : null;
   const dateStr = new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
   const rate = exchangeRate || 1;
   const formatBs = (n: number) => n.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1117,23 +1119,43 @@ function CorteDeCajaModal({
             </div>
 
             <div className="space-y-2">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-500">Cuenta tu caja</p>
-              <p className="text-[10px] text-zinc-600 -mt-1">Escribe lo que tienes, sin el fondo de caja. El sistema compara al guardar.</p>
-              {COUNT_FIELDS.map(({ key, label, unit, icon: Icon, color }) => (
-                <label key={key} className="flex items-center justify-between gap-3 bg-zinc-950 p-3 rounded-xl">
-                  <span className="flex items-center gap-2 text-sm font-bold text-zinc-300">
-                    <Icon className={`w-4 h-4 ${color}`} /> {label}
+              <div className="bg-primary-vibrant/10 border border-primary-vibrant/30 rounded-xl p-3 space-y-1">
+                <p className="text-sm font-black text-white">Paso 1: cuenta lo que tienes</p>
+                <p className="text-[11px] text-zinc-300">Cuenta el dinero de la caja y revisa el punto y el banco. Escribe cada monto abajo. Si no recibiste de algo, toca <span className="font-black text-white">No hay</span>.</p>
+                <p className="text-[11px] text-zinc-400">No cuentes el fondo de caja (el sencillo con que abriste).</p>
+                {firstOrderAt && (
+                  <p className="text-[11px] text-yellow-400 font-bold">
+                    Incluye todo lo vendido desde el {firstOrderAt.toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'short' })} a las {firstOrderAt.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}.
+                  </p>
+                )}
+              </div>
+              {COUNT_FIELDS.map(({ key, label, hint, unit, icon: Icon, color }) => (
+                <div key={key} className="flex flex-wrap items-center justify-between gap-2 bg-zinc-950 p-3 rounded-xl">
+                  <label htmlFor={`count-${key}`} className="min-w-0">
+                    <span className="flex items-center gap-2 text-sm font-bold text-zinc-200">
+                      <Icon className={`w-4 h-4 ${color}`} /> {label}
+                    </span>
+                    <span className="block text-[10px] text-zinc-500">{hint}</span>
+                  </label>
+                  <span className="flex items-center gap-1.5">
+                    <span className="relative w-28">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500">{unit}</span>
+                      <input id={`count-${key}`} type="number" inputMode="decimal" step="0.01" min="0" value={counted[key]}
+                        onChange={e => setCounted(prev => ({ ...prev, [key]: e.target.value }))}
+                        className={`w-full bg-zinc-900 border py-2 pl-8 pr-2 rounded-lg text-right text-sm font-black text-white outline-none focus:ring-2 focus:ring-primary-vibrant ${counted[key] === '' ? 'border-yellow-500/50' : 'border-zinc-800'}`}
+                        placeholder="Escribe"
+                      />
+                    </span>
+                    <button type="button" onClick={() => setCounted(prev => ({ ...prev, [key]: '0' }))}
+                      className="px-2.5 py-2 rounded-lg bg-zinc-800 text-[11px] font-bold text-zinc-300 hover:bg-zinc-700 hover:text-white transition-all"
+                    >
+                      No hay
+                    </button>
                   </span>
-                  <span className="relative w-32 flex-shrink-0">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500">{unit}</span>
-                    <input type="number" inputMode="decimal" step="0.01" min="0" value={counted[key]}
-                      onChange={e => setCounted(prev => ({ ...prev, [key]: e.target.value }))}
-                      className="w-full bg-zinc-900 border border-zinc-800 py-2 pl-8 pr-2 rounded-lg text-right text-sm font-black text-white outline-none focus:ring-2 focus:ring-primary-vibrant"
-                      placeholder="0.00"
-                    />
-                  </span>
-                </label>
+                </div>
               ))}
+              <p className="text-sm font-black text-white pt-1">Paso 2: toca <span className="text-primary-vibrant">Hacer corte</span></p>
+              <p className="text-[11px] text-zinc-400 -mt-1">El sistema compara lo que contaste con lo que registró y te muestra si cuadra.</p>
             </div>
 
             <div className="space-y-1 max-h-40 overflow-y-auto">
@@ -1150,6 +1172,9 @@ function CorteDeCajaModal({
 
             {error && (
               <p className="text-red-400 text-xs font-bold text-center">{error}</p>
+            )}
+            {!countValid && (
+              <p className="text-yellow-400 text-xs font-bold text-center">Falta escribir: {missing.map(f => f.label).join(', ')}</p>
             )}
 
             <div className="flex gap-2">
