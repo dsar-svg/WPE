@@ -64,7 +64,7 @@ Stack: React 19 / React Router v7 / Vite 6 / TypeScript 5.8 / Tailwind CSS v4 (`
 - **BCV rate** (`src/services/bcvRate.ts`): Fetches VES from dolarapi.com/ve.dolarapi.com, daily localStorage cache.
 - **Image upload** (`src/lib/uploadImage.ts`): Validates 5MB max, compresses to WebP 800px, uploads to `images` Supabase bucket.
 - **Auth**: Supabase Auth (email/password) for admins; escrituras del admin solo si `is_staff()` (email confirmado + rol `super_admin`/`location_admin`). POS: PIN de 4 dígitos → RPC `pos_login` devuelve un token (`pos_sessions`, 16 h) guardado en `cashier.token`. La clave anon **no** puede leer `admins`/`customers` ni escribir `orders` (salvo pedido web `pendiente`), `order_payments`, `cortes` o `invoice_counters` (migración 00022).
-- **POS: cobro y corte por RPC**: `pos_cobrar` asigna el número de factura atómico (si falla no consume número), guarda `paid_at`, `exchange_rate`, vuelto y su moneda (`change_currency`). `pos_corte` calcula el corte en el servidor con los pedidos `corte_id IS NULL` de la cajera, guarda el conteo ciego (`counted_*`) y marca los pedidos con `corte_id`. Arqueo/diferencias: `src/lib/corte.ts`.
+- **POS: cobro y corte por RPC**: `pos_cobrar` asigna el número de factura atómico (si falla no consume número), guarda `paid_at`, `exchange_rate`, vuelto y su moneda (`change_currency`). `pos_corte(token, tasa, p_preview)` calcula el corte en el servidor con los pedidos `corte_id IS NULL` de la cajera (con `p_preview` solo devuelve los totales, sin guardar) y marca los pedidos con `corte_id`. Corte automático: la cajera no escribe montos (migración 00023). `counted_*` solo existe en cortes viejos; `src/lib/corte.ts` muestra el arqueo si lo hay.
 
 ## DB schema
 
