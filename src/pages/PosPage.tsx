@@ -2269,10 +2269,10 @@ export function PosPage() {
                 const v = parseFloat(editRateValue);
                 if (v > 0) {
                   setLocalRate(v);
-                  if (v !== localRate) {
-                    await supabase.rpc('pos_update_rate', { p_token: cashierToken, p_rate: v });
-                    queryClient.refetchQueries({ queryKey: ['config'] });
-                  }
+                  // Siempre se envía: la web pública toma la tasa de config, aunque esta caja ya la tuviera
+                  const { error } = await supabase.rpc('pos_update_rate', { p_token: cashierToken, p_rate: v });
+                  if (error) alert(`La tasa quedó solo en esta caja; no se pudo actualizar en la página web: ${error.message}`);
+                  queryClient.refetchQueries({ queryKey: ['config'] });
                 }
                 setEditingRate(false);
               }}
